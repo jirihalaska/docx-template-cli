@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Infrastructure.Configuration;
 using DocxTemplate.Infrastructure.Services;
 
@@ -28,6 +29,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITemplateDiscoveryService, TemplateDiscoveryService>();
         services.AddScoped<IPlaceholderScanService, PlaceholderScanService>();
         services.AddScoped<ITemplateCopyService, TemplateCopyService>();
+        services.AddScoped<IPlaceholderReplaceService, PlaceholderReplaceService>();
+
+        // Error Handling
+        services.AddScoped<IErrorHandler, ErrorHandler>();
 
         // Logging
         services.AddLogging();

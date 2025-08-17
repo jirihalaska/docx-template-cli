@@ -16,7 +16,7 @@ A command-line interface system for Word document template processing built on .
 ### Core Technologies
 - **Runtime**: .NET 8.0 (LTS)
 - **Language**: C# 12 with nullable reference types
-- **CLI Framework**: System.CommandLine (2.0.0-beta)
+- **CLI Framework**: System.CommandLine (2.0.0-beta4.22272.1)
 - **Word Processing**: DocumentFormat.OpenXml (3.0.0)
 - **Testing**: xUnit 2.6, Moq 4.20, FluentAssertions 6.12
 - **Benchmarking**: BenchmarkDotNet 0.13
@@ -24,9 +24,10 @@ A command-line interface system for Word document template processing built on .
 ### Development Tools
 - **IDE**: Visual Studio 2022 / VS Code / Rider
 - **Version Control**: Git with conventional commits
-- **CI/CD**: GitHub Actions
-- **Code Quality**: SonarQube, Roslyn Analyzers
+- **CI/CD**: GitHub Actions (Windows platform, simplified pipeline)
+- **Code Quality**: Roslyn Analyzers, StyleCop, EditorConfig
 - **Documentation**: DocFX for API docs
+- **Note**: SonarCloud and security scanning removed for initial simplicity
 
 ---
 
@@ -590,18 +591,41 @@ public class PerformanceTests
 
 ### Platform-Specific Builds
 ```bash
-# Windows
+# Windows (Primary platform)
 dotnet publish -c Release -r win-x64 --self-contained
 
-# macOS Intel
-dotnet publish -c Release -r osx-x64 --self-contained
+# macOS Intel (Future iteration)
+# dotnet publish -c Release -r osx-x64 --self-contained
 
-# macOS Apple Silicon
-dotnet publish -c Release -r osx-arm64 --self-contained
+# macOS Apple Silicon (Future iteration)
+# dotnet publish -c Release -r osx-arm64 --self-contained
 
-# Linux
-dotnet publish -c Release -r linux-x64 --self-contained
+# Linux (Not required for current scope)
+# dotnet publish -c Release -r linux-x64 --self-contained
 ```
+
+---
+
+## Implementation Notes (Updated from Story 01.001)
+
+### Completed Changes
+- **CI/CD Pipeline**: Implemented simplified GitHub Actions workflow targeting Windows platform only
+- **Architecture Enhancement**: Added `TemplateSetValidationResult` record to resolve build dependencies
+- **Package Configuration**: Configured with specific versions (System.CommandLine 2.0.0-beta4.22272.1, DocumentFormat.OpenXml 3.0.0)
+- **Project Structure**: Created 7-project solution (3 main + 3 test + 1 benchmark)
+- **Code Quality**: Integrated StyleCop, EditorConfig, and Microsoft analyzers (SonarCloud deferred)
+
+### Platform Strategy Changes
+- **Primary Platform**: Windows (full CI/CD support)
+- **macOS Support**: Deferred to future iteration
+- **Linux Support**: Not required for current scope
+- **Rationale**: Simplified initial deployment while maintaining architectural flexibility
+
+### Build System Updates
+- Package creation pipeline validated
+- Self-contained executable generation for Windows
+- Framework-dependent portable builds available
+- All tests passing with established coverage baseline
 
 ---
 

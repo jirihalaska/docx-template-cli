@@ -41,9 +41,10 @@ DocxTemplate.Core/
 │   ├── Template.cs              // Domain entity within a set
 │   ├── Placeholder.cs           // Value object
 │   ├── ReplacementMap.cs        // Value object for replacements
-│   └── ValidationResult.cs      // Domain validation
+│   ├── ValidationResult.cs      // Domain validation
+│   └── TemplateSetValidationResult.cs // Template set specific validation
 ├── Services/
-│   ├── ITemplateSetService.cs       // Manage template sets
+│   ├── ITemplateSetService.cs       // Manage template sets (with validation fixes)
 │   ├── ITemplateDiscoveryService.cs // Discover templates within set
 │   ├── IPlaceholderScanService.cs   // Scan placeholders in set
 │   ├── ITemplateCopyService.cs      // Copy entire template set
@@ -370,10 +371,10 @@ public async Task ProcessHundredTemplates()
 ```
 /dist
 ├── win-x64/
-│   └── docx-template.exe (self-contained)
-├── osx-x64/
+│   └── docx-template.exe (self-contained, primary platform)
+├── osx-x64/                      [Future iteration]
 │   └── docx-template (self-contained)
-├── linux-x64/
+├── linux-x64/                    [Not required for current scope]
 │   └── docx-template (self-contained)
 └── portable/
     └── DocxTemplate.CLI.dll (framework-dependent)

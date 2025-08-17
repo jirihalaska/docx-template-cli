@@ -20,4 +20,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DocxTemplate.Core\DocxTemplate.Core.csproj" />
+  </ItemGroup>
+
 </Project>

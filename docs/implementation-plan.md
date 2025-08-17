@@ -12,7 +12,7 @@
 ### Sprint Timeline
 - **Week 1**: Foundation & Core Services
 - **Week 2**: CLI Commands & Basic Operations  
-- **Week 3**: Advanced Features & Pipeline Support
+- **Week 3**: Advanced Features & Error Handling
 - **Week 4**: Testing, Documentation & Release
 
 ### Story Implementation Order
@@ -29,7 +29,6 @@
 
 **Advanced Features (Week 3):**
 - 03.001: Replace Command implementation
-- 03.002: Pipeline support and integration
 - 03.003: Error handling and recovery
 
 **Testing & Release (Week 4):**
@@ -144,7 +143,7 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 
 ---
 
-## Week 3: Advanced Features & Pipeline Support
+## Week 3: Advanced Features & Error Handling
 
 ### Day 11-12: Replace Command
 - [ ] Implement PlaceholderReplaceService
@@ -156,15 +155,15 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 
 **Deliverable**: Working `replace` command
 
-### Day 13: Pipeline Support
-- [ ] Implement stdin/stdout handling
-- [ ] Add JSON serialization for pipeline
-- [ ] Create command chaining support
-- [ ] Implement pipe operator handling
-- [ ] Add pipeline integration tests
-- [ ] Document pipeline usage
+### Day 13: Additional Replace Features
+- [ ] Implement batch processing optimizations
+- [ ] Add validation for replacement mappings
+- [ ] Create advanced backup strategies
+- [ ] Implement progress reporting
+- [ ] Add comprehensive replace command tests
+- [ ] Document replace command usage
 
-**Deliverable**: Full pipeline support
+**Deliverable**: Complete replace command functionality
 
 ### Day 14-15: Error Handling & Recovery
 - [ ] Implement comprehensive error handling
@@ -291,9 +290,9 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 | Risk | Mitigation | Contingency |
 |------|------------|-------------|
 | OpenXml complexity | Early prototype, reference existing code | Use alternative library |
-| Pipeline complexity | Start simple, iterate | Provide batch scripts |
 | Performance issues | Continuous benchmarking | Optimize in week 4 |
 | Czech encoding | Test early and often | Implement fallbacks |
+| Error handling complexity | Start with basic scenarios, iterate | Simplify for v2.0 |
 
 ### Schedule Risks
 | Risk | Mitigation | Contingency |
@@ -317,7 +316,7 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 - [ ] Manual testing successful
 
 ### Week 3 Checkpoint
-- [ ] Pipeline support working
+- [ ] Replace command complete
 - [ ] Error handling complete
 - [ ] Performance targets met
 

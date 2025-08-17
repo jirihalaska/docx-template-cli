@@ -12,7 +12,6 @@ A clean-architecture command-line interface system for Word document template pr
 ### Key Differentiators from v1.0
 - **CLI-First Architecture**: All operations exposed as testable CLI commands
 - **Clean Separation**: Core business logic independent of UI concerns
-- **Pipeline Support**: Unix-style composable commands
 - **No Technical Debt**: Fresh start without Czech encoding workarounds
 - **GUI-Ready**: Architecture prepared for future windowed interface
 
@@ -70,7 +69,6 @@ Start fresh with clean architecture, incorporating all lessons learned, focusing
 - **FR3.3**: Report unique placeholders across the template set
 - **FR3.4**: Track placeholder locations and occurrence counts
 - **FR3.5**: Group placeholders by template within the set
-- **FR3.6**: Output scannable JSON for downstream processing
 
 #### FR4: Template Set Copying
 - **FR4.1**: Copy entire template set from source to target directory
@@ -88,11 +86,6 @@ Start fresh with clean architecture, incorporating all lessons learned, focusing
 - **FR5.5**: Process entire template set atomically
 - **FR5.6**: Handle Czech and Unicode characters correctly
 
-#### FR6: Pipeline Operations
-- **FR6.1**: Commands must support stdin/stdout piping
-- **FR6.2**: JSON output format for inter-command communication
-- **FR6.3**: Support for command chaining with template set context
-- **FR6.4**: Error propagation through pipeline
 
 ### Non-Functional Requirements
 
@@ -205,7 +198,7 @@ docx-template replace --folder <path> --map <file> [options]
 
 ### Output Formats
 
-#### JSON Output (Pipeline-Friendly)
+#### JSON Output
 ```json
 {
   "command": "discover",
@@ -259,7 +252,6 @@ DocxTemplate.CLI/              # Command Line Interface
 ├── Commands/                  # Command implementations
 ├── Options/                   # Command options parsing
 ├── Output/                    # Formatters and presenters
-└── Pipeline/                  # Pipeline support
 
 DocxTemplate.Tests/           # Test Projects
 ├── Unit/                     # Unit tests per component
@@ -272,7 +264,6 @@ DocxTemplate.Tests/           # Test Projects
 - **CQRS Pattern**: Separate read (discover/scan) from write (copy/replace)
 - **Repository Pattern**: Abstract file system operations
 - **Strategy Pattern**: Pluggable output formatters
-- **Pipeline Pattern**: Composable command chain
 
 ---
 
@@ -316,7 +307,6 @@ DocxTemplate.Tests/           # Test Projects
 ### Phase 3: Advanced Commands (Week 3)
 - [ ] Implement copy command
 - [ ] Implement replace command
-- [ ] Pipeline support
 - [ ] Error handling
 
 ### Phase 4: Polish & Testing (Week 4)
@@ -424,16 +414,6 @@ docx-template replace --folder ./working/Contract_Templates_2025-08-17_143025 --
 # Output: Successfully replaced 375 placeholders in 15 documents
 ```
 
-#### Pipeline Mode
-```bash
-# Complete workflow in one pipeline
-docx-template list-sets -t /shared/templates | \
-jq '.sets[0].name' | \
-xargs -I {} docx-template scan -t /shared/templates -s {} | \
-tee placeholders.json | \
-docx-template copy -t /shared/templates -s Contract_Templates -g ./output | \
-docx-template replace -m values.json
-```
 
 ### C. Future GUI Integration Points
 - CLI commands exposed as service methods

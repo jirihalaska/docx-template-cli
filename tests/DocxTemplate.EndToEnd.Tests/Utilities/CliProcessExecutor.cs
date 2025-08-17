@@ -186,8 +186,6 @@ public class CliProcessExecutor : IDisposable
         var assemblyDirectory = Path.GetDirectoryName(typeof(CliProcessExecutor).Assembly.Location) ?? throw new InvalidOperationException("Unable to determine assembly location");
         var solutionRoot = FindSolutionRoot(assemblyDirectory);
         
-        var cliProjectPath = Path.Combine(solutionRoot, "src", "DocxTemplate.CLI", "bin", configuration, "net9.0");
-        
         // Try different executable names based on platform
         var possibleNames = new[]
         {
@@ -197,14 +195,27 @@ public class CliProcessExecutor : IDisposable
             "docx-template"          // Potential published name Unix
         };
 
-        foreach (var name in possibleNames)
+        // Try the specified configuration first, then try common configurations
+        var configurationsToTry = new List<string> { configuration };
+        if (configuration != "Release") configurationsToTry.Add("Release");
+        if (configuration != "Debug") configurationsToTry.Add("Debug");
+
+        var checkedPaths = new List<string>();
+        
+        foreach (var config in configurationsToTry)
         {
-            var path = Path.Combine(cliProjectPath, name);
-            if (File.Exists(path))
-                return path;
+            var cliProjectPath = Path.Combine(solutionRoot, "src", "DocxTemplate.CLI", "bin", config, "net9.0");
+            checkedPaths.Add(cliProjectPath);
+            
+            foreach (var name in possibleNames)
+            {
+                var path = Path.Combine(cliProjectPath, name);
+                if (File.Exists(path))
+                    return path;
+            }
         }
 
-        throw new FileNotFoundException($"CLI executable not found in {cliProjectPath}. Available names tried: {string.Join(", ", possibleNames)}");
+        throw new FileNotFoundException($"CLI executable not found in any of: {string.Join(", ", checkedPaths)}. Available names tried: {string.Join(", ", possibleNames)}");
     }
 
     private static string FindSolutionRoot(string startPath)

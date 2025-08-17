@@ -15,6 +15,48 @@
 - **Week 3**: Advanced Features & Pipeline Support
 - **Week 4**: Testing, Documentation & Release
 
+### Story Implementation Order
+**Foundation (Week 1):**
+- 01.001: Project Setup & Architecture ✅
+- 01.002: Core Models & Interfaces ✅
+- 01.003: Infrastructure Foundation ✅
+
+**CLI Commands (Week 2):**
+- 02.001: List Sets Command (NEW - discover template sets)
+- 02.002: Discover Command (find templates within sets)
+- 02.003: Scan Command (find placeholders)
+- 02.004: Copy Command (copy template sets)
+
+**Advanced Features (Week 3+):**
+- Replace Command implementation
+- Pipeline support and integration
+- Error handling and recovery
+
+### New Command Workflow
+The updated story structure creates a logical user workflow:
+
+1. **`list-sets`** - Discover available template sets in directory
+2. **`discover`** - Find templates within a specific set  
+3. **`scan`** - Identify placeholders in templates
+4. **`copy`** - Copy template set to working directory
+5. **`replace`** - Replace placeholders with values
+
+**Example:**
+```bash
+# Step 1: See what's available
+docx-template list-sets --templates /shared/templates
+
+# Step 2: Explore a specific set
+docx-template discover --templates /shared/templates --set Contract_Templates
+
+# Step 3: Find placeholders
+docx-template scan --templates /shared/templates --set Contract_Templates
+
+# Step 4: Copy and work with templates
+docx-template copy --templates /shared/templates --set Contract_Templates --target ./work
+docx-template replace --folder ./work/Contract_Templates_timestamp --map values.json
+```
+
 ---
 
 ## Week 1: Foundation & Core Services
@@ -53,17 +95,27 @@
 
 ## Week 2: CLI Commands & Basic Operations
 
-### Day 6-7: Discover Command
-- [ ] Implement TemplateDiscoveryService
-- [ ] Create DiscoverCommand with options
+### Day 6: List Sets Command
+- [ ] Implement TemplateSetDiscoveryService
+- [ ] Create ListSetsCommand with options
+- [ ] Add template set validation logic
+- [ ] Implement metadata collection (file count, size)
+- [ ] Add JSON/Text/Table output formatters
+- [ ] Create integration tests with various directory structures
+
+**Deliverable**: Working `list-sets` command
+
+### Day 7-8: Discover Command  
+- [ ] Implement TemplateDiscoveryService (within sets)
+- [ ] Create DiscoverCommand with set parameter
 - [ ] Add JSON/Text output formatters
-- [ ] Implement recursive directory scanning
+- [ ] Implement recursive directory scanning within sets
 - [ ] Add progress reporting
 - [ ] Create integration tests
 
 **Deliverable**: Working `discover` command
 
-### Day 8-9: Scan Command
+### Day 9-10: Scan Command
 - [ ] Implement PlaceholderScanner with OpenXml
 - [ ] Handle split text runs
 - [ ] Create ScanCommand with pattern support
@@ -76,7 +128,7 @@
 ### Day 10: Copy Command
 - [ ] Implement TemplateCopyService
 - [ ] Add directory structure preservation
-- [ ] Create CopyCommand with options
+- [ ] Create CopyCommand with set parameter
 - [ ] Implement overwrite protection
 - [ ] Add dry-run support
 - [ ] Create file operation tests
@@ -166,6 +218,7 @@
 ## Task Checklist by Component
 
 ### Core Services ✅
+- [ ] ITemplateSetDiscoveryService implementation
 - [ ] ITemplateDiscoveryService implementation
 - [ ] IPlaceholderScanService implementation  
 - [ ] ITemplateCopyService implementation
@@ -174,12 +227,13 @@
 - [ ] Service integration tests
 
 ### CLI Layer ✅
+- [ ] ListSetsCommand with options
 - [ ] DiscoverCommand with options
 - [ ] ScanCommand with options
 - [ ] CopyCommand with options
 - [ ] ReplaceCommand with options
 - [ ] Global options handling
-- [ ] Output formatters (JSON/Text/XML)
+- [ ] Output formatters (JSON/Text/Table/List)
 
 ### Infrastructure ✅
 - [ ] FileSystemService abstraction

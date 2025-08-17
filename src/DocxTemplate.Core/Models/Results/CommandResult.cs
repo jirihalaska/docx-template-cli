@@ -90,7 +90,7 @@ public record CommandResult : CommandResult<object>
     /// <summary>
     /// Creates a failed command result without data
     /// </summary>
-    public static CommandResult Failure(ErrorResult error)
+    public static new CommandResult Failure(ErrorResult error)
     {
         return new CommandResult
         {
@@ -102,7 +102,7 @@ public record CommandResult : CommandResult<object>
     /// <summary>
     /// Creates a failed command result from an exception
     /// </summary>
-    public static CommandResult Failure(Exception exception, string operationContext)
+    public static new CommandResult Failure(Exception exception, string operationContext)
     {
         var errorResult = exception switch
         {

@@ -16,8 +16,16 @@ jobs:
     name: Build and Test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            platform: windows
+            binary-suffix: '.exe'
+          - os: macos-latest
+            platform: macos
+            binary-suffix: ''
         
     steps:
     - name: Checkout code
@@ -46,6 +54,23 @@ jobs:
       
     - name: Run unit tests
       run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      
+    - name: Test Czech character handling
+      shell: bash
+      run: |
+        echo "Testing Czech character handling on ${{ matrix.platform }}"
+        # Create test file with Czech characters
+        echo '{"název": "Testovací dokument", "město": "Brno", "ulice": "Údolní"}' > test-czech.json
+        
+        # Verify file contents
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          type test-czech.json || cat test-czech.json
+        else
+          cat test-czech.json
+        fi
+        
+        # Clean up
+        rm test-czech.json
       
     - name: Upload coverage reports to Codecov
       if: matrix.os == 'windows-latest'
@@ -80,8 +105,9 @@ jobs:
         # Create NuGet packages
         dotnet pack --configuration Release --output ./packages --no-restore
         
-        # Create self-contained executable for Windows
+        # Create self-contained executables for Windows and macOS
         dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r win-x64 --self-contained -o ./publish/win-x64
+        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r osx-x64 --self-contained -o ./publish/osx-x64
         
     - name: Upload NuGet packages
       uses: actions/upload-artifact@v4

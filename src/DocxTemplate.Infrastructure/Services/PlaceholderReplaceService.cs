@@ -552,4 +552,49 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             ReplacementDetails = replacementDetails
         };
     }
+
+    /// <inheritdoc />
+    public async Task<ReplaceResult> ReplaceInTemplateAsync(
+        TemplateFile templateFile,
+        ReplacementMap replacementMap,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(templateFile);
+        ArgumentNullException.ThrowIfNull(replacementMap);
+
+        var startTime = DateTime.UtcNow;
+        
+        try
+        {
+            var replacementCount = await ProcessDocumentReplacementsAsync(templateFile.FullPath, replacementMap, cancellationToken);
+            
+            var endTime = DateTime.UtcNow;
+            var duration = endTime - startTime;
+
+            var fileResult = FileReplaceResult.Success(
+                templateFile.FullPath, 
+                replacementCount, 
+                processingDuration: duration);
+
+            return ReplaceResult.Success(
+                new[] { fileResult },
+                duration);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to replace placeholders in template {TemplatePath}", templateFile.FullPath);
+            
+            var endTime = DateTime.UtcNow;
+            var duration = endTime - startTime;
+            
+            var fileResult = FileReplaceResult.Failure(
+                templateFile.FullPath, 
+                ex.Message,
+                duration);
+
+            return ReplaceResult.Success(
+                new[] { fileResult },
+                duration);
+        }
+    }
 }

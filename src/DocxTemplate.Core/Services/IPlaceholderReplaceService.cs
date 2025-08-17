@@ -91,6 +91,20 @@ public interface IPlaceholderReplaceService
         bool requireAllPlaceholders = false);
 
     /// <summary>
+    /// Replaces placeholders in a single template file
+    /// </summary>
+    /// <param name="templateFile">Template file to process</param>
+    /// <param name="replacementMap">Map of placeholder names to replacement values</param>
+    /// <param name="cancellationToken">Cancellation token for operation cancellation</param>
+    /// <returns>Replacement operation result</returns>
+    /// <exception cref="DocumentProcessingException">Thrown when the document cannot be processed</exception>
+    /// <exception cref="ArgumentException">Thrown when arguments are invalid</exception>
+    Task<ReplaceResult> ReplaceInTemplateAsync(
+        TemplateFile templateFile,
+        ReplacementMap replacementMap,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Creates backup copies of template files
     /// </summary>
     /// <param name="templateFiles">Files to backup</param>

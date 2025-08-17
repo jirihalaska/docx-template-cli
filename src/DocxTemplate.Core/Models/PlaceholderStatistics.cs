@@ -3,15 +3,15 @@ using System.ComponentModel.DataAnnotations;
 namespace DocxTemplate.Core.Models;
 
 /// <summary>
-/// Statistics about placeholder usage across multiple files
+/// Statistical analysis of placeholder usage across multiple files
 /// </summary>
 public record PlaceholderStatistics
 {
     /// <summary>
     /// Total number of unique placeholders found
     /// </summary>
-    [Range(0, int.MaxValue, ErrorMessage = "Unique placeholder count must be non-negative")]
-    public required int UniquePlaceholderCount { get; init; }
+    [Range(0, int.MaxValue, ErrorMessage = "Total unique placeholders must be non-negative")]
+    public required int TotalUniquePlaceholders { get; init; }
 
     /// <summary>
     /// Total number of placeholder occurrences across all files
@@ -20,158 +20,127 @@ public record PlaceholderStatistics
     public required int TotalOccurrences { get; init; }
 
     /// <summary>
-    /// Number of files that contain at least one placeholder
+    /// Number of files that were scanned
+    /// </summary>
+    [Range(0, int.MaxValue, ErrorMessage = "Files scanned must be non-negative")]
+    public required int FilesScanned { get; init; }
+
+    /// <summary>
+    /// Number of files that contained at least one placeholder
     /// </summary>
     [Range(0, int.MaxValue, ErrorMessage = "Files with placeholders must be non-negative")]
     public required int FilesWithPlaceholders { get; init; }
 
     /// <summary>
-    /// Most frequently used placeholders
+    /// Average number of placeholders per file that contains placeholders
     /// </summary>
-    [Required(ErrorMessage = "Most frequent placeholders collection is required")]
-    public required IReadOnlyList<PlaceholderFrequency> MostFrequentPlaceholders { get; init; }
+    public required double AveragePerFile { get; init; }
 
     /// <summary>
-    /// Placeholders that appear in only one file
+    /// List of most commonly used placeholders (top 10)
     /// </summary>
-    [Required(ErrorMessage = "Unique to file placeholders collection is required")]
-    public required IReadOnlyList<string> UniqueToFilePlaceholders { get; init; }
+    [Required(ErrorMessage = "Most common placeholders list is required")]
+    public required IReadOnlyList<Placeholder> MostCommonPlaceholders { get; init; }
 
     /// <summary>
-    /// Placeholders that appear in all scanned files
+    /// Distribution of placeholder counts per file
     /// </summary>
-    [Required(ErrorMessage = "Universal placeholders collection is required")]
-    public required IReadOnlyList<string> UniversalPlaceholders { get; init; }
+    [Required(ErrorMessage = "Placeholder distribution is required")]
+    public required IReadOnlyDictionary<int, int> PlaceholderDistribution { get; init; }
 
     /// <summary>
-    /// Average number of placeholder occurrences per file
+    /// Duration of the scan operation
     /// </summary>
-    public double AverageOccurrencesPerFile => 
-        FilesWithPlaceholders > 0 ? (double)TotalOccurrences / FilesWithPlaceholders : 0;
+    public required TimeSpan ScanDuration { get; init; }
 
     /// <summary>
-    /// Average number of unique placeholders per file
+    /// Gets the coverage percentage (files with placeholders / total files)
     /// </summary>
-    public double AverageUniquePlaceholdersPerFile { get; init; }
+    public double CoveragePercentage => 
+        FilesScanned > 0 ? (FilesWithPlaceholders * 100.0) / FilesScanned : 0;
 
     /// <summary>
-    /// Percentage of files that contain placeholders
+    /// Gets the scan rate in files per second
     /// </summary>
-    public double PlaceholderCoveragePercentage { get; init; }
+    public double FilesPerSecond => 
+        ScanDuration.TotalSeconds > 0 ? FilesScanned / ScanDuration.TotalSeconds : 0;
 
     /// <summary>
-    /// Distribution of placeholder usage (how many placeholders appear N times)
+    /// Gets the average occurrences per unique placeholder
     /// </summary>
-    [Required(ErrorMessage = "Usage distribution is required")]
-    public required IReadOnlyDictionary<int, int> UsageDistribution { get; init; }
+    public double AverageOccurrencesPerPlaceholder => 
+        TotalUniquePlaceholders > 0 ? (double)TotalOccurrences / TotalUniquePlaceholders : 0;
 
     /// <summary>
     /// Gets a summary string of the statistics
     /// </summary>
     public string GetSummary()
     {
-        return $"{UniquePlaceholderCount} unique placeholders with {TotalOccurrences} total occurrences " +
-               $"across {FilesWithPlaceholders} files. " +
-               $"Coverage: {PlaceholderCoveragePercentage:F1}%. " +
-               $"Avg: {AverageOccurrencesPerFile:F1} occurrences/file, {AverageUniquePlaceholdersPerFile:F1} unique/file.";
+        return $"Found {TotalUniquePlaceholders} unique placeholders with {TotalOccurrences} total occurrences " +
+               $"across {FilesWithPlaceholders} of {FilesScanned} files ({CoveragePercentage:F1}% coverage). " +
+               $"Scan completed in {ScanDuration.TotalMilliseconds:F0}ms " +
+               $"({FilesPerSecond:F1} files/sec).";
     }
 
     /// <summary>
-    /// Creates placeholder statistics from scan results
+    /// Gets the most frequent placeholder
     /// </summary>
-    /// <param name="scanResult">Scan results to analyze</param>
-    /// <param name="totalFilesScanned">Total number of files that were scanned</param>
-    /// <returns>PlaceholderStatistics instance</returns>
-    public static PlaceholderStatistics FromScanResult(PlaceholderScanResult scanResult, int totalFilesScanned)
+    public Placeholder? MostFrequentPlaceholder => 
+        MostCommonPlaceholders.FirstOrDefault();
+
+    /// <summary>
+    /// Gets the least frequent placeholder from the most common list
+    /// </summary>
+    public Placeholder? LeastFrequentFromTop => 
+        MostCommonPlaceholders.LastOrDefault();
+
+    /// <summary>
+    /// Validates the statistics data integrity
+    /// </summary>
+    /// <returns>True if the statistics data is consistent</returns>
+    public bool IsValid()
     {
-        var placeholders = scanResult.Placeholders;
-        
-        // Calculate most frequent placeholders
-        var mostFrequent = placeholders
-            .OrderByDescending(p => p.TotalOccurrences)
-            .Take(10)
-            .Select(p => new PlaceholderFrequency
-            {
-                PlaceholderName = p.Name,
-                Occurrences = p.TotalOccurrences,
-                FileCount = p.UniqueFileCount
-            })
-            .ToList();
+        // Check that files with placeholders doesn't exceed total files
+        if (FilesWithPlaceholders > FilesScanned)
+            return false;
 
-        // Find placeholders unique to single files
-        var uniqueToFile = placeholders
-            .Where(p => p.UniqueFileCount == 1)
-            .Select(p => p.Name)
-            .ToList();
+        // Check that most common placeholders list is reasonable
+        if (MostCommonPlaceholders.Count > TotalUniquePlaceholders)
+            return false;
 
-        // Find universal placeholders (appear in all files with placeholders)
-        var universal = placeholders
-            .Where(p => p.UniqueFileCount == scanResult.FilesWithPlaceholders)
-            .Select(p => p.Name)
-            .ToList();
+        // Check that average is reasonable
+        if (AveragePerFile < 0)
+            return false;
 
-        // Calculate usage distribution
-        var usageDistribution = placeholders
-            .GroupBy(p => p.TotalOccurrences)
-            .ToDictionary(g => g.Key, g => g.Count());
+        // Check that scan duration is non-negative
+        if (ScanDuration < TimeSpan.Zero)
+            return false;
 
-        // Calculate averages
-        var avgUniquePlaceholdersPerFile = scanResult.FilesWithPlaceholders > 0
-            ? placeholders.SelectMany(p => p.Locations).GroupBy(l => l.FilePath).Average(g => g.Count())
-            : 0;
+        // Check that all placeholders in most common list are valid
+        if (MostCommonPlaceholders.Any(p => !p.IsValid()))
+            return false;
 
-        var coveragePercentage = totalFilesScanned > 0
-            ? (scanResult.FilesWithPlaceholders * 100.0) / totalFilesScanned
-            : 0;
+        return true;
+    }
 
+    /// <summary>
+    /// Creates empty statistics for when no placeholders are found
+    /// </summary>
+    /// <param name="filesScanned">Number of files scanned</param>
+    /// <param name="scanDuration">Duration of the scan</param>
+    /// <returns>Empty PlaceholderStatistics instance</returns>
+    public static PlaceholderStatistics Empty(int filesScanned, TimeSpan scanDuration)
+    {
         return new PlaceholderStatistics
         {
-            UniquePlaceholderCount = placeholders.Count,
-            TotalOccurrences = scanResult.TotalOccurrences,
-            FilesWithPlaceholders = scanResult.FilesWithPlaceholders,
-            MostFrequentPlaceholders = mostFrequent,
-            UniqueToFilePlaceholders = uniqueToFile,
-            UniversalPlaceholders = universal,
-            AverageUniquePlaceholdersPerFile = avgUniquePlaceholdersPerFile,
-            PlaceholderCoveragePercentage = coveragePercentage,
-            UsageDistribution = usageDistribution
+            TotalUniquePlaceholders = 0,
+            TotalOccurrences = 0,
+            FilesScanned = filesScanned,
+            FilesWithPlaceholders = 0,
+            AveragePerFile = 0,
+            MostCommonPlaceholders = Array.Empty<Placeholder>(),
+            PlaceholderDistribution = new Dictionary<int, int>(),
+            ScanDuration = scanDuration
         };
     }
-}
-
-/// <summary>
-/// Represents the frequency of a placeholder usage
-/// </summary>
-public record PlaceholderFrequency
-{
-    /// <summary>
-    /// Name of the placeholder
-    /// </summary>
-    [Required(ErrorMessage = "Placeholder name is required")]
-    public required string PlaceholderName { get; init; }
-
-    /// <summary>
-    /// Total number of occurrences
-    /// </summary>
-    [Range(0, int.MaxValue, ErrorMessage = "Occurrences must be non-negative")]
-    public required int Occurrences { get; init; }
-
-    /// <summary>
-    /// Number of files containing this placeholder
-    /// </summary>
-    [Range(0, int.MaxValue, ErrorMessage = "File count must be non-negative")]
-    public required int FileCount { get; init; }
-
-    /// <summary>
-    /// Average occurrences per file containing this placeholder
-    /// </summary>
-    public double AverageOccurrencesPerFile => 
-        FileCount > 0 ? (double)Occurrences / FileCount : 0;
-
-    /// <summary>
-    /// Gets a display string for this frequency data
-    /// </summary>
-    public string DisplayFrequency => 
-        $"{PlaceholderName}: {Occurrences} occurrences in {FileCount} file{(FileCount == 1 ? "" : "s")} " +
-        $"(avg: {AverageOccurrencesPerFile:F1}/file)";
 }

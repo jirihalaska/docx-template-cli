@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Configuration;
 using DocxTemplate.Infrastructure.Services;
 
@@ -21,6 +22,9 @@ public static class ServiceCollectionExtensions
 
         // File System Services
         services.AddSingleton<IFileSystemService, FileSystemService>();
+        
+        // Template Services
+        services.AddScoped<ITemplateSetService, TemplateSetDiscoveryService>();
 
         // Logging
         services.AddLogging();

@@ -27,10 +27,17 @@
 - 02.003: Scan Command (find placeholders)
 - 02.004: Copy Command (copy template sets)
 
-**Advanced Features (Week 3+):**
-- Replace Command implementation
-- Pipeline support and integration
-- Error handling and recovery
+**Advanced Features (Week 3):**
+- 03.001: Replace Command implementation
+- 03.002: Pipeline support and integration
+- 03.003: Error handling and recovery
+
+**Testing & Release (Week 4):**
+- 04.001: Unit & Cross-Platform Testing
+- 04.002: End-to-End Testing
+- 04.003: Documentation
+- 04.004: Performance Optimization
+- 04.005: Release Preparation
 
 ### New Command Workflow
 The updated story structure creates a logical user workflow:
@@ -173,17 +180,26 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 
 ## Week 4: Testing, Documentation & Release
 
-### Day 16-17: Comprehensive Testing
+### Day 16: Unit and Cross-Platform Testing (Story 04.001)
 - [ ] Complete unit test coverage (>90%)
-- [ ] Create end-to-end test scenarios
-- [ ] Add performance benchmarks
-- [ ] Implement stress tests
 - [ ] Cross-platform testing (Windows/macOS/Linux)
+- [ ] Automated test infrastructure and CI/CD integration
+- [ ] Performance benchmarks and stress testing
 - [ ] Security testing (path traversal, injection)
 
-**Deliverable**: Complete test suite
+**Deliverable**: Core test suite with coverage and automation
 
-### Day 18: Documentation
+### Day 17: End-to-End Testing (Story 04.002)
+- [ ] Complete user workflow testing scenarios
+- [ ] CLI command integration testing
+- [ ] Real document processing validation
+- [ ] Error scenario and recovery testing
+- [ ] Cross-command data flow validation
+- [ ] Performance and scalability testing
+
+**Deliverable**: End-to-end test validation
+
+### Day 18: Documentation (Story 04.003)
 - [ ] Complete API documentation with DocFX
 - [ ] Create user guide with examples
 - [ ] Document all CLI commands
@@ -193,7 +209,7 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 
 **Deliverable**: Complete documentation
 
-### Day 19: Performance Optimization
+### Day 19: Performance Optimization (Story 04.004)
 - [ ] Run performance profiler
 - [ ] Optimize hot paths
 - [ ] Implement caching where beneficial
@@ -203,7 +219,7 @@ docx-template replace --folder ./work/Contract_Templates_timestamp --map values.
 
 **Deliverable**: Optimized performance
 
-### Day 20: Release Preparation
+### Day 20: Release Preparation (Story 04.005)
 - [ ] Create release builds for all platforms
 - [ ] Generate checksums for binaries
 - [ ] Create installation scripts

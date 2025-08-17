@@ -39,29 +39,55 @@ Implementation layer for file I/O and Word document processing using DocumentFor
 
 ## Commands
 
-### 1. Discover Templates
-```bash
-docx-template discover --folder ./templates [--recursive]
-```
-Finds all .docx files in the specified folder.
+The CLI provides five main commands that work together to process DOCX templates:
 
-### 2. Scan Placeholders
+### 1. List Template Sets
 ```bash
-docx-template scan --folder ./templates [--recursive] [--pattern "{{*}}"]
+docx-template list-sets --templates /shared/templates
 ```
-Discovers all unique placeholders across templates.
+Discovers and lists all template sets (top-level directories containing .docx files).
 
-### 3. Copy Templates
+### 2. Discover Templates  
 ```bash
-docx-template copy --source ./templates --target ./output [--preserve-structure]
+docx-template discover --templates /shared/templates --set Contract_Templates
 ```
-Copies templates to target folder, optionally preserving directory structure.
+Finds all .docx files within a specific template set.
 
-### 4. Replace Placeholders
+### 3. Scan Placeholders
 ```bash
-docx-template replace --folder ./output --map replacements.json [--backup]
+docx-template scan --templates /shared/templates --set Contract_Templates [--pattern "{{.*?}}"]
 ```
-Replaces placeholders in all documents within the folder.
+Discovers all unique placeholders across templates in the set.
+
+### 4. Copy Template Set
+```bash
+docx-template copy --templates /shared/templates --set Contract_Templates --target ./working
+```
+Copies an entire template set to a working directory with timestamp.
+
+### 5. Replace Placeholders
+```bash
+docx-template replace --folder ./working/Contract_Templates_timestamp --map values.json
+```
+Replaces placeholders in all templates with values from mapping file.
+
+## Complete Workflow Example
+```bash
+# Step 1: List available template sets
+docx-template list-sets --templates /shared/templates
+
+# Step 2: Explore a specific template set  
+docx-template discover --templates /shared/templates --set Contract_Templates
+
+# Step 3: Find placeholders in the set
+docx-template scan --templates /shared/templates --set Contract_Templates
+
+# Step 4: Copy template set to working directory
+docx-template copy --templates /shared/templates --set Contract_Templates --target ./work
+
+# Step 5: Replace placeholders with actual values
+docx-template replace --folder ./work/Contract_Templates_timestamp --map contract-values.json
+```
 
 ## Installation
 
@@ -81,26 +107,28 @@ dotnet tool install --global --add-source ./nupkg DocxTemplate.CLI
 
 ### Interactive Workflow
 ```bash
-# Step 1: Discover what templates exist
-docx-template discover --folder ./templates
+# Step 1: List available template sets
+docx-template list-sets --templates /shared/templates
 
-# Step 2: Find what placeholders need values  
-docx-template scan --folder ./templates --recursive
+# Step 2: Discover templates in a specific set
+docx-template discover --templates /shared/templates --set Contract_Templates
 
-# Step 3: Copy templates to working directory
-docx-template copy --source ./templates --target ./output
+# Step 3: Find placeholders in the template set
+docx-template scan --templates /shared/templates --set Contract_Templates
 
-# Step 4: Replace placeholders with values
-docx-template replace --folder ./output --map values.json
+# Step 4: Copy template set to working directory
+docx-template copy --templates /shared/templates --set Contract_Templates --target ./work
+
+# Step 5: Replace placeholders with values
+docx-template replace --folder ./work/Contract_Templates_timestamp --map values.json
 ```
 
 ### Pipeline Workflow
 ```bash
-# Complete pipeline
-docx-template discover --folder ./templates | \
-docx-template scan | \
-docx-template copy --target ./output | \
-docx-template replace --map values.json
+# JSON pipeline example
+docx-template list-sets --templates /shared/templates --format json | \
+  jq -r '.data.template_sets[0].name' | \
+  xargs -I {} docx-template copy --templates /shared/templates --set {} --target ./work
 ```
 
 ### Replacement Map Format
@@ -175,10 +203,11 @@ This CLI is designed to be the backend for a future GUI application:
 
 ```csharp
 // Future GUI can call CLI commands
-var result = await CliWrapper.ExecuteAsync("discover", "--folder", folderPath);
+var result = await CliWrapper.ExecuteAsync("list-sets", "--templates", templatesPath);
 
 // Or use Core services directly
-var templates = await templateService.DiscoverAsync(folderPath);
+var templateSets = await templateSetService.DiscoverAsync(templatesPath);
+var templates = await templateService.DiscoverAsync(templatesPath, setName);
 ```
 
 ## License

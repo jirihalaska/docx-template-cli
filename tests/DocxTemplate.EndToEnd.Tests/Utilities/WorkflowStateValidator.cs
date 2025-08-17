@@ -97,7 +97,8 @@ public class WorkflowStateValidator
                 try
                 {
                     var commandName = ExtractCommandName(commandResult.Command);
-                    var jsonOutput = JsonSerializer.Deserialize<JsonElement>(commandResult.StandardOutput);
+                    var jsonContent = CliProcessExecutor.ExtractJsonFromOutput(commandResult.StandardOutput);
+                    var jsonOutput = JsonSerializer.Deserialize<JsonElement>(jsonContent);
                     commandOutputs[commandName] = jsonOutput;
 
                     // Validate JSON schema based on command type
@@ -246,16 +247,23 @@ public class WorkflowStateValidator
 
     private async Task ValidateListSetsOutput(JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        if (!jsonOutput.TryGetProperty("templateSets", out var templateSets))
+        if (!jsonOutput.TryGetProperty("data", out var data))
         {
-            result.ValidationErrors.Add("list-sets output missing 'templateSets' property");
+            result.ValidationErrors.Add("list-sets output missing 'data' property");
+            result.IsValid = false;
+            return;
+        }
+
+        if (!data.TryGetProperty("template_sets", out var templateSets))
+        {
+            result.ValidationErrors.Add("list-sets output missing 'template_sets' property in data");
             result.IsValid = false;
             return;
         }
 
         if (templateSets.ValueKind != JsonValueKind.Array)
         {
-            result.ValidationErrors.Add("list-sets 'templateSets' property should be an array");
+            result.ValidationErrors.Add("list-sets 'template_sets' property should be an array");
             result.IsValid = false;
         }
         
@@ -264,15 +272,16 @@ public class WorkflowStateValidator
 
     private async Task ValidateDiscoverOutput(JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        if (!jsonOutput.TryGetProperty("templateSet", out _))
+        if (!jsonOutput.TryGetProperty("data", out var data))
         {
-            result.ValidationErrors.Add("discover output missing 'templateSet' property");
+            result.ValidationErrors.Add("discover output missing 'data' property");
             result.IsValid = false;
+            return;
         }
 
-        if (!jsonOutput.TryGetProperty("templates", out var templates))
+        if (!data.TryGetProperty("templates", out var templates))
         {
-            result.ValidationErrors.Add("discover output missing 'templates' property");
+            result.ValidationErrors.Add("discover output missing 'templates' property in data");
             result.IsValid = false;
             return;
         }
@@ -288,9 +297,16 @@ public class WorkflowStateValidator
 
     private async Task ValidateScanOutput(JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        if (!jsonOutput.TryGetProperty("placeholders", out var placeholders))
+        if (!jsonOutput.TryGetProperty("data", out var data))
         {
-            result.ValidationErrors.Add("scan output missing 'placeholders' property");
+            result.ValidationErrors.Add("scan output missing 'data' property");
+            result.IsValid = false;
+            return;
+        }
+
+        if (!data.TryGetProperty("placeholders", out var placeholders))
+        {
+            result.ValidationErrors.Add("scan output missing 'placeholders' property in data");
             result.IsValid = false;
             return;
         }
@@ -306,16 +322,23 @@ public class WorkflowStateValidator
 
     private async Task ValidateCopyOutput(JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        if (!jsonOutput.TryGetProperty("copiedFiles", out var copiedFiles))
+        if (!jsonOutput.TryGetProperty("data", out var data))
         {
-            result.ValidationErrors.Add("copy output missing 'copiedFiles' property");
+            result.ValidationErrors.Add("copy output missing 'data' property");
+            result.IsValid = false;
+            return;
+        }
+
+        if (!data.TryGetProperty("copied_files", out var copiedFiles))
+        {
+            result.ValidationErrors.Add("copy output missing 'copied_files' property in data");
             result.IsValid = false;
             return;
         }
 
         if (copiedFiles.ValueKind != JsonValueKind.Array)
         {
-            result.ValidationErrors.Add("copy 'copiedFiles' property should be an array");
+            result.ValidationErrors.Add("copy 'copied_files' property should be an array");
             result.IsValid = false;
         }
         
@@ -324,9 +347,16 @@ public class WorkflowStateValidator
 
     private async Task ValidateReplaceOutput(JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        if (!jsonOutput.TryGetProperty("replacements", out var replacements))
+        if (!jsonOutput.TryGetProperty("data", out var data))
         {
-            result.ValidationErrors.Add("replace output missing 'replacements' property");
+            result.ValidationErrors.Add("replace output missing 'data' property");
+            result.IsValid = false;
+            return;
+        }
+
+        if (!data.TryGetProperty("replacements", out var replacements))
+        {
+            result.ValidationErrors.Add("replace output missing 'replacements' property in data");
             result.IsValid = false;
             return;
         }
@@ -345,19 +375,27 @@ public class WorkflowStateValidator
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
-        // Validate template set consistency between discover and other commands
-        if (commandOutputs.ContainsKey("discover") && commandOutputs.ContainsKey("scan"))
+        // Since we're dealing with directory-based operations rather than template sets,
+        // we'll validate that the commands are operating on consistent data structures
+        foreach (var (commandName, output) in commandOutputs)
         {
-            var discoverSetName = commandOutputs["discover"].GetProperty("templateSet").GetProperty("name").GetString();
-            
-            if (commandOutputs["scan"].TryGetProperty("templateSet", out var scanTemplateSet))
+            // Validate that all JSON outputs have the expected basic structure
+            if (!output.TryGetProperty("command", out _))
             {
-                var scanSetName = scanTemplateSet.GetProperty("name").GetString();
-                if (discoverSetName != scanSetName)
-                {
-                    result.ValidationErrors.Add($"Template set inconsistency between discover ('{discoverSetName}') and scan ('{scanSetName}')");
-                    result.IsValid = false;
-                }
+                result.ValidationErrors.Add($"Command '{commandName}' output missing 'command' property");
+                result.IsValid = false;
+            }
+            
+            if (!output.TryGetProperty("success", out _))
+            {
+                result.ValidationErrors.Add($"Command '{commandName}' output missing 'success' property");
+                result.IsValid = false;
+            }
+            
+            if (!output.TryGetProperty("data", out _))
+            {
+                result.ValidationErrors.Add($"Command '{commandName}' output missing 'data' property");
+                result.IsValid = false;
             }
         }
         

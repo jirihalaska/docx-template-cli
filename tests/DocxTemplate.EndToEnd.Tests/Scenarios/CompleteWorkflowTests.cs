@@ -131,8 +131,10 @@ public class CompleteWorkflowTests : IDisposable
         listResult.IsSuccess.Should().BeTrue();
         
         // Parse the JSON output and use it in subsequent commands
-        var setsData = JsonSerializer.Deserialize<JsonElement>(listResult.StandardOutput);
-        setsData.TryGetProperty("templateSets", out var templateSets).Should().BeTrue("JSON should contain templateSets");
+        var jsonContent = CliProcessExecutor.ExtractJsonFromOutput(listResult.StandardOutput);
+        var setsData = JsonSerializer.Deserialize<JsonElement>(jsonContent);
+        setsData.TryGetProperty("data", out var data).Should().BeTrue("JSON should contain data");
+        data.TryGetProperty("template_sets", out var templateSets).Should().BeTrue("JSON data should contain template_sets");
         
         // Use discovered template set information in subsequent command
         var templateSetPath = Path.Combine(environment.TemplatesDirectory, "TestTemplateSet");
@@ -144,8 +146,10 @@ public class CompleteWorkflowTests : IDisposable
         discoverResult.IsSuccess.Should().BeTrue($"chained discover command should succeed. Error: {discoverResult.StandardError}");
         
         // Verify the chained command worked correctly
-        var discoverData = JsonSerializer.Deserialize<JsonElement>(discoverResult.StandardOutput);
-        discoverData.TryGetProperty("templates", out _).Should().BeTrue("Discover JSON should contain templates property");
+        var discoverJsonContent = CliProcessExecutor.ExtractJsonFromOutput(discoverResult.StandardOutput);
+        var discoverData = JsonSerializer.Deserialize<JsonElement>(discoverJsonContent);
+        discoverData.TryGetProperty("data", out var discoverDataContent).Should().BeTrue("Discover JSON should contain data property");
+        discoverDataContent.TryGetProperty("templates", out _).Should().BeTrue("Discover JSON data should contain templates property");
     }
 
     /// <summary>

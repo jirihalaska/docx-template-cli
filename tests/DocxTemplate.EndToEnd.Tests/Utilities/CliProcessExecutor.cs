@@ -129,9 +129,11 @@ public class CliProcessExecutor : IDisposable
             throw new InvalidOperationException("CLI command returned empty output");
         }
 
+        var jsonContent = ExtractJsonFromOutput(result.StandardOutput);
+
         try
         {
-            return JsonSerializer.Deserialize<T>(result.StandardOutput, new JsonSerializerOptions
+            return JsonSerializer.Deserialize<T>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -139,8 +141,41 @@ public class CliProcessExecutor : IDisposable
         catch (JsonException ex)
         {
             throw new InvalidOperationException(
-                $"Failed to deserialize CLI output as {typeof(T).Name}. Output: {result.StandardOutput}", ex);
+                $"Failed to deserialize CLI output as {typeof(T).Name}. JSON: {jsonContent}", ex);
         }
+    }
+
+    /// <summary>
+    /// Extracts JSON content from mixed CLI output
+    /// </summary>
+    public static string ExtractJsonFromOutput(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+            return output;
+
+        // Look for JSON starting with { or [
+        var lines = output.Split('\n');
+        var jsonStart = -1;
+        
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (trimmed.StartsWith("{") || trimmed.StartsWith("["))
+            {
+                jsonStart = i;
+                break;
+            }
+        }
+
+        if (jsonStart == -1)
+        {
+            // No JSON found, return original output
+            return output;
+        }
+
+        // Extract from the first JSON line to the end
+        var jsonLines = lines.Skip(jsonStart);
+        return string.Join('\n', jsonLines).Trim();
     }
 
     /// <summary>

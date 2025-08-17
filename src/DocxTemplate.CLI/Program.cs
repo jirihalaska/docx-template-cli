@@ -42,6 +42,7 @@ var middleware = new CommandLineBuilder(rootCommand)
 rootCommand.AddCommand(new ListSetsCommand());
 rootCommand.AddCommand(new DiscoverCommand());
 rootCommand.AddCommand(new ScanCommand());
+rootCommand.AddCommand(new CopyCommand());
 
 // Execute
 return await middleware.InvokeAsync(args);

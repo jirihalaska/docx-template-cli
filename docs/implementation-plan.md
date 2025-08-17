@@ -407,6 +407,39 @@ A task is considered complete when:
 - Should work with logging infrastructure when implemented
 - Critical for production reliability scenarios
 
+### Advanced Error Handling and Recovery (Deferred from Story 03.003)
+**Target:** Future iteration (v2.1)
+- **Transaction Support**: Multi-file operations with rollback capability
+  - Checkpointing before destructive operations
+  - Automatic rollback on critical failures
+  - Operation logs for manual recovery scenarios
+  - Partial completion with resume functionality
+
+- **Comprehensive Rollback Mechanisms**: 
+  - File restoration to pre-operation state
+  - Directory structure and permissions restoration
+  - Selective rollback for specific operations
+  - Rollback verification and status reporting
+
+- **Detailed Error Reporting**:
+  - Comprehensive error logs with correlation IDs
+  - Full operation context capture
+  - Error report export for support scenarios
+  - Machine-parseable error formats
+
+- **Advanced Recovery Strategies**:
+  - Retry logic with exponential backoff
+  - Circuit breaker pattern for external services
+  - Graceful degradation for non-critical features
+  - Manual recovery workflows
+  - Resume operations from checkpoints
+
+**Implementation Notes:**
+- Requires comprehensive logging infrastructure
+- Complex state management and persistence
+- Enterprise-level reliability features
+- Should integrate with monitoring and alerting systems
+
 ---
 
 *This implementation plan provides a detailed 4-week roadmap to deliver the DOCX Template CLI v2.0 system with all planned features, comprehensive testing, and documentation.*

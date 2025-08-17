@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITemplateSetService, TemplateSetDiscoveryService>();
         services.AddScoped<ITemplateDiscoveryService, TemplateDiscoveryService>();
         services.AddScoped<IPlaceholderScanService, PlaceholderScanService>();
+        services.AddScoped<ITemplateCopyService, TemplateCopyService>();
 
         // Logging
         services.AddLogging();

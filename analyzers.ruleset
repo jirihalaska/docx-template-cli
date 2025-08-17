@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Custom Analyzer Rules" Description="Custom ruleset for DocxTemplate projects" ToolsVersion="17.0">
+  <IncludeAll Action="Warning" />
+  
+  <!-- StyleCop Rules -->
+  <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
+    <!-- Documentation rules - reduced severity for initial development -->
+    <Rule Id="SA1200" Action="None" />        <!-- Using directives should be placed correctly -->
+    <Rule Id="SA1633" Action="None" />        <!-- File should have header -->
+    <Rule Id="SA1652" Action="None" />        <!-- Enable XML documentation output -->
+    <Rule Id="SA1600" Action="Warning" />     <!-- Elements should be documented -->
+    <Rule Id="SA1601" Action="Warning" />     <!-- Partial elements should be documented -->
+    <Rule Id="SA1602" Action="Warning" />     <!-- Enumeration items should be documented -->
+    
+    <!-- Spacing rules -->
+    <Rule Id="SA1028" Action="Warning" />     <!-- Code should not contain trailing whitespace -->
+    <Rule Id="SA1025" Action="Warning" />     <!-- Code should not contain multiple whitespace in a row -->
+    
+    <!-- Readability rules -->
+    <Rule Id="SA1101" Action="None" />        <!-- Prefix local calls with this -->
+    <Rule Id="SA1309" Action="None" />        <!-- Field names should not begin with underscore -->
+    <Rule Id="SA1311" Action="None" />        <!-- Static readonly fields should begin with upper-case letter -->
+    
+    <!-- Ordering rules -->
+    <Rule Id="SA1200" Action="None" />        <!-- Using directives should be placed correctly -->
+    <Rule Id="SA1208" Action="Warning" />     <!-- System using directives should be placed before other using directives -->
+    
+    <!-- Layout rules -->
+    <Rule Id="SA1500" Action="Warning" />     <!-- Braces for multi-line statements should not share line -->
+    <Rule Id="SA1501" Action="Warning" />     <!-- Statement should not be on a single line -->
+    <Rule Id="SA1502" Action="Warning" />     <!-- Element should not be on a single line -->
+    <Rule Id="SA1503" Action="Warning" />     <!-- Braces should not be omitted -->
+  </Rules>
+
+  <!-- Microsoft.CodeAnalysis.NetAnalyzers -->
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.NetAnalyzers" RuleNamespace="Microsoft.CodeAnalysis.NetAnalyzers">
+    <!-- Design rules -->
+    <Rule Id="CA1000" Action="Warning" />     <!-- Do not declare static members on generic types -->
+    <Rule Id="CA1001" Action="Warning" />     <!-- Types that own disposable fields should be disposable -->
+    <Rule Id="CA1002" Action="Warning" />     <!-- Do not expose generic lists -->
+    <Rule Id="CA1003" Action="Warning" />     <!-- Use generic event handler instances -->
+    <Rule Id="CA1005" Action="Warning" />     <!-- Avoid excessive parameters on generic types -->
+    
+    <!-- Globalization rules -->
+    <Rule Id="CA1303" Action="None" />        <!-- Do not pass literals as localized parameters -->
+    <Rule Id="CA1304" Action="Warning" />     <!-- Specify CultureInfo -->
+    <Rule Id="CA1305" Action="Warning" />     <!-- Specify IFormatProvider -->
+    
+    <!-- Performance rules -->
+    <Rule Id="CA1800" Action="Warning" />     <!-- Do not cast unnecessarily -->
+    <Rule Id="CA1801" Action="Warning" />     <!-- Review unused parameters -->
+    <Rule Id="CA1802" Action="Warning" />     <!-- Use literals where appropriate -->
+    <Rule Id="CA1805" Action="Warning" />     <!-- Do not initialize unnecessarily -->
+    
+    <!-- Security rules -->
+    <Rule Id="CA2100" Action="Warning" />     <!-- Review SQL queries for security vulnerabilities -->
+    <Rule Id="CA2101" Action="Warning" />     <!-- Specify marshaling for P/Invoke string arguments -->
+    <Rule Id="CA2109" Action="Warning" />     <!-- Review visible event handlers -->
+    
+    <!-- Usage rules -->
+    <Rule Id="CA2200" Action="Warning" />     <!-- Rethrow to preserve stack details -->
+    <Rule Id="CA2201" Action="Warning" />     <!-- Do not raise reserved exception types -->
+    <Rule Id="CA2202" Action="Warning" />     <!-- Do not dispose objects multiple times -->
+    <Rule Id="CA2207" Action="Warning" />     <!-- Initialize value type static fields inline -->
+    <Rule Id="CA2208" Action="Warning" />     <!-- Instantiate argument exceptions correctly -->
+    <Rule Id="CA2211" Action="Warning" />     <!-- Non-constant fields should not be visible -->
+    <Rule Id="CA2213" Action="Warning" />     <!-- Disposable fields should be disposed -->
+    <Rule Id="CA2214" Action="Warning" />     <!-- Do not call overridable methods in constructors -->
+    <Rule Id="CA2215" Action="Warning" />     <!-- Dispose methods should call base class dispose -->
+    <Rule Id="CA2216" Action="Warning" />     <!-- Disposable types should declare finalizer -->
+    <Rule Id="CA2217" Action="Warning" />     <!-- Do not mark enums with FlagsAttribute -->
+    <Rule Id="CA2219" Action="Warning" />     <!-- Do not raise exceptions in exception clauses -->
+    <Rule Id="CA2225" Action="Warning" />     <!-- Operator overloads have named alternates -->
+    <Rule Id="CA2226" Action="Warning" />     <!-- Operators should have symmetrical overloads -->
+    <Rule Id="CA2227" Action="Warning" />     <!-- Collection properties should be read only -->
+    <Rule Id="CA2231" Action="Warning" />     <!-- Overload operator equals on overriding value type Equals -->
+    <Rule Id="CA2234" Action="Warning" />     <!-- Pass system uri objects instead of strings -->
+  </Rules>
+</RuleSet>

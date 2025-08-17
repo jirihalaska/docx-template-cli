@@ -31,10 +31,23 @@ public interface ITemplateSetService
     /// <param name="setName">Name of the template set</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Validation result with any issues found</returns>
-    Task<ValidationResult> ValidateTemplateSetAsync(
+    Task<TemplateSetValidationResult> ValidateTemplateSetAsync(
         string templatesRootPath,
         string setName,
         CancellationToken cancellationToken = default);
+}
+
+public record TemplateSetValidationResult
+{
+    public required bool IsValid { get; init; }
+    public required IEnumerable<string> Errors { get; init; }
+    public required IEnumerable<string> Warnings { get; init; }
+    
+    public static TemplateSetValidationResult Success() =>
+        new() { IsValid = true, Errors = Array.Empty<string>(), Warnings = Array.Empty<string>() };
+        
+    public static TemplateSetValidationResult Failure(IEnumerable<string> errors, IEnumerable<string>? warnings = null) =>
+        new() { IsValid = false, Errors = errors, Warnings = warnings ?? Array.Empty<string>() };
 }
 
 public record TemplateSet

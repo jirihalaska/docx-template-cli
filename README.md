@@ -1,6 +1,15 @@
-# DOCX Template CLI
+# DocxTemplate CLI
 
-A clean, modular command-line interface for Word document template processing with placeholder replacement.
+A modern, efficient command-line tool for processing Microsoft Word (.docx) document templates with placeholder replacement.
+
+## Features
+
+- **Template Discovery**: Automatically discover .docx template files in directories
+- **Placeholder Scanning**: Scan documents for placeholders using configurable patterns (default: `{{placeholder}}`)
+- **Smart Replacement**: Replace placeholders with values from JSON mapping files
+- **Template Sets**: Manage collections of related templates as a unified set
+- **Cross-Platform**: Built on .NET 9 for Windows, macOS, and Linux support
+- **High Performance**: Optimized for processing large numbers of documents
 
 ## Architecture Principles
 
@@ -9,6 +18,24 @@ A clean, modular command-line interface for Word document template processing wi
 - **Modular Design**: Each operation is independent and composable  
 - **Testability**: Every component individually testable
 - **Pipeline Support**: Commands can be piped together
+
+## Architecture
+
+This application follows clean architecture principles with three distinct layers:
+
+### 🎯 **DocxTemplate.CLI** 
+Command-line interface layer handling user interaction and command parsing.
+
+### 🔧 **DocxTemplate.Core**
+Business logic layer containing service interfaces and domain models:
+- `ITemplateDiscoveryService` - Template file discovery
+- `IPlaceholderScanService` - Placeholder pattern scanning  
+- `ITemplateCopyService` - Template copying operations
+- `IPlaceholderReplaceService` - Placeholder replacement logic
+- `ITemplateSetService` - Template set management
+
+### 📁 **DocxTemplate.Infrastructure**
+Implementation layer for file I/O and Word document processing using DocumentFormat.OpenXml.
 
 ## Commands
 
@@ -88,7 +115,21 @@ docx-template replace --map values.json
 }
 ```
 
+## Code Quality
+
+This project uses:
+- **StyleCop** for code style enforcement
+- **Microsoft.CodeAnalysis.Analyzers** for code quality
+- **EditorConfig** for consistent formatting
+- **Automated testing** with xUnit, Moq, and FluentAssertions
+- **Performance testing** with BenchmarkDotNet
+
 ## Development
+
+### Prerequisites
+
+- .NET 9.0 SDK
+- Git
 
 ### Project Structure
 ```

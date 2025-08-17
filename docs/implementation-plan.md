@@ -308,4 +308,35 @@ A task is considered complete when:
 
 ---
 
+## Deferred Features
+
+### Logging Infrastructure (Deferred from Story 01.003 AC2)
+**Target:** Future iteration (v2.1)
+- Structured logging with correlation IDs for operation tracking
+- Multiple log levels (Debug, Info, Warning, Error, Critical)
+- File-based logging with rotation and retention policies
+- Console logging with colored output for development
+- Performance logging for operation timing and metrics
+
+**Implementation Notes:**
+- Can be added without breaking existing functionality
+- Consider using Microsoft.Extensions.Logging or Serilog
+- Should integrate with existing error handling framework
+
+### Retry Policy Implementation (Deferred from Story 01.003 AC4)
+**Target:** Future iteration (v2.1)
+- Exponential backoff for file I/O operations
+- Circuit breaker pattern for external service calls
+- Timeout handling with configurable thresholds
+- Retry count limits with failure escalation
+- Detailed retry attempt logging for troubleshooting
+
+**Implementation Notes:**
+- Use Polly library for resilience patterns
+- Integrate with configuration management for policy settings
+- Should work with logging infrastructure when implemented
+- Critical for production reliability scenarios
+
+---
+
 *This implementation plan provides a detailed 4-week roadmap to deliver the DOCX Template CLI v2.0 system with all planned features, comprehensive testing, and documentation.*

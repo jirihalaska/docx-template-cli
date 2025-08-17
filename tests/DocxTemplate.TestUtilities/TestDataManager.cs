@@ -8,7 +8,7 @@ namespace DocxTemplate.TestUtilities;
 /// <summary>
 /// Manages test data creation and cleanup for testing scenarios
 /// </summary>
-public static class TestDataManager
+public class TestDataManager
 {
     /// <summary>
     /// Creates a temporary directory for test data
@@ -170,5 +170,123 @@ public static class TestDataManager
                 { "product_price", "$1,000.00" }
             }
         };
+    }
+
+    /// <summary>
+    /// Creates a Word document with specified placeholders asynchronously
+    /// </summary>
+    public async Task CreateTestDocumentAsync(string filePath, List<string> placeholders, bool includeCzechCharacters = false)
+    {
+        using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
+        
+        var mainPart = document.AddMainDocumentPart();
+        mainPart.Document = new Document();
+        var body = mainPart.Document.AppendChild(new Body());
+
+        // Add title
+        var titleParagraph = new Paragraph();
+        var titleRun = new Run();
+        var titleText = includeCzechCharacters ? "Testovací dokument s českými znaky" : "Test Document";
+        titleRun.Append(new Text(titleText));
+        titleParagraph.Append(titleRun);
+        body.Append(titleParagraph);
+
+        // Add placeholders
+        foreach (var placeholder in placeholders)
+        {
+            var paragraph = new Paragraph();
+            var run = new Run();
+            var text = includeCzechCharacters ? 
+                $"Tento dokument obsahuje zástupný symbol {{{{{placeholder}}}}} pro testování." :
+                $"This document contains placeholder {{{{{placeholder}}}}} for testing.";
+            run.Append(new Text(text));
+            paragraph.Append(run);
+            body.Append(paragraph);
+        }
+
+        if (includeCzechCharacters)
+        {
+            // Add specific Czech characters test content
+            var czechParagraph = new Paragraph();
+            var czechRun = new Run();
+            czechRun.Append(new Text("Specifické české znaky: áčďéěíňóřšťúůýž ÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"));
+            czechParagraph.Append(czechRun);
+            body.Append(czechParagraph);
+        }
+
+        mainPart.Document.Save();
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Creates a complex test document with various elements asynchronously
+    /// </summary>
+    public async Task CreateComplexTestDocumentAsync(string filePath, dynamic complexitySpec)
+    {
+        using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
+        
+        var mainPart = document.AddMainDocumentPart();
+        mainPart.Document = new Document();
+        var body = mainPart.Document.AppendChild(new Body());
+
+        // Add title
+        var titleParagraph = new Paragraph();
+        var titleRun = new Run();
+        titleRun.Append(new Text($"Complex Test Document - {complexitySpec.Name}"));
+        titleParagraph.Append(titleRun);
+        body.Append(titleParagraph);
+
+        // Add placeholders based on complexity
+        for (int i = 1; i <= complexitySpec.PlaceholderCount; i++)
+        {
+            var paragraph = new Paragraph();
+            var run = new Run();
+            var placeholderName = complexitySpec.HasCzechCharacters ? $"český_zástupce_{i}" : $"placeholder_{i}";
+            run.Append(new Text($"Placeholder {{{{{placeholderName}}}}} in document."));
+            paragraph.Append(run);
+            body.Append(paragraph);
+        }
+
+        // Add table if specified
+        if (complexitySpec.HasTables)
+        {
+            var table = new Table();
+            
+            // Add table header
+            var headerRow = new TableRow();
+            var headerCell1 = new TableCell();
+            headerCell1.Append(new Paragraph(new Run(new Text("Column 1 - {{table_header_1}}"))));
+            var headerCell2 = new TableCell();
+            headerCell2.Append(new Paragraph(new Run(new Text("Column 2 - {{table_header_2}}"))));
+            headerRow.Append(headerCell1, headerCell2);
+            table.Append(headerRow);
+            
+            // Add data rows
+            for (int i = 1; i <= 3; i++)
+            {
+                var row = new TableRow();
+                var cell1 = new TableCell();
+                cell1.Append(new Paragraph(new Run(new Text($"{{{{table_data_{i}_1}}}}"))));
+                var cell2 = new TableCell();
+                cell2.Append(new Paragraph(new Run(new Text($"{{{{table_data_{i}_2}}}}"))));
+                row.Append(cell1, cell2);
+                table.Append(row);
+            }
+            
+            body.Append(table);
+        }
+
+        // Add Czech characters if specified
+        if (complexitySpec.HasCzechCharacters)
+        {
+            var czechParagraph = new Paragraph();
+            var czechRun = new Run();
+            czechRun.Append(new Text("Testování českých znaků: {{český_název}}, {{adresa_město}}, {{poznámka}}"));
+            czechParagraph.Append(czechRun);
+            body.Append(czechParagraph);
+        }
+
+        mainPart.Document.Save();
+        await Task.CompletedTask;
     }
 }

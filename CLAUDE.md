@@ -57,9 +57,22 @@ This is a clean, modular .NET 9 command-line application for Word document templ
 - `PlaceholderLocation` - Tracks where placeholders appear in templates
 
 ### Implementation Status
-Currently in initial development phase. Core interfaces are defined but implementations are pending. The CLI entry point exists but commands are not yet implemented.
+CLI commands are implemented and functional:
+- `discover` - Find DOCX files in directories
+- `scan` - Find placeholders in DOCX files using regex patterns  
+- `copy` - Copy templates with performance metrics
+- `list-sets` - List template sets (directories)
+
+All commands support JSON output format for programmatic use.
 
 ## Testing Conventions
 - Unit tests use XUnit framework
 - Use lowercase arrange, act, assert comments in tests
 - Execute specific tests using `--filter` parameter
+
+## CLI Documentation Maintenance
+**IMPORTANT**: When making changes to CLI commands, you MUST update the documentation:
+- File: `docs/cli-reference.md`
+- Update command parameters, output schemas, and behavior
+- Test actual CLI output and update examples
+- The documentation must reflect the current CLI implementation exactly

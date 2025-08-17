@@ -9,22 +9,25 @@ public class TemplateFileTests
     public void TemplateFile_WithValidProperties_ShouldCreateCorrectly()
     {
         // arrange & act
+        var fullPath = Path.Combine("test", "templates", "document.docx");
+        var expectedDirectory = Path.Combine("test", "templates");
+        
         var templateFile = new TemplateFile
         {
-            FullPath = "/test/templates/document.docx",
-            RelativePath = "templates/document.docx",
+            FullPath = fullPath,
+            RelativePath = Path.Combine("templates", "document.docx"),
             FileName = "document.docx",
             SizeInBytes = 2048,
             LastModified = new DateTime(2025, 1, 2)
         };
 
         // assert
-        templateFile.FullPath.Should().Be("/test/templates/document.docx");
-        templateFile.RelativePath.Should().Be("templates/document.docx");
+        templateFile.FullPath.Should().Be(fullPath);
+        templateFile.RelativePath.Should().Be(Path.Combine("templates", "document.docx"));
         templateFile.FileName.Should().Be("document.docx");
         templateFile.SizeInBytes.Should().Be(2048);
         templateFile.LastModified.Should().Be(new DateTime(2025, 1, 2));
-        templateFile.DirectoryName.Should().Be("/test/templates");
+        templateFile.DirectoryName.Should().Be(expectedDirectory);
         templateFile.FileNameWithoutExtension.Should().Be("document");
         templateFile.Extension.Should().Be(".docx");
     }
@@ -40,7 +43,7 @@ public class TemplateFileTests
         // arrange
         var templateFile = new TemplateFile
         {
-            FullPath = "/test/document.docx",
+            FullPath = Path.Combine("test", "document.docx"),
             RelativePath = "document.docx",
             FileName = "document.docx",
             SizeInBytes = sizeBytes,
@@ -60,8 +63,8 @@ public class TemplateFileTests
         // arrange & act
         var templateFile = new TemplateFile
         {
-            FullPath = "/test/šablony/název_dokumentu.docx",
-            RelativePath = "šablony/název_dokumentu.docx",
+            FullPath = Path.Combine("test", "šablony", "název_dokumentu.docx"),
+            RelativePath = Path.Combine("šablony", "název_dokumentu.docx"),
             FileName = "název_dokumentu.docx",
             SizeInBytes = 1024,
             LastModified = DateTime.UtcNow

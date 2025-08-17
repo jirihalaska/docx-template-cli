@@ -156,45 +156,61 @@ docx-template list-sets --templates <path> [options]
 
 #### Command: discover
 ```bash
-docx-template discover --templates <path> --set <name> [options]
-  --templates, -t      Templates root folder (required)
-  --set, -s           Template set name (required)
+docx-template discover --path <directory> [options]
+  --path, -p           Directory path to scan (required)
   --recursive, -r      Include subdirectories (default: true)
-  --pattern, -p        File pattern (default: *.docx)
-  --output, -o         Output file path (default: stdout)
+  --format, -f         Output format (text|json|table|csv, default: text)
+  --include, -i        File patterns to include (default: *.docx)
+  --exclude, -e        File patterns to exclude
+  --max-depth, -d      Maximum directory depth
+  --min-size           Minimum file size in bytes
+  --max-size           Maximum file size in bytes
+  --modified-after     Files modified after date (yyyy-MM-dd)
+  --modified-before    Files modified before date (yyyy-MM-dd)
+  --quiet, -q          Suppress progress messages (default: false)
 ```
 
 #### Command: scan
 ```bash
-docx-template scan --templates <path> --set <name> [options]
-  --templates, -t      Templates root folder (required)
-  --set, -s           Template set name (required)
-  --pattern, -p        Placeholder pattern (default: {{.*?}})
+docx-template scan --path <directory|file> [options]
+  --path, -p           Directory or file path to scan (required)
   --recursive, -r      Include subdirectories (default: true)
-  --unique, -u         Show only unique placeholders (default: true)
-  --output, -o         Output file path (default: stdout)
+  --pattern            Regex patterns for placeholders (default: {{.*?}})
+  --format, -f         Output format (text|json|table|csv, default: text)
+  --statistics, -s     Include detailed statistics (default: false)
+  --case-sensitive, -c Case-sensitive matching (default: false)
+  --parallelism        Number of parallel threads (default: ProcessorCount)
+  --quiet, -q          Suppress progress messages (default: false)
 ```
 
 #### Command: copy
 ```bash
-docx-template copy --templates <path> --set <name> --target <path> [options]
-  --templates, -t      Templates root folder (required)
-  --set, -s           Template set name (required)
-  --target, -g         Target folder path (required)
-  --timestamp, -m      Add timestamp to target folder (default: true)
-  --overwrite, -w      Overwrite existing files (default: false)
+docx-template copy --source <source_dir> --target <target_dir> [options]
+  --source, -s         Source directory path (required)
+  --target, -t         Target directory path (required)
+  --preserve-structure Preserve directory structure (default: true)
+  --overwrite, -f      Overwrite existing files (default: false)
   --dry-run, -d        Preview operation without copying
+  --format, -o         Output format (text|json|table|csv, default: text)
+  --quiet, -q          Suppress progress messages (default: false)
+  --validate, -v       Validate copy operation before executing (default: false)
+  --estimate, -e       Show disk space estimate (default: false)
 ```
 
-#### Command: replace
+#### Command: replace (Not Yet Implemented)
 ```bash
 docx-template replace --folder <path> --map <file> [options]
-  --folder, -f         Target folder with copied template set (required)
+  --folder, -f         Target folder with copied templates (required)
   --map, -m           Replacement map file (required)
   --backup, -b         Create backups (default: true)
   --recursive, -r      Include subdirectories (default: true)
   --dry-run, -d        Preview replacements without modifying
+  --format, -o         Output format (text|json|table, default: text)
+  --quiet, -q          Suppress progress messages (default: false)
+  --pattern, -p        Placeholder pattern (default: {{.*?}})
 ```
+
+**Note:** The replace command is planned for implementation in Story 03.001.
 
 ### Output Formats
 
@@ -270,7 +286,7 @@ DocxTemplate.Tests/           # Test Projects
 ## Success Metrics
 
 ### Technical Metrics
-- [x] All 5 CLI commands fully functional
+- [ ] All 5 CLI commands fully functional (4 of 5 implemented, replace pending)
 - [x] Comprehensive unit test coverage achieved (46.6%, 90% deferred to v2.1)
 - [ ] <10 second processing for 100 files
 - [ ] Zero memory leaks in 24-hour stress test
@@ -305,8 +321,8 @@ DocxTemplate.Tests/           # Test Projects
 - [x] Implement copy command
 - [x] Integration tests
 
-### Phase 3: Advanced Commands (Week 3) ✅ COMPLETED
-- [x] Implement replace command
+### Phase 3: Advanced Commands (Week 3) 🔄 IN PROGRESS
+- [ ] Implement replace command (Story 03.001 - Pending)
 - [x] Error handling and recovery
 
 ### Phase 4: Polish & Testing (Week 4) 🔄 IN PROGRESS
@@ -397,22 +413,22 @@ docx-template list-sets --templates /shared/templates
 # 2. Invoice_Templates (8 files, 1.1 MB)  
 # 3. Report_Templates (12 files, 3.5 MB)
 
-# Step 2: Select and explore a template set
-docx-template discover --templates /shared/templates --set Contract_Templates
+# Step 2: Explore templates in a directory
+docx-template discover --path /shared/templates/Contract_Templates
 # Output: Found 15 templates with complex directory structure
 
 # Step 3: Find what needs to be filled in
-docx-template scan --templates /shared/templates --set Contract_Templates
+docx-template scan --path /shared/templates/Contract_Templates
 # Output: 25 unique placeholders found:
 # {{COMPANY_NAME}}, {{CONTRACT_DATE}}, {{CLIENT_NAME}}, ...
 
-# Step 4: Copy the template set to working directory
-docx-template copy --templates /shared/templates --set Contract_Templates --target ./working
-# Output: Copied to ./working/Contract_Templates_2025-08-17_143025/
+# Step 4: Copy templates to working directory
+docx-template copy --source /shared/templates/Contract_Templates --target ./working
+# Output: Copied 15 files to ./working/
 
-# Step 5: Replace placeholders with actual values
-docx-template replace --folder ./working/Contract_Templates_2025-08-17_143025 --map contract-values.json
-# Output: Successfully replaced 375 placeholders in 15 documents
+# Step 5: Replace placeholders with actual values (NOT YET IMPLEMENTED)
+# docx-template replace --folder ./working --map contract-values.json
+# Output: Will replace placeholders when implemented
 ```
 
 

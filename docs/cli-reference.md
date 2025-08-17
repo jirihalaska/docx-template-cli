@@ -4,14 +4,15 @@ This document provides precise documentation of the DocxTemplate CLI commands fo
 
 ## Overview
 
-The DocxTemplate CLI provides five main commands for working with DOCX template files:
+The DocxTemplate CLI currently provides four main commands for working with DOCX template files:
 - `list-sets` - List template sets (top-level directories containing templates)
-- `discover` - Find DOCX files within a specific template set
+- `discover` - Find DOCX files within a directory
 - `scan` - Find placeholders in DOCX files using regex patterns
-- `copy` - Copy template sets with performance metrics
-- `replace` - Replace placeholders with values from mapping files
+- `copy` - Copy templates with performance metrics
 
 All commands support JSON output format for programmatic use.
+
+**Note:** The `replace` command is planned but not yet implemented (see Story 03.001).
 
 ## Commands
 
@@ -215,19 +216,21 @@ list-sets --templates <templates_dir> [options]
 }
 ```
 
+## Planned Commands (Not Yet Implemented)
+
 ### replace
 **Purpose:** Replace placeholders in DOCX files with values from a mapping file
 
-**Syntax:**
+**Status:** Planned for implementation in Story 03.001
+
+**Planned Syntax:**
 ```bash
 replace --folder <target_dir> --map <mapping_file> [options]
 ```
 
-**Required Parameters:**
+**Planned Parameters:**
 - `--folder, -f`: Target directory containing copied templates
 - `--map, -m`: JSON file containing placeholder mappings
-
-**Optional Parameters:**
 - `--backup, -b`: Create backups before replacement (default: true)
 - `--recursive, -r`: Include subdirectories (default: true)
 - `--dry-run, -d`: Preview replacements without modifying files (default: false)
@@ -235,7 +238,7 @@ replace --folder <target_dir> --map <mapping_file> [options]
 - `--quiet, -q`: Suppress progress messages (default: false)
 - `--pattern, -p`: Placeholder pattern (default: {{.*?}})
 
-**Mapping File Format:**
+**Planned Mapping File Format:**
 ```json
 {
   "placeholders": {
@@ -251,7 +254,7 @@ replace --folder <target_dir> --map <mapping_file> [options]
 }
 ```
 
-**JSON Output Schema:**
+**Planned JSON Output Schema:**
 ```json
 {
   "command": "replace",
@@ -297,9 +300,10 @@ Error: Folder path not found: /nonexistent
 
 ## Current Limitations
 
-1. **No standardized error JSON format** - Errors go to stderr as text
-2. **Console output mixed with JSON** - Progress messages appear before JSON in quiet mode
-3. **JSON field naming** - Property names use snake_case (e.g., `template_sets`, `full_path`) despite JsonNamingPolicy.CamelCase in code
+1. **Replace command not implemented** - The `replace` command is planned but not yet available
+2. **No standardized error JSON format** - Errors go to stderr as text
+3. **Console output mixed with JSON** - Progress messages appear before JSON in quiet mode
+4. **JSON field naming** - Property names use snake_case (e.g., `template_sets`, `full_path`) despite JsonNamingPolicy.CamelCase in code
 
 ## Maintenance
 

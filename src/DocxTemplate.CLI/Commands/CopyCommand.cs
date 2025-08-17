@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using DocxTemplate.Core.Models.Results;
@@ -395,7 +396,7 @@ public class CopyCommand : Command
                 fileName = fileName.Substring(0, 47) + "...";
             }
 
-            var duration = file.CopyDuration?.TotalMilliseconds.ToString("F0") + "ms" ?? "N/A";
+            var duration = file.CopyDuration?.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture) + "ms" ?? "N/A";
             if (duration.Length > 9)
             {
                 duration = duration.Substring(0, 9);
@@ -421,7 +422,7 @@ public class CopyCommand : Command
 
         foreach (var file in result.CopiedFiles)
         {
-            csv.AppendLine($"\"{file.SourcePath}\",\"{file.TargetPath}\",{file.SizeInBytes},\"{file.DisplaySize}\",{file.CopyDuration?.TotalMilliseconds:F0},{file.CopiedAt:yyyy-MM-ddTHH:mm:ss.fffZ}");
+            csv.AppendLine(CultureInfo.InvariantCulture, $"\"{file.SourcePath}\",\"{file.TargetPath}\",{file.SizeInBytes},\"{file.DisplaySize}\",{file.CopyDuration?.TotalMilliseconds:F0},{file.CopiedAt:yyyy-MM-ddTHH:mm:ss.fffZ}");
         }
 
         await Console.Out.WriteAsync(csv.ToString());
@@ -454,7 +455,7 @@ public class CopyCommand : Command
         foreach (var file in sampleFiles)
         {
             var fileName = Path.GetFileName(file.TargetPath);
-            var duration = file.CopyDuration?.TotalMilliseconds.ToString("F0") + "ms" ?? "N/A";
+            var duration = file.CopyDuration?.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture) + "ms" ?? "N/A";
             Console.WriteLine($"  • {fileName} ({file.DisplaySize}) - {duration}");
         }
 

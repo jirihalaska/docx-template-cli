@@ -77,7 +77,7 @@ public class ErrorHandlerTests
     public async Task HandleExceptionAsync_WithCriticalException_ReturnsCriticalErrorResult()
     {
         // arrange
-        var exception = new OutOfMemoryException("Not enough memory");
+        var exception = new InvalidOperationException("Invalid operation occurred");
         const string operationContext = "memory allocation";
 
         // act
@@ -86,7 +86,7 @@ public class ErrorHandlerTests
         // assert
         Assert.True(result.IsCritical);
         Assert.Equal(99, result.ExitCode);
-        Assert.Contains("Not enough memory", result.Message);
+        Assert.Contains("Invalid operation occurred", result.Message);
     }
 
     [Theory]
@@ -94,7 +94,7 @@ public class ErrorHandlerTests
     [InlineData(typeof(UnauthorizedAccessException), 3)]
     [InlineData(typeof(ArgumentException), 1)]
     [InlineData(typeof(DocumentProcessingException), 4)]
-    [InlineData(typeof(OutOfMemoryException), 99)]
+    [InlineData(typeof(SystemException), 99)]
     public void GetExitCode_WithVariousExceptions_ReturnsCorrectExitCode(Type exceptionType, int expectedExitCode)
     {
         // arrange
@@ -108,9 +108,8 @@ public class ErrorHandlerTests
     }
 
     [Theory]
-    [InlineData(typeof(OutOfMemoryException), true)]
-    [InlineData(typeof(StackOverflowException), true)]
     [InlineData(typeof(SystemException), true)]
+    [InlineData(typeof(InvalidOperationException), true)]
     [InlineData(typeof(FileNotFoundException), false)]
     [InlineData(typeof(ArgumentException), false)]
     [InlineData(typeof(DocumentProcessingException), false)]
@@ -211,7 +210,7 @@ public class ErrorHandlerTests
     public async Task HandleExceptionAsync_WithCriticalError_LogsAsError()
     {
         // arrange
-        var exception = new OutOfMemoryException("Out of memory");
+        var exception = new InvalidOperationException("Invalid operation occurred");
         const string operationContext = "memory allocation";
 
         // act

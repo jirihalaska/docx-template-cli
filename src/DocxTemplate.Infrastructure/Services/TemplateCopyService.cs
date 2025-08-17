@@ -162,7 +162,7 @@ public class TemplateCopyService : ITemplateCopyService
     }
 
     /// <inheritdoc />
-    public async Task<CopiedFile> CopyTemplateFileAsync(
+    public Task<CopiedFile> CopyTemplateFileAsync(
         TemplateFile sourceFile,
         string targetPath,
         bool overwrite = false,
@@ -237,13 +237,13 @@ public class TemplateCopyService : ITemplateCopyService
             _logger.LogDebug("Successfully copied {SourcePath} to {TargetPath} in {Duration}ms",
                 sourceFile.FullPath, targetFilePath, duration.TotalMilliseconds);
 
-            return new CopiedFile
+            return Task.FromResult(new CopiedFile
             {
                 SourcePath = sourceFile.FullPath,
                 TargetPath = targetFilePath,
                 SizeInBytes = sourceFile.SizeInBytes,
                 CopyDuration = duration
-            };
+            });
         }
         catch (Exception ex)
         {
@@ -452,7 +452,7 @@ public class TemplateCopyService : ITemplateCopyService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<string>> CreateDirectoryStructureAsync(
+    public Task<IReadOnlyList<string>> CreateDirectoryStructureAsync(
         IReadOnlyList<TemplateFile> templateFiles,
         string targetPath,
         CancellationToken cancellationToken = default)
@@ -499,7 +499,7 @@ public class TemplateCopyService : ITemplateCopyService
                 }
             }
 
-            return createdDirectories.AsReadOnly();
+            return Task.FromResult<IReadOnlyList<string>>(createdDirectories.AsReadOnly());
         }
         catch (Exception ex) when (ex is not FileAccessException)
         {

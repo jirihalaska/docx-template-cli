@@ -5,6 +5,7 @@ using DocxTemplate.Core.Services;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace DocxTemplate.Infrastructure.Services;
@@ -323,7 +324,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             }
 
             var startTime = DateTime.UtcNow;
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
             var actualBackupDirectory = backupDirectory ?? 
                 Path.Combine(Path.GetDirectoryName(templateFiles[0].FullPath)!, $"backup_{timestamp}");
 
@@ -391,7 +392,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         }
     }
 
-    private async Task<IReadOnlyList<TemplateFile>> DiscoverTemplateFilesAsync(string folderPath, CancellationToken cancellationToken)
+    private Task<IReadOnlyList<TemplateFile>> DiscoverTemplateFilesAsync(string folderPath, CancellationToken cancellationToken)
     {
         var files = _fileSystemService.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly);
         var templateFiles = new List<TemplateFile>();
@@ -425,7 +426,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             }
         }
 
-        return templateFiles;
+        return Task.FromResult<IReadOnlyList<TemplateFile>>(templateFiles);
     }
 
     private async Task<string> CreateFileBackupAsync(string filePath, CancellationToken cancellationToken)
@@ -435,7 +436,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         return backupPath;
     }
 
-    private async Task<int> ProcessDocumentReplacementsAsync(
+    private Task<int> ProcessDocumentReplacementsAsync(
         string filePath,
         ReplacementMap replacementMap,
         CancellationToken cancellationToken)
@@ -480,10 +481,10 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         wordDocument.MainDocumentPart?.Document?.Save();
         
         _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", replacementCount, filePath);
-        return replacementCount;
+        return Task.FromResult(replacementCount);
     }
 
-    private async Task<FileReplacementPreview> CreateFilePreviewAsync(
+    private Task<FileReplacementPreview> CreateFilePreviewAsync(
         string filePath,
         ReplacementMap replacementMap,
         CancellationToken cancellationToken)
@@ -532,25 +533,25 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to preview file: {FilePath}", filePath);
-            return new FileReplacementPreview
+            return Task.FromResult(new FileReplacementPreview
             {
                 FilePath = filePath,
                 ReplacementCount = 0,
                 CanProcess = false,
                 ErrorMessage = ex.Message,
                 ReplacementDetails = Array.Empty<ReplacementDetail>()
-            };
+            });
         }
 
         var totalReplacements = replacementDetails.Where(r => !string.IsNullOrEmpty(r.NewValue)).Sum(r => r.OccurrenceCount);
 
-        return new FileReplacementPreview
+        return Task.FromResult(new FileReplacementPreview
         {
             FilePath = filePath,
             ReplacementCount = totalReplacements,
             CanProcess = true,
             ReplacementDetails = replacementDetails
-        };
+        });
     }
 
     /// <inheritdoc />

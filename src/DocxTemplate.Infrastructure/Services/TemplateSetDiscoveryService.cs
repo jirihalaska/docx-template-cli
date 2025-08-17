@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
@@ -372,7 +373,7 @@ public class TemplateSetDiscoveryService : ITemplateSetService
     }
 
     /// <inheritdoc />
-    public async Task<CopyResult> CreateTemplateSetCopyAsync(
+    public Task<CopyResult> CreateTemplateSetCopyAsync(
         string sourceSetPath,
         string targetSetPath,
         bool preserveStructure = true,
@@ -454,7 +455,7 @@ public class TemplateSetDiscoveryService : ITemplateSetService
         // Add date-based suggestions
         if (suggestions.Count < maxSuggestions)
         {
-            var dateStr = DateTime.Now.ToString("yyyyMMdd");
+            var dateStr = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
             var dateSuggestion = $"{baseName}_{dateStr}";
             if (!existingNames.Contains(dateSuggestion))
             {

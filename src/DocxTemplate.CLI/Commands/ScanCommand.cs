@@ -359,7 +359,7 @@ public class ScanCommand : Command
         {
             foreach (var location in placeholder.Locations)
             {
-                csv.AppendLine($"\"{placeholder.Name}\",\"{placeholder.Pattern}\",{placeholder.TotalOccurrences},{placeholder.UniqueFileCount},\"{location.FilePath}\",\"{location.FileName}\",{location.Occurrences},\"{location.Context?.Replace("\"", "\"\"")}\"");
+                csv.AppendLine(CultureInfo.InvariantCulture, $"\"{placeholder.Name}\",\"{placeholder.Pattern}\",{placeholder.TotalOccurrences},{placeholder.UniqueFileCount},\"{location.FilePath}\",\"{location.FileName}\",{location.Occurrences},\"{location.Context?.Replace("\"", "\"\"")}\"");
             }
         }
 

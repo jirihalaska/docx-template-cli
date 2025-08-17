@@ -25,7 +25,7 @@ public class DiscoverCommandTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public void DiscoverCommand_WhenFolderPathIsInvalid_ShouldReturnError(string invalidPath)
+    public void DiscoverCommand_WhenFolderPathIsInvalid_ShouldReturnError(string? invalidPath)
     {
         // arrange
         var mockService = new Mock<ITemplateDiscoveryService>();
@@ -71,5 +71,5 @@ public class DiscoverCommand
 
 public class DiscoverCommandOptions
 {
-    public string FolderPath { get; set; } = string.Empty;
+    public string? FolderPath { get; set; } = string.Empty;
 }

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using System.Text.Json;
 using DocxTemplate.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -147,7 +148,7 @@ public class ListSetsCommand : Command
         {
             var name = ts.Name.Length > 30 ? ts.Name.Substring(0, 27) + "..." : ts.Name;
             var status = ts.IsValid() ? "Valid" : "Invalid";
-            var lastMod = ts.LastModified.ToString("yyyy-MM-dd HH:mm");
+            var lastMod = ts.LastModified.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
             Console.WriteLine($"║ {name,-30} │ {ts.TemplateCount,9} │ {ts.DisplaySize,9} │ {lastMod,18} │ {status,8} ║");
 

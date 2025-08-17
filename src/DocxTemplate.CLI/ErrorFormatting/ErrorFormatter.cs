@@ -1,4 +1,5 @@
 using DocxTemplate.Core.Models.Results;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -20,18 +21,18 @@ public static class ErrorFormatter
         var sb = new StringBuilder();
         
         // Main error message
-        sb.AppendLine($"Error: {error.Message}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Error: {error.Message}");
         
         // Add context if different from message
         if (!string.IsNullOrEmpty(error.OperationContext))
         {
-            sb.AppendLine($"Operation: {error.OperationContext}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Operation: {error.OperationContext}");
         }
         
         // Add file path if available
         if (!string.IsNullOrEmpty(error.FilePath))
         {
-            sb.AppendLine($"File: {error.FilePath}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"File: {error.FilePath}");
         }
         
         // Add technical details if requested

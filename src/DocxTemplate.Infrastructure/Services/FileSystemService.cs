@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using DocxTemplate.Core.Exceptions;
 
@@ -380,7 +381,7 @@ public class FileSystemService : IFileSystemService
             throw new FileAccessException($"Cannot create backup: source file not found: {filePath}");
         }
 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
         var extension = GetExtension(filePath);
         var nameWithoutExtension = GetFileNameWithoutExtension(filePath);
         var directory = GetDirectoryName(filePath);

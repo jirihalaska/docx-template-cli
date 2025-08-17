@@ -315,7 +315,7 @@ public class DiscoverCommand : Command
 
         foreach (var template in templates)
         {
-            csv.AppendLine($"\"{template.RelativePath}\",\"{template.FileName}\",{template.SizeInBytes},{template.LastModified:yyyy-MM-dd HH:mm:ss},\"{template.DirectoryName}\"");
+            csv.AppendLine(CultureInfo.InvariantCulture, $"\"{template.RelativePath}\",\"{template.FileName}\",{template.SizeInBytes},{template.LastModified:yyyy-MM-dd HH:mm:ss},\"{template.DirectoryName}\"");
         }
 
         await Console.Out.WriteAsync(csv.ToString());

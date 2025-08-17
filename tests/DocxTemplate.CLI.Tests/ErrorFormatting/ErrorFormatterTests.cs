@@ -114,7 +114,7 @@ public class ErrorFormatterTests
     public void FormatCommandResult_WithSuccessfulResult_ReturnsSuccessMessage()
     {
         // arrange
-        var result = CommandResult<string>.Success("operation completed");
+        var result = CommandResult.Success("operation completed");
 
         // act
         var formatted = ErrorFormatter.FormatCommandResult(result);
@@ -128,7 +128,7 @@ public class ErrorFormatterTests
     {
         // arrange
         var error = ErrorResult.ValidationError("Invalid data", "validation");
-        var result = CommandResult<string>.Failure(error);
+        var result = CommandResult.Failure<string>(error);
 
         // act
         var formatted = ErrorFormatter.FormatCommandResult(result);
@@ -143,7 +143,7 @@ public class ErrorFormatterTests
     {
         // arrange
         var data = new { name = "test", value = 42 };
-        var result = CommandResult<object>.Success(data);
+        var result = CommandResult.Success(data);
 
         // act
         var json = ErrorFormatter.FormatCommandResultAsJson(result);
@@ -164,7 +164,7 @@ public class ErrorFormatterTests
     {
         // arrange
         var error = ErrorResult.ValidationError("Invalid input", "validation");
-        var result = CommandResult<string>.Failure(error);
+        var result = CommandResult.Failure<string>(error);
 
         // act
         var json = ErrorFormatter.FormatCommandResultAsJson(result);

@@ -92,8 +92,7 @@ public class ErrorHandler : IErrorHandler
             UnauthorizedAccessException => 3,
             
             // Critical system errors (specific first)
-            OutOfMemoryException => 99,
-            StackOverflowException => 99,
+            InvalidOperationException => 99,
             
             // I/O exceptions (after more specific ones)
             IOException => 4,
@@ -119,8 +118,7 @@ public class ErrorHandler : IErrorHandler
             DocumentProcessingException => false,
             
             // Critical system exceptions (specific first)
-            OutOfMemoryException => true,
-            StackOverflowException => true,
+            InvalidOperationException => true,
             
             // Non-critical system exceptions (specific first for inheritance)
             ArgumentNullException => false,

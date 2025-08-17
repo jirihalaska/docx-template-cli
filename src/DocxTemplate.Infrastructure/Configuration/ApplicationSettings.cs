@@ -49,7 +49,7 @@ public class LoggingSettings
 {
     public string LogLevel { get; set; } = "Information";
     
-    public bool EnableFileLogging { get; set; } = false;
+    public bool EnableFileLogging { get; set; }
     
     public string LogFilePath { get; set; } = "logs/docx-template-{Date}.log";
     

@@ -71,7 +71,7 @@ public class TestEnvironmentProvisioner : IDisposable
     /// <summary>
     /// Creates a temporary directory for testing
     /// </summary>
-    public string CreateTemporaryDirectory(string name = null)
+    public string CreateTemporaryDirectory(string? name = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), name ?? $"docx-template-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -82,7 +82,7 @@ public class TestEnvironmentProvisioner : IDisposable
     /// <summary>
     /// Creates a temporary file for testing
     /// </summary>
-    public string CreateTemporaryFile(string content, string extension = ".txt", string name = null)
+    public string CreateTemporaryFile(string content, string extension = ".txt", string? name = null)
     {
         var fileName = name ?? $"test-{Guid.NewGuid():N}{extension}";
         var tempFile = Path.Combine(Path.GetTempPath(), fileName);

@@ -29,7 +29,7 @@ public class CliProcessExecutor : IDisposable
     /// </summary>
     public async Task<CliExecutionResult> ExecuteAsync(
         string command, 
-        string workingDirectory = null, 
+        string? workingDirectory = null, 
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -97,7 +97,7 @@ public class CliProcessExecutor : IDisposable
                 StandardError = errorBuilder.ToString().Trim(),
                 Duration = stopwatch.Elapsed,
                 Command = command,
-                WorkingDirectory = workingDirectory
+                WorkingDirectory = workingDirectory ?? string.Empty
             };
         }
         finally
@@ -112,7 +112,7 @@ public class CliProcessExecutor : IDisposable
     /// </summary>
     public async Task<T> ExecuteAndDeserializeAsync<T>(
         string command, 
-        string workingDirectory = null, 
+        string? workingDirectory = null, 
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -148,7 +148,7 @@ public class CliProcessExecutor : IDisposable
     /// </summary>
     public static string GetCliExecutablePath(string configuration = "Debug")
     {
-        var assemblyDirectory = Path.GetDirectoryName(typeof(CliProcessExecutor).Assembly.Location);
+        var assemblyDirectory = Path.GetDirectoryName(typeof(CliProcessExecutor).Assembly.Location) ?? throw new InvalidOperationException("Unable to determine assembly location");
         var solutionRoot = FindSolutionRoot(assemblyDirectory);
         
         var cliProjectPath = Path.Combine(solutionRoot, "src", "DocxTemplate.CLI", "bin", configuration, "net9.0");

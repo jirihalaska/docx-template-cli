@@ -175,7 +175,7 @@ public class TestDataManager
     /// <summary>
     /// Creates a Word document with specified placeholders asynchronously
     /// </summary>
-    public async Task CreateTestDocumentAsync(string filePath, List<string> placeholders, bool includeCzechCharacters = false)
+    public async Task CreateTestDocumentAsync(string filePath, IList<string> placeholders, bool includeCzechCharacters = false)
     {
         using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
         

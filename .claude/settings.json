@@ -10,6 +10,8 @@
     "GIT*",
     "git add*",
     "git commit*",
+    "git commit -m*",
+    "git commit -m \"$(cat <<*",
     "git push*",
     "git pull*",
     "git status*",

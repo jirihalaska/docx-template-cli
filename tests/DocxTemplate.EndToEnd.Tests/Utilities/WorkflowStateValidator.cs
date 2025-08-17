@@ -76,6 +76,8 @@ public class WorkflowStateValidator
                 result.IsValid = false;
             }
         }
+        
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -125,9 +127,9 @@ public class WorkflowStateValidator
         WorkflowValidationResult result)
     {
         // Track template set context
-        string currentTemplateSet = null;
-        string currentTemplatesPath = null;
-        string currentTargetPath = null;
+        string? currentTemplateSet = null;
+        string? currentTemplatesPath = null;
+        string? currentTargetPath = null;
 
         foreach (var commandResult in commandResults)
         {
@@ -179,6 +181,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("Template set context not maintained throughout workflow");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -212,6 +216,8 @@ public class WorkflowStateValidator
                 }
             }
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateCommandJsonSchema(string commandName, JsonElement jsonOutput, WorkflowValidationResult result)
@@ -234,6 +240,8 @@ public class WorkflowStateValidator
                 await ValidateReplaceOutput(jsonOutput, result);
                 break;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateListSetsOutput(JsonElement jsonOutput, WorkflowValidationResult result)
@@ -250,6 +258,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("list-sets 'templateSets' property should be an array");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateDiscoverOutput(JsonElement jsonOutput, WorkflowValidationResult result)
@@ -272,6 +282,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("discover 'templates' property should be an array");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateScanOutput(JsonElement jsonOutput, WorkflowValidationResult result)
@@ -288,6 +300,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("scan 'placeholders' property should be an array");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateCopyOutput(JsonElement jsonOutput, WorkflowValidationResult result)
@@ -304,6 +318,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("copy 'copiedFiles' property should be an array");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateReplaceOutput(JsonElement jsonOutput, WorkflowValidationResult result)
@@ -320,6 +336,8 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("replace 'replacements' property should be an array");
             result.IsValid = false;
         }
+        
+        await Task.CompletedTask;
     }
 
     private async Task ValidateDataConsistencyAcrossCommands(
@@ -342,6 +360,8 @@ public class WorkflowStateValidator
                 }
             }
         }
+        
+        await Task.CompletedTask;
     }
 
     private string ExtractCommandName(string fullCommand)

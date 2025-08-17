@@ -6,16 +6,16 @@ namespace DocxTemplate.Core.Exceptions;
 public class TemplateNotFoundException : DocxTemplateException
 {
     /// <summary>
-    /// Path to the template file that was not found
-    /// </summary>
-    public string? TemplatePath { get; }
-
-    /// <summary>
     /// Initializes a new instance of the TemplateNotFoundException class
     /// </summary>
     public TemplateNotFoundException() : base("Template file not found")
     {
     }
+
+    /// <summary>
+    /// Path to the template file that was not found
+    /// </summary>
+    public string? TemplatePath { get; }
 
     /// <summary>
     /// Initializes a new instance of the TemplateNotFoundException class with a specified error message

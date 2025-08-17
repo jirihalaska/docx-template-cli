@@ -8,6 +8,13 @@ namespace DocxTemplate.Core.Exceptions;
 public class InvalidPlaceholderPatternException : DocxTemplateException
 {
     /// <summary>
+    /// Initializes a new instance of the InvalidPlaceholderPatternException class
+    /// </summary>
+    public InvalidPlaceholderPatternException() : base("Invalid placeholder pattern")
+    {
+    }
+
+    /// <summary>
     /// The invalid pattern that caused the exception
     /// </summary>
     public string? Pattern { get; }
@@ -16,13 +23,6 @@ public class InvalidPlaceholderPatternException : DocxTemplateException
     /// The position in the pattern where the error was detected (if available)
     /// </summary>
     public int? ErrorPosition { get; }
-
-    /// <summary>
-    /// Initializes a new instance of the InvalidPlaceholderPatternException class
-    /// </summary>
-    public InvalidPlaceholderPatternException() : base("Invalid placeholder pattern")
-    {
-    }
 
     /// <summary>
     /// Initializes a new instance of the InvalidPlaceholderPatternException class with a specified error message
@@ -135,7 +135,7 @@ public class InvalidPlaceholderPatternException : DocxTemplateException
         {
             throw RegexCompilationFailed(pattern, ex);
         }
-        catch (RegexMatchTimeoutException ex)
+        catch (RegexMatchTimeoutException)
         {
             throw DangerousPattern(pattern, "Pattern may cause catastrophic backtracking");
         }

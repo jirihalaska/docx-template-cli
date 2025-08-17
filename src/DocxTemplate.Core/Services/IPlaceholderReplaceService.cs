@@ -1,6 +1,6 @@
+using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
-using DocxTemplate.Core.Exceptions;
 
 namespace DocxTemplate.Core.Services;
 

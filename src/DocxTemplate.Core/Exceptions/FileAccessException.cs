@@ -226,5 +226,5 @@ public enum FileAccessType
     /// <summary>
     /// Both read and write access
     /// </summary>
-    ReadWrite
+    ReadWrite,
 }

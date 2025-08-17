@@ -1,5 +1,5 @@
-using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Exceptions;
+using DocxTemplate.Core.Models;
 
 namespace DocxTemplate.Core.Services;
 

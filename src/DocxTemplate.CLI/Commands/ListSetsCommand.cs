@@ -248,5 +248,6 @@ public enum OutputFormat
     Text,
     Json,
     Table,
-    List
+    List,
+    Csv
 }

@@ -40,6 +40,7 @@ var middleware = new CommandLineBuilder(rootCommand)
 
 // Add commands
 rootCommand.AddCommand(new ListSetsCommand());
+rootCommand.AddCommand(new DiscoverCommand());
 
 // Execute
 return await middleware.InvokeAsync(args);

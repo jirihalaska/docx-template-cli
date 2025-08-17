@@ -1,3 +1,4 @@
+using System.IO;
 using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
@@ -102,8 +103,9 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.DirectoryExists(sourcePath)).Returns(true);
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.FileExists("/source/test.docx")).Returns(true);
-        _mockFileSystemService.Setup(x => x.FileExists("/target/test.docx")).Returns(false);
-        _mockFileSystemService.Setup(x => x.CopyFile("/source/test.docx", "/target/test.docx", It.IsAny<bool>()));
+        var expectedTargetPath = Path.Combine(targetPath, "test.docx");
+        _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath)).Returns(false);
+        _mockFileSystemService.Setup(x => x.CopyFile("/source/test.docx", expectedTargetPath, It.IsAny<bool>()));
 
         _mockDiscoveryService
             .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
@@ -117,7 +119,7 @@ public class TemplateCopyServiceTests
         Assert.True(result.IsCompletelySuccessful);
         Assert.Equal(1, result.FilesCount);
         Assert.Equal(0, result.FailedFiles);
-        _mockFileSystemService.Verify(x => x.CopyFile("/source/test.docx", "/target/test.docx", false), Times.Once);
+        _mockFileSystemService.Verify(x => x.CopyFile("/source/test.docx", expectedTargetPath, false), Times.Once);
     }
 
     [Fact]
@@ -145,11 +147,13 @@ public class TemplateCopyServiceTests
             }
         };
 
+        var expectedTargetPath1 = Path.Combine(targetPath, "test1.docx");
+        var expectedTargetPath2 = Path.Combine(targetPath, "test2.docx");
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.FileExists("/source/test1.docx")).Returns(true);
         _mockFileSystemService.Setup(x => x.FileExists("/source/test2.docx")).Returns(true);
-        _mockFileSystemService.Setup(x => x.FileExists("/target/test1.docx")).Returns(false);
-        _mockFileSystemService.Setup(x => x.FileExists("/target/test2.docx")).Returns(false);
+        _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath1)).Returns(false);
+        _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath2)).Returns(false);
         _mockFileSystemService.Setup(x => x.CopyFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()));
 
         // act
@@ -341,9 +345,10 @@ public class TemplateCopyServiceTests
             }
         };
 
+        var expectedTargetPath = Path.Combine(targetPath, "test.docx");
         _mockFileSystemService.Setup(x => x.DirectoryExists(sourcePath)).Returns(true);
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
-        _mockFileSystemService.Setup(x => x.FileExists("/target/test.docx")).Returns(true);
+        _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath)).Returns(true);
 
         _mockDiscoveryService
             .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))

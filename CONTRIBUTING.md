@@ -72,6 +72,7 @@ The project uses several tools to ensure code quality:
 - **StyleCop**: Enforces C# coding conventions
 - **EditorConfig**: Maintains consistent formatting
 - **Analyzers**: Catches potential issues and enforces best practices
+- **GitHub Actions**: Automated CI/CD pipeline validates all PRs
 
 #### Manual Guidelines
 

@@ -123,6 +123,7 @@ This project uses:
 - **EditorConfig** for consistent formatting
 - **Automated testing** with xUnit, Moq, and FluentAssertions
 - **Performance testing** with BenchmarkDotNet
+- **GitHub Actions CI/CD** with automated build, test, and packaging
 
 ## Development
 

@@ -6,6 +6,10 @@ project.lock.json
 *.pyc
 nupkg/
 
+# BMAD code
+.bmad-core/
+web-bundles/
+
 # Visual Studio Code
 .vscode/
 

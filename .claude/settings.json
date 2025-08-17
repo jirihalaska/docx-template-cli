@@ -1,0 +1,15 @@
+{
+  "_comment": "Repository-specific Claude Code settings for this project",
+  "_note": "This project requires additional permissions for building executables and releases",
+  "model": "sonnet",
+  "auto_approve_commands": [
+    "python3*",
+    "python*", 
+    "git*",
+    "gh*",
+    "npm*",
+    "pip*",
+    "pyinstaller*",
+    "dotnet*"
+  ]
+}

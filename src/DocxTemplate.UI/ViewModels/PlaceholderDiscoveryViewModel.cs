@@ -205,17 +205,30 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         try
         {
             var templatePath = SelectedTemplateSet.TemplateSetInfo.Path;
-            var arguments = new[] { "scan", "--path", $"\"{templatePath}\"", "--format", "json" };
+            var arguments = new[] { "scan", "--path", $"\"{templatePath}\"", "--format", "json", "--quiet" };
             
             var jsonOutput = await _cliCommandService.ExecuteCommandAsync("", arguments);
             
-            var scanResult = JsonSerializer.Deserialize<PlaceholderScanResult>(jsonOutput, new JsonSerializerOptions
+            // Validate JSON output
+            if (string.IsNullOrWhiteSpace(jsonOutput))
+            {
+                throw new InvalidOperationException("CLI command returned empty output");
+            }
+            
+            // If output starts with non-JSON characters, it might be an error message
+            if (!jsonOutput.TrimStart().StartsWith("{") && !jsonOutput.TrimStart().StartsWith("["))
+            {
+                throw new InvalidOperationException($"CLI command returned non-JSON output: {jsonOutput}");
+            }
+            
+            var cliResponse = JsonSerializer.Deserialize<CliScanResponse>(jsonOutput, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-            if (scanResult != null)
+            if (cliResponse != null)
             {
+                var scanResult = cliResponse.ToPlaceholderScanResult();
                 await ProcessScanResult(scanResult);
             }
             else

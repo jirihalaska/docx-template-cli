@@ -82,7 +82,7 @@ public class ProcessingResultsViewModelTests
         var outputPath = "/test/output";
 
         // act
-        _viewModel.SetProcessingData(templateSetPath, outputPath, null);
+        _viewModel.SetProcessingData(templateSetPath, outputPath, null!);
 
         // assert
         Assert.Equal("templates", _viewModel.TemplateSetName);

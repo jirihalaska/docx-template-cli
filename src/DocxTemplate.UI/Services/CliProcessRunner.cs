@@ -13,8 +13,8 @@ public class CliProcessRunner : ICliCommandService
 
     public CliProcessRunner()
     {
-        // Default to looking for the CLI executable in the same directory or PATH
-        _cliExecutablePath = "docx-template";
+        // Default to using the CLI DLL in the same directory
+        _cliExecutablePath = "DocxTemplate.CLI.dll";
         _timeoutMs = 30000; // 30 second default timeout
     }
 

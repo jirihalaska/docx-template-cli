@@ -4,15 +4,14 @@ This document provides precise documentation of the DocxTemplate CLI commands fo
 
 ## Overview
 
-The DocxTemplate CLI currently provides four main commands for working with DOCX template files:
+The DocxTemplate CLI provides five main commands for working with DOCX template files:
 - `list-sets` - List template sets (top-level directories containing templates)
 - `discover` - Find DOCX files within a directory
 - `scan` - Find placeholders in DOCX files using regex patterns
 - `copy` - Copy templates with performance metrics
+- `replace` - Replace placeholders in DOCX files with values from a JSON mapping file
 
 All commands support JSON output format for programmatic use.
-
-**Note:** The `replace` command is planned but not yet implemented (see Story 03.001).
 
 ## Commands
 
@@ -174,6 +173,71 @@ copy --source <source_dir> --target <target_dir> [options]
 
 ---
 
+### replace
+**Purpose:** Replace placeholders in DOCX files with values from a JSON mapping file
+
+**Syntax:**
+```bash
+replace --folder <target_dir> --map <mapping_file> [options]
+```
+
+**Required Parameters:**
+- `--folder, -f`: Target directory containing templates to process
+- `--map, -m`: JSON file containing placeholder-to-value mappings
+
+**Optional Parameters:**
+- `--backup, -b`: Create backups before replacement (default: true)
+- `--recursive, -r`: Include subdirectories (default: true)
+- `--dry-run, -d`: Preview replacements without modifying files (default: false)
+- `--format, -o`: Output format (text|json, default: text)
+- `--quiet, -q`: Suppress progress messages (default: false)
+- `--pattern, -p`: Placeholder regex pattern (default: `{{.*?}}`)
+
+**Mapping File Format:**
+```json
+{
+  "{{COMPANY_NAME}}": "Acme Corporation",
+  "{{CONTRACT_DATE}}": "2025-08-17",
+  "{{CLIENT_NAME}}": "John Doe",
+  "{{AMOUNT}}": "150000"
+}
+```
+
+**JSON Output Schema:**
+```json
+{
+  "command": "replace",
+  "timestamp": "2025-08-17T10:30:00Z",
+  "success": true,
+  "data": {
+    "summary": {
+      "files_processed": 15,
+      "files_modified": 12,
+      "files_failed": 0,
+      "total_replacements": 375,
+      "backup_created": true,
+      "backup_directory": "/target/.backup_20250817_103000",
+      "duration_ms": 2340.5
+    },
+    "file_results": [
+      {
+        "file_path": "/target/contract.docx",
+        "replacements_made": 25,
+        "backup_path": "/target/.backup_20250817_103000/contract.docx",
+        "status": "success"
+      }
+    ],
+    "errors": []
+  }
+}
+```
+
+**Other Output Formats:**
+- **Text**: Summary with counts and file-by-file results
+- **Dry-run**: Shows what replacements would be made without file modification
+
+---
+
 ### list-sets
 **Purpose:** List all template sets (directories) in templates directory
 
@@ -218,68 +282,7 @@ list-sets --templates <templates_dir> [options]
 
 ## Planned Commands (Not Yet Implemented)
 
-### replace
-**Purpose:** Replace placeholders in DOCX files with values from a mapping file
-
-**Status:** Planned for implementation in Story 03.001
-
-**Planned Syntax:**
-```bash
-replace --folder <target_dir> --map <mapping_file> [options]
-```
-
-**Planned Parameters:**
-- `--folder, -f`: Target directory containing copied templates
-- `--map, -m`: JSON file containing placeholder mappings
-- `--backup, -b`: Create backups before replacement (default: true)
-- `--recursive, -r`: Include subdirectories (default: true)
-- `--dry-run, -d`: Preview replacements without modifying files (default: false)
-- `--format, -o`: Output format (text|json|table, default: text)
-- `--quiet, -q`: Suppress progress messages (default: false)
-- `--pattern, -p`: Placeholder pattern (default: {{.*?}})
-
-**Planned Mapping File Format:**
-```json
-{
-  "placeholders": {
-    "{{COMPANY_NAME}}": "Acme Corporation",
-    "{{CONTRACT_DATE}}": "2025-08-17",
-    "{{CLIENT_NAME}}": "John Doe"
-  },
-  "metadata": {
-    "author": "Template Administrator",
-    "created": "2025-08-17T10:30:00Z",
-    "description": "Contract values for Acme Corp"
-  }
-}
-```
-
-**Planned JSON Output Schema:**
-```json
-{
-  "command": "replace",
-  "timestamp": "2025-08-17T10:30:00Z",
-  "success": true,
-  "data": {
-    "summary": {
-      "files_processed": 15,
-      "files_modified": 12,
-      "files_failed": 0,
-      "total_replacements": 375,
-      "backup_created": true,
-      "duration_ms": 2340.5
-    },
-    "file_results": [
-      {
-        "file_path": "/target/contract.docx",
-        "replacements_made": 25,
-        "backup_path": "/target/.backup/contract_20250817_103000.docx",
-        "status": "success"
-      }
-    ]
-  }
-}
-```
+*No planned commands - all core functionality has been implemented.*
 
 ## Error Handling
 
@@ -300,10 +303,9 @@ Error: Folder path not found: /nonexistent
 
 ## Current Limitations
 
-1. **Replace command not implemented** - The `replace` command is planned but not yet available
-2. **No standardized error JSON format** - Errors go to stderr as text
-3. **Console output mixed with JSON** - Progress messages appear before JSON in quiet mode
-4. **JSON field naming** - Property names use snake_case (e.g., `template_sets`, `full_path`) despite JsonNamingPolicy.CamelCase in code
+1. **No standardized error JSON format** - Errors go to stderr as text
+2. **Console output mixed with JSON** - Progress messages appear before JSON in quiet mode
+3. **JSON field naming** - Property names use snake_case (e.g., `template_sets`, `full_path`) despite JsonNamingPolicy.CamelCase in code
 
 ## Maintenance
 

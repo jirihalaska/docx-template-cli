@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.Text;
@@ -36,12 +37,18 @@ public class DocumentIntegrityValidator
             // Validate document structure
             var structureValidation = await ValidateDocumentStructureAsync(originalPath, processedPath);
             result.StructurePreserved = structureValidation.IsStructurePreserved;
-            result.StructureIssues.AddRange(structureValidation.Issues);
+            foreach (var issue in structureValidation.Issues)
+            {
+                result.StructureIssues.Add(issue);
+            }
 
             // Validate character preservation
             var characterValidation = await ValidateCharacterPreservationAsync(originalPath, processedPath);
             result.CharactersPreserved = characterValidation.IsCharactersPreserved;
-            result.CharacterIssues.AddRange(characterValidation.Issues);
+            foreach (var issue in characterValidation.Issues)
+            {
+                result.CharacterIssues.Add(issue);
+            }
 
             result.IsValid = result.IsValidDocxFormat &&
                            result.StructurePreserved &&
@@ -208,19 +215,19 @@ public class DocumentValidationResult
     public bool IsValidDocxFormat { get; set; }
     public bool StructurePreserved { get; set; }
     public bool CharactersPreserved { get; set; }
-    public List<string> StructureIssues { get; set; } = [];
-    public List<string> CharacterIssues { get; set; } = [];
+    public Collection<string> StructureIssues { get; init; } = [];
+    public Collection<string> CharacterIssues { get; init; } = [];
     public string ValidationError { get; set; } = string.Empty;
 }
 
 public class CharacterPreservationResult
 {
     public bool IsCharactersPreserved { get; set; }
-    public List<string> Issues { get; set; } = [];
+    public Collection<string> Issues { get; init; } = [];
 }
 
 public class DocumentStructureResult
 {
     public bool IsStructurePreserved { get; set; }
-    public List<string> Issues { get; set; } = [];
+    public Collection<string> Issues { get; init; } = [];
 }

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using DocxTemplate.TestUtilities;
 
@@ -91,7 +92,7 @@ public class TestEnvironmentProvisioner : IDisposable
         return tempFile;
     }
 
-    private async Task CopyTemplateSetsAsync(List<TemplateSetSpec> templateSets, string targetDirectory)
+    private async Task CopyTemplateSetsAsync(ICollection<TemplateSetSpec> templateSets, string targetDirectory)
     {
         foreach (var templateSet in templateSets)
         {
@@ -141,7 +142,7 @@ public class TestEnvironmentProvisioner : IDisposable
     }
 
     private async Task CreateReplacementMappingFilesAsync(
-        List<ReplacementMappingSpec> mappings,
+        ICollection<ReplacementMappingSpec> mappings,
         string dataDirectory)
     {
         foreach (var mapping in mappings)
@@ -159,7 +160,7 @@ public class TestEnvironmentProvisioner : IDisposable
     }
 
     private async Task CreateAdditionalTestFilesAsync(
-        List<AdditionalTestFileSpec> files,
+        ICollection<AdditionalTestFileSpec> files,
         string dataDirectory)
     {
         foreach (var file in files)
@@ -270,11 +271,11 @@ public class TestEnvironmentProvisioner : IDisposable
 public class TestEnvironmentSpec
 {
     public string Name { get; init; } = string.Empty;
-    public List<TemplateSetSpec> TemplateSets { get; init; } = [];
+    public Collection<TemplateSetSpec> TemplateSets { get; init; } = [];
     public bool GenerateTestDocuments { get; set; }
     public DocumentComplexity DocumentComplexity { get; set; } = DocumentComplexity.Simple;
-    public List<ReplacementMappingSpec> ReplacementMappings { get; init; } = [];
-    public List<AdditionalTestFileSpec> AdditionalTestFiles { get; set; } = [];
+    public Collection<ReplacementMappingSpec> ReplacementMappings { get; init; } = [];
+    public Collection<AdditionalTestFileSpec> AdditionalTestFiles { get; init; } = [];
 }
 
 /// <summary>
@@ -285,7 +286,7 @@ public class TemplateSetSpec
     public string Name { get; init; } = string.Empty;
     public string SourcePath { get; set; } = string.Empty;
     public int DocumentCount { get; init; } = 3;
-    public List<string> Placeholders { get; init; } = [];
+    public Collection<string> Placeholders { get; init; } = [];
     public bool IncludeCzechCharacters { get; init; }
 }
 

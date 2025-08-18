@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
 
@@ -12,13 +13,18 @@ public class WorkflowStateValidator
     /// Validates that workflow state is maintained correctly across command executions
     /// </summary>
     public async Task<WorkflowValidationResult> ValidateWorkflowStateAsync(
-        List<CliExecutionResult> commandResults,
+        ICollection<CliExecutionResult> commandResults,
         WorkflowExpectation expectations)
     {
         var result = new WorkflowValidationResult
         {
             IsValid = true,
-            CommandResults = commandResults
+            CommandResults = { }
+        };
+        
+        foreach (var item in commandResults)
+        {
+            result.CommandResults.Add(item);
         };
 
         try
@@ -48,20 +54,21 @@ public class WorkflowStateValidator
     /// Validates that commands execute in the correct sequence
     /// </summary>
     private async Task ValidateCommandSequenceAsync(
-        List<CliExecutionResult> commandResults,
+        ICollection<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
-        if (commandResults.Count != expectations.ExpectedCommandSequence.Count)
+        var commandList = commandResults.ToList();
+        if (commandList.Count != expectations.ExpectedCommandSequence.Count)
         {
-            result.ValidationErrors.Add($"Command count mismatch: expected {expectations.ExpectedCommandSequence.Count}, got {commandResults.Count}");
+            result.ValidationErrors.Add($"Command count mismatch: expected {expectations.ExpectedCommandSequence.Count}, got {commandList.Count}");
             result.IsValid = false;
             return;
         }
 
-        for (int i = 0; i < commandResults.Count; i++)
+        for (int i = 0; i < commandList.Count; i++)
         {
-            var actualCommand = ExtractCommandName(commandResults[i].Command);
+            var actualCommand = ExtractCommandName(commandList[i].Command);
             var expectedCommand = expectations.ExpectedCommandSequence[i];
 
             if (actualCommand != expectedCommand)
@@ -71,9 +78,9 @@ public class WorkflowStateValidator
             }
 
             // Validate command success
-            if (!commandResults[i].IsSuccess && !expectations.ExpectedFailures.Contains(i))
+            if (!commandList[i].IsSuccess && !expectations.ExpectedFailures.Contains(i))
             {
-                result.ValidationErrors.Add($"Unexpected command failure at position {i}: {commandResults[i].StandardError}");
+                result.ValidationErrors.Add($"Unexpected command failure at position {i}: {commandList[i].StandardError}");
                 result.IsValid = false;
             }
         }
@@ -85,7 +92,7 @@ public class WorkflowStateValidator
     /// Validates data flow and JSON output consistency between commands
     /// </summary>
     private async Task ValidateDataFlowAsync(
-        List<CliExecutionResult> commandResults,
+        ICollection<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -124,7 +131,7 @@ public class WorkflowStateValidator
     /// Validates state consistency throughout the workflow
     /// </summary>
     private async Task ValidateStateConsistencyAsync(
-        List<CliExecutionResult> commandResults,
+        ICollection<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -191,13 +198,14 @@ public class WorkflowStateValidator
     /// Validates error handling and recovery mechanisms
     /// </summary>
     private async Task ValidateErrorHandlingAsync(
-        List<CliExecutionResult> commandResults,
+        ICollection<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
-        for (int i = 0; i < commandResults.Count; i++)
+        var commandList = commandResults.ToList();
+        for (int i = 0; i < commandList.Count; i++)
         {
-            var commandResult = commandResults[i];
+            var commandResult = commandList[i];
 
             if (!commandResult.IsSuccess)
             {
@@ -422,10 +430,10 @@ public class WorkflowStateValidator
 /// </summary>
 public class WorkflowExpectation
 {
-    public List<string> ExpectedCommandSequence { get; set; } = [];
-    public List<int> ExpectedFailures { get; set; } = [];
-    public List<string> RequireJsonOutput { get; set; } = [];
-    public bool AllowTemplateSetChanges { get; set; } = false;
+    public Collection<string> ExpectedCommandSequence { get; init; } = [];
+    public Collection<int> ExpectedFailures { get; init; } = [];
+    public Collection<string> RequireJsonOutput { get; init; } = [];
+    public bool AllowTemplateSetChanges { get; set; }
     public bool RequireTemplateSetConsistency { get; init; } = true;
 }
 
@@ -435,6 +443,6 @@ public class WorkflowExpectation
 public class WorkflowValidationResult
 {
     public bool IsValid { get; set; }
-    public List<string> ValidationErrors { get; set; } = [];
-    public List<CliExecutionResult> CommandResults { get; set; } = [];
+    public Collection<string> ValidationErrors { get; init; } = [];
+    public Collection<CliExecutionResult> CommandResults { get; init; } = [];
 }

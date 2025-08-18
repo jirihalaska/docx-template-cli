@@ -61,7 +61,7 @@ public record TemplateSet
     /// <summary>
     /// Optional tags for categorizing the template set
     /// </summary>
-    public IReadOnlyList<string> Tags { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Tags { get; init; } = [];
 
     /// <summary>
     /// Gets a display-friendly size string (e.g., "2.3 MB")
@@ -176,7 +176,7 @@ public record TemplateSet
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         
@@ -274,8 +274,8 @@ public record TemplateSetValidationResult
         return new TemplateSetValidationResult
         {
             IsValid = true,
-            Errors = Array.Empty<string>(),
-            Warnings = warnings ?? Array.Empty<string>(),
+            Errors = [],
+            Warnings = warnings ?? [],
             FilesValidated = filesValidated,
             ValidationDuration = duration
         };
@@ -299,7 +299,7 @@ public record TemplateSetValidationResult
         {
             IsValid = false,
             Errors = errors,
-            Warnings = warnings ?? Array.Empty<string>(),
+            Warnings = warnings ?? [],
             FilesValidated = filesValidated,
             ValidationDuration = duration
         };

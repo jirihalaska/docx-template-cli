@@ -178,14 +178,14 @@ public record CopyValidationResult
         return new CopyValidationResult
         {
             CanCopy = true,
-            Errors = Array.Empty<string>(),
-            Warnings = warnings ?? Array.Empty<string>(),
+            Errors = [],
+            Warnings = warnings ?? [],
             FilesToCopy = filesToCopy,
             FilesToOverwrite = filesToOverwrite,
             DirectoriesToCreate = directoriesToCreate,
             TotalSizeBytes = totalSizeBytes,
             AvailableSpaceBytes = availableSpaceBytes,
-            ConflictingFiles = Array.Empty<FileConflict>(),
+            ConflictingFiles = [],
             SourcePath = sourcePath,
             TargetPath = targetPath,
             ValidationDuration = validationDuration
@@ -216,13 +216,13 @@ public record CopyValidationResult
         {
             CanCopy = false,
             Errors = errors,
-            Warnings = warnings ?? Array.Empty<string>(),
+            Warnings = warnings ?? [],
             FilesToCopy = filesToCopy,
             FilesToOverwrite = 0,
             DirectoriesToCreate = 0,
             TotalSizeBytes = 0,
             AvailableSpaceBytes = 0,
-            ConflictingFiles = conflictingFiles ?? Array.Empty<FileConflict>(),
+            ConflictingFiles = conflictingFiles ?? [],
             SourcePath = sourcePath,
             TargetPath = targetPath,
             ValidationDuration = validationDuration
@@ -233,7 +233,7 @@ public record CopyValidationResult
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         int order = 0;
         double size = bytes;
         

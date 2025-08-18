@@ -21,46 +21,46 @@ public class ReplaceCommand : Command
     public ReplaceCommand() : base("replace", "Replace placeholders in DOCX templates with actual values")
     {
         var folderOption = new Option<string>(
-            aliases: new[] { "--folder", "-f" },
+            aliases: ["--folder", "-f"],
             description: "Target directory containing copied templates")
         {
             IsRequired = true
         };
 
         var mapOption = new Option<string>(
-            aliases: new[] { "--map", "-m" },
+            aliases: ["--map", "-m"],
             description: "JSON file containing placeholder mappings")
         {
             IsRequired = true
         };
 
         var backupOption = new Option<bool>(
-            aliases: new[] { "--backup", "-b" },
+            aliases: ["--backup", "-b"],
             getDefaultValue: () => true,
             description: "Create backups before replacement");
 
         var recursiveOption = new Option<bool>(
-            aliases: new[] { "--recursive", "-r" },
+            aliases: ["--recursive", "-r"],
             getDefaultValue: () => true,
             description: "Include subdirectories");
 
         var dryRunOption = new Option<bool>(
-            aliases: new[] { "--dry-run", "-d" },
+            aliases: ["--dry-run", "-d"],
             getDefaultValue: () => false,
             description: "Preview replacements without modifying files");
 
         var formatOption = new Option<OutputFormat>(
-            aliases: new[] { "--format", "-o" },
+            aliases: ["--format", "-o"],
             getDefaultValue: () => OutputFormat.Text,
             description: "Output format (text, json, table)");
 
         var quietOption = new Option<bool>(
-            aliases: new[] { "--quiet", "-q" },
+            aliases: ["--quiet", "-q"],
             getDefaultValue: () => false,
             description: "Suppress progress messages");
 
         var patternOption = new Option<string>(
-            aliases: new[] { "--pattern", "-p" },
+            aliases: ["--pattern", "-p"],
             getDefaultValue: () => @"\{\{.*?\}\}",
             description: "Placeholder pattern");
 
@@ -144,7 +144,7 @@ public class ReplaceCommand : Command
             {
                 var jsonContent = await File.ReadAllTextAsync(mapPath, cancellationToken);
                 var jsonDocument = JsonDocument.Parse(jsonContent);
-                
+
                 var mappings = new Dictionary<string, string>();
                 if (jsonDocument.RootElement.TryGetProperty("placeholders", out var placeholdersElement))
                 {
@@ -265,7 +265,7 @@ public class ReplaceCommand : Command
             Console.WriteLine($"\nProcessed {result.FilesProcessed} file(s)");
             Console.WriteLine($"Modified {result.SuccessfulFiles} file(s)");
             Console.WriteLine($"Total replacements: {result.TotalReplacements}");
-            
+
             if (result.FailedFiles > 0)
             {
                 Console.WriteLine($"Failed: {result.FailedFiles} file(s)");

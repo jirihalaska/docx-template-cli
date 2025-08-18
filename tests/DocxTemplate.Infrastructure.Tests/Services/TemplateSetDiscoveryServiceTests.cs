@@ -28,14 +28,14 @@ public class TemplateSetDiscoveryServiceTests
         var templatesRootPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(templatesRootPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(templatesRootPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/templates/Set1", "/templates/Set2", "/templates/.hidden" });
+            .Returns(["/templates/Set1", "/templates/Set2", "/templates/.hidden"]);
 
         // Setup Set1
         _mockFileSystemService.Setup(x => x.DirectoryExists("/templates/Set1")).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles("/templates/Set1", "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { "/templates/Set1/template1.docx", "/templates/Set1/template2.docx" });
+            .Returns(["/templates/Set1/template1.docx", "/templates/Set1/template2.docx"]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories("/templates/Set1", "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize("/templates/Set1/template1.docx")).Returns(1024);
         _mockFileSystemService.Setup(x => x.GetFileSize("/templates/Set1/template2.docx")).Returns(2048);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime("/templates/Set1/template1.docx")).Returns(DateTime.UtcNow.AddDays(-1));
@@ -44,9 +44,9 @@ public class TemplateSetDiscoveryServiceTests
         // Setup Set2
         _mockFileSystemService.Setup(x => x.DirectoryExists("/templates/Set2")).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles("/templates/Set2", "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { "/templates/Set2/doc.docx" });
+            .Returns(["/templates/Set2/doc.docx"]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories("/templates/Set2", "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize("/templates/Set2/doc.docx")).Returns(512);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime("/templates/Set2/doc.docx")).Returns(DateTime.UtcNow.AddDays(-2));
 
@@ -87,13 +87,13 @@ public class TemplateSetDiscoveryServiceTests
         var templatesRootPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(templatesRootPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(templatesRootPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/templates/.hidden", "/templates/visible" });
+            .Returns(["/templates/.hidden", "/templates/visible"]);
 
         _mockFileSystemService.Setup(x => x.DirectoryExists("/templates/visible")).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles("/templates/visible", "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { "/templates/visible/doc.docx" });
+            .Returns(["/templates/visible/doc.docx"]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories("/templates/visible", "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize("/templates/visible/doc.docx")).Returns(1024);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime("/templates/visible/doc.docx")).Returns(DateTime.UtcNow);
 
@@ -116,9 +116,9 @@ public class TemplateSetDiscoveryServiceTests
         
         _mockFileSystemService.Setup(x => x.DirectoryExists(fullPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(fullPath, "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { docPath });
+            .Returns([docPath]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(fullPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize(docPath)).Returns(2048);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime(docPath)).Returns(DateTime.UtcNow);
 
@@ -145,9 +145,9 @@ public class TemplateSetDiscoveryServiceTests
         
         _mockFileSystemService.Setup(x => x.DirectoryExists(fullPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(fullPath, "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { doc1Path, doc2Path });
+            .Returns([doc1Path, doc2Path]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(fullPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize(It.IsAny<string>())).Returns(1024);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime(It.IsAny<string>())).Returns(DateTime.UtcNow);
         _mockFileSystemService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
@@ -173,9 +173,9 @@ public class TemplateSetDiscoveryServiceTests
         
         _mockFileSystemService.Setup(x => x.DirectoryExists(fullPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(fullPath, "*.docx", It.IsAny<SearchOption>()))
-            .Returns(new[] { docPath });
+            .Returns([docPath]);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(fullPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         _mockFileSystemService.Setup(x => x.GetFileSize(It.IsAny<string>())).Returns(1024);
         _mockFileSystemService.Setup(x => x.GetLastWriteTime(It.IsAny<string>())).Returns(DateTime.UtcNow);
         _mockFileSystemService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
@@ -223,11 +223,11 @@ public class TemplateSetDiscoveryServiceTests
         var templatesRootPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(templatesRootPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(templatesRootPath, "*", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/templates/Set1", "/templates/Set2" });
+            .Returns(["/templates/Set1", "/templates/Set2"]);
 
         // Setup template sets
-        SetupMockTemplateSet("/templates/Set1", new[] { "doc1.docx", "doc2.docx" }, 1024);
-        SetupMockTemplateSet("/templates/Set2", new[] { "doc3.docx" }, 2048);
+        SetupMockTemplateSet("/templates/Set1", ["doc1.docx", "doc2.docx"], 1024);
+        SetupMockTemplateSet("/templates/Set2", ["doc3.docx"], 2048);
 
         // act
         var result = await _service.GetTemplateSetStatisticsAsync(templatesRootPath);
@@ -247,7 +247,7 @@ public class TemplateSetDiscoveryServiceTests
         _mockFileSystemService.Setup(x => x.EnumerateFiles(path, "*.docx", It.IsAny<SearchOption>()))
             .Returns(fullPaths);
         _mockFileSystemService.Setup(x => x.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         
         foreach (var file in fullPaths)
         {

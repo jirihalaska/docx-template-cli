@@ -16,47 +16,47 @@ public class ScanCommand : Command
     public ScanCommand() : base("scan", "Scan DOCX templates for placeholders")
     {
         var pathOption = new Option<string>(
-            new[] { "--path", "-p" },
+            ["--path", "-p"],
             "Path to the directory or file to scan for placeholders")
         {
             IsRequired = true
         };
 
         var recursiveOption = new Option<bool>(
-            new[] { "--recursive", "-r" },
+            ["--recursive", "-r"],
             getDefaultValue: () => true,
             "Scan subdirectories recursively");
 
         var patternOption = new Option<string[]>(
-            new[] { "--pattern" },
-            getDefaultValue: () => new[] { @"\{\{.*?\}\}" },
+            ["--pattern"],
+            getDefaultValue: () => [@"\{\{.*?\}\}"],
             "Regex patterns for placeholders (can be specified multiple times)")
         {
             AllowMultipleArgumentsPerToken = true
         };
 
         var formatOption = new Option<OutputFormat>(
-            new[] { "--format", "-f" },
+            ["--format", "-f"],
             getDefaultValue: () => OutputFormat.Text,
             "Output format (text, json, table, csv)");
 
         var statisticsOption = new Option<bool>(
-            new[] { "--statistics", "-s" },
+            ["--statistics", "-s"],
             getDefaultValue: () => false,
             "Include detailed statistics in output");
 
         var caseSensitiveOption = new Option<bool>(
-            new[] { "--case-sensitive", "-c" },
+            ["--case-sensitive", "-c"],
             getDefaultValue: () => false,
             "Use case-sensitive pattern matching");
 
         var parallelismOption = new Option<int>(
-            new[] { "--parallelism" },
+            ["--parallelism"],
             getDefaultValue: () => Environment.ProcessorCount,
             "Number of parallel threads for scanning");
 
         var quietOption = new Option<bool>(
-            new[] { "--quiet", "-q" },
+            ["--quiet", "-q"],
             getDefaultValue: () => false,
             "Suppress progress messages");
 
@@ -73,7 +73,7 @@ public class ScanCommand : Command
         {
             var path = context.ParseResult.GetValueForOption(pathOption)!;
             var recursive = context.ParseResult.GetValueForOption(recursiveOption);
-            var patterns = context.ParseResult.GetValueForOption(patternOption) ?? new[] { @"\{\{.*?\}\}" };
+            var patterns = context.ParseResult.GetValueForOption(patternOption) ?? [@"\{\{.*?\}\}"];
             var format = context.ParseResult.GetValueForOption(formatOption);
             var includeStatistics = context.ParseResult.GetValueForOption(statisticsOption);
             var caseSensitive = context.ParseResult.GetValueForOption(caseSensitiveOption);

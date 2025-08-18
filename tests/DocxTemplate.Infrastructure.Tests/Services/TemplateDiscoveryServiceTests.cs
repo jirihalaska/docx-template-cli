@@ -27,7 +27,7 @@ public class TemplateDiscoveryServiceTests
         var folderPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories))
-            .Returns(new[] { "/templates/doc1.docx", "/templates/doc2.docx", "/templates/~$temp.docx" });
+            .Returns(["/templates/doc1.docx", "/templates/doc2.docx", "/templates/~$temp.docx"]);
 
         _mockFileSystemService.Setup(x => x.FileExists("/templates/doc1.docx")).Returns(true);
         _mockFileSystemService.Setup(x => x.FileExists("/templates/doc2.docx")).Returns(true);
@@ -69,15 +69,15 @@ public class TemplateDiscoveryServiceTests
         var folderPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(folderPath, "template*.docx", SearchOption.AllDirectories))
-            .Returns(new[] { "/templates/template1.docx", "/templates/template2.docx" });
+            .Returns(["/templates/template1.docx", "/templates/template2.docx"]);
 
         SetupTemplateFile("/templates/template1.docx", folderPath, "template1.docx", 1024);
         SetupTemplateFile("/templates/template2.docx", folderPath, "template2.docx", 2048);
 
         // act
         var result = await _service.DiscoverTemplatesAsync(
-            folderPath, 
-            new[] { "template*.docx" }, 
+            folderPath,
+            ["template*.docx"], 
             true);
 
         // assert
@@ -93,7 +93,7 @@ public class TemplateDiscoveryServiceTests
         var folderPath = "/templates";
         _mockFileSystemService.Setup(x => x.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/templates/doc1.docx" });
+            .Returns(["/templates/doc1.docx"]);
 
         SetupTemplateFile("/templates/doc1.docx", folderPath, "doc1.docx", 1024);
 

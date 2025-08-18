@@ -16,60 +16,60 @@ public class DiscoverCommand : Command
     public DiscoverCommand() : base("discover", "Discover all DOCX template files in a directory")
     {
         var pathOption = new Option<string>(
-            new[] { "--path", "-p" },
+            ["--path", "-p"],
             "Path to the directory to scan for templates")
         {
             IsRequired = true
         };
 
         var recursiveOption = new Option<bool>(
-            new[] { "--recursive", "-r" },
+            ["--recursive", "-r"],
             getDefaultValue: () => true,
             "Scan subdirectories recursively");
 
         var formatOption = new Option<OutputFormat>(
-            new[] { "--format", "-f" },
+            ["--format", "-f"],
             getDefaultValue: () => OutputFormat.Text,
             "Output format (text, json, table, csv)");
 
         var includeOption = new Option<string[]>(
-            new[] { "--include", "-i" },
-            getDefaultValue: () => new[] { "*.docx" },
+            ["--include", "-i"],
+            getDefaultValue: () => ["*.docx"],
             "File patterns to include")
         {
             AllowMultipleArgumentsPerToken = true
         };
 
         var excludeOption = new Option<string[]>(
-            new[] { "--exclude", "-e" },
-            getDefaultValue: () => Array.Empty<string>(),
+            ["--exclude", "-e"],
+            getDefaultValue: () => [],
             "File patterns to exclude")
         {
             AllowMultipleArgumentsPerToken = true
         };
 
         var maxDepthOption = new Option<int?>(
-            new[] { "--max-depth", "-d" },
+            ["--max-depth", "-d"],
             "Maximum directory depth to scan");
 
         var minSizeOption = new Option<long?>(
-            new[] { "--min-size" },
+            ["--min-size"],
             "Minimum file size in bytes");
 
         var maxSizeOption = new Option<long?>(
-            new[] { "--max-size" },
+            ["--max-size"],
             "Maximum file size in bytes");
 
         var modifiedAfterOption = new Option<DateTime?>(
-            new[] { "--modified-after" },
+            ["--modified-after"],
             "Only show files modified after this date");
 
         var modifiedBeforeOption = new Option<DateTime?>(
-            new[] { "--modified-before" },
+            ["--modified-before"],
             "Only show files modified before this date");
 
         var quietOption = new Option<bool>(
-            new[] { "--quiet", "-q" },
+            ["--quiet", "-q"],
             getDefaultValue: () => false,
             "Suppress progress messages");
 
@@ -90,8 +90,8 @@ public class DiscoverCommand : Command
             var path = context.ParseResult.GetValueForOption(pathOption)!;
             var recursive = context.ParseResult.GetValueForOption(recursiveOption);
             var format = context.ParseResult.GetValueForOption(formatOption);
-            var includePatterns = context.ParseResult.GetValueForOption(includeOption) ?? new[] { "*.docx" };
-            var excludePatterns = context.ParseResult.GetValueForOption(excludeOption) ?? Array.Empty<string>();
+            var includePatterns = context.ParseResult.GetValueForOption(includeOption) ?? ["*.docx"];
+            var excludePatterns = context.ParseResult.GetValueForOption(excludeOption) ?? [];
             var maxDepth = context.ParseResult.GetValueForOption(maxDepthOption);
             var minSize = context.ParseResult.GetValueForOption(minSizeOption);
             var maxSize = context.ParseResult.GetValueForOption(maxSizeOption);
@@ -233,7 +233,7 @@ public class DiscoverCommand : Command
         if (string.IsNullOrEmpty(relativePath))
             return 0;
 
-        return relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, 
+        return relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], 
             StringSplitOptions.RemoveEmptyEntries).Length - 1;
     }
 
@@ -344,7 +344,7 @@ public class DiscoverCommand : Command
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         

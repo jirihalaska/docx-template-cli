@@ -39,7 +39,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
         ArgumentNullException.ThrowIfNull(replacementMap);
-        
+
         try
         {
 
@@ -49,14 +49,14 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             }
 
             var templateFiles = await DiscoverTemplateFilesAsync(folderPath, cancellationToken);
-            
+
             return await ReplacePlaceholdersAsync(templateFiles, replacementMap, createBackup, cancellationToken);
         }
         catch (Exception ex)
         {
             var errorResult = await _errorHandler.HandleExceptionAsync(ex, "folder replacement");
             var fileResult = FileReplaceResult.Failure(folderPath, errorResult?.Message ?? ex.Message);
-            return ReplaceResult.Success(new[] { fileResult }, TimeSpan.Zero);
+            return ReplaceResult.Success([fileResult], TimeSpan.Zero);
         }
     }
 
@@ -69,12 +69,12 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         ArgumentNullException.ThrowIfNull(templateFiles);
         ArgumentNullException.ThrowIfNull(replacementMap);
-        
+
         if (!replacementMap.IsValid())
         {
             throw new ArgumentException("Invalid replacement map", nameof(replacementMap));
         }
-        
+
         try
         {
 
@@ -113,7 +113,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         {
             var errorResult = await _errorHandler.HandleExceptionAsync(ex, "batch replacement");
             var fileResult = FileReplaceResult.Failure("", errorResult?.Message ?? ex.Message);
-            return ReplaceResult.Success(new[] { fileResult }, TimeSpan.Zero);
+            return ReplaceResult.Success([fileResult], TimeSpan.Zero);
         }
     }
 
@@ -126,12 +126,12 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(templatePath);
         ArgumentNullException.ThrowIfNull(replacementMap);
-        
+
         if (!replacementMap.IsValid())
         {
             throw new ArgumentException("Invalid replacement map", nameof(replacementMap));
         }
-        
+
         try
         {
 
@@ -142,7 +142,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
             var startTime = DateTime.UtcNow;
             var backupPath = string.Empty;
-            
+
             if (createBackup)
             {
                 backupPath = await CreateFileBackupAsync(templatePath, cancellationToken);
@@ -150,7 +150,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
             var replacementCount = await ProcessDocumentReplacementsAsync(templatePath, replacementMap, cancellationToken);
             var endTime = DateTime.UtcNow;
-            
+
             return FileReplaceResult.Success(
                 templatePath,
                 replacementCount,
@@ -173,7 +173,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
         ArgumentNullException.ThrowIfNull(replacementMap);
-        
+
         try
         {
 
@@ -205,7 +205,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             var mappedPlaceholders = allPlaceholders.Where(p => replacementMap.Mappings.ContainsKey(p)).ToList();
             var unmappedPlaceholders = allPlaceholders.Except(mappedPlaceholders).ToList();
             var unusedMappings = replacementMap.PlaceholderNames.Except(allPlaceholders).ToList();
-            
+
             var duration = DateTime.UtcNow - startTime;
 
             return ReplacementPreview.Create(previews, mappedPlaceholders, unmappedPlaceholders, unusedMappings, duration);
@@ -225,7 +225,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         ArgumentNullException.ThrowIfNull(placeholders);
         ArgumentNullException.ThrowIfNull(replacementMap);
-        
+
         try
         {
 
@@ -242,8 +242,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             var missingReplacements = placeholderNames.Except(mappingNames).ToList();
             var unusedMappings = mappingNames.Except(placeholderNames).ToList();
 
-            var missingRequired = requireAllPlaceholders ? missingReplacements : new List<string>();
-            var missingOptional = requireAllPlaceholders ? new List<string>() : missingReplacements;
+            var missingRequired = requireAllPlaceholders ? missingReplacements : [];
+            var missingOptional = requireAllPlaceholders ? [] : missingReplacements;
 
             if (requireAllPlaceholders && missingReplacements.Count > 0)
             {
@@ -281,10 +281,10 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             if (isValid)
             {
                 return ReplacementValidationResult.Success(
-                    validMappings, 
-                    missingOptional, 
-                    unusedMappings, 
-                    duration, 
+                    validMappings,
+                    missingOptional,
+                    unusedMappings,
+                    duration,
                     warnings);
             }
             else
@@ -303,7 +303,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         catch (Exception ex)
         {
             return ReplacementValidationResult.Failure(
-                new[] { $"Validation failed: {ex.Message}" });
+                [$"Validation failed: {ex.Message}"]);
         }
     }
 
@@ -314,18 +314,18 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(templateFiles);
-        
+
         try
         {
 
             if (templateFiles.Count == 0)
             {
-                return BackupResult.Success(Array.Empty<BackupDetail>(), "", TimeSpan.Zero);
+                return BackupResult.Success([], "", TimeSpan.Zero);
             }
 
             var startTime = DateTime.UtcNow;
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-            var actualBackupDirectory = backupDirectory ?? 
+            var actualBackupDirectory = backupDirectory ??
                 Path.Combine(Path.GetDirectoryName(templateFiles[0].FullPath)!, $"backup_{timestamp}");
 
             _fileSystemService.CreateDirectory(actualBackupDirectory);
@@ -343,16 +343,16 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 {
                     var fileName = Path.GetFileName(templateFile.FullPath);
                     var backupPath = Path.Combine(actualBackupDirectory, fileName);
-                    
+
                     _fileSystemService.CopyFile(templateFile.FullPath, backupPath);
-                    
+
                     backupDetails.Add(new BackupDetail
                     {
                         SourcePath = templateFile.FullPath,
                         BackupPath = backupPath,
                         SizeBytes = templateFile.SizeInBytes
                     });
-                    
+
                     _logger.LogDebug("Created backup: {BackupPath}", backupPath);
                 }
                 catch (Exception ex)
@@ -384,11 +384,11 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         {
             var errorResult = await _errorHandler.HandleExceptionAsync(ex, "backup creation");
             return BackupResult.WithFailures(
-                Array.Empty<BackupDetail>(), 
-                "", 
-                TimeSpan.Zero, 
-                1, 
-                new[] { new BackupError { SourcePath = "", BackupPath = "", Message = errorResult?.Message ?? ex.Message } });
+                [],
+                "",
+                TimeSpan.Zero,
+                1,
+                [new BackupError { SourcePath = "", BackupPath = "", Message = errorResult?.Message ?? ex.Message }]);
         }
     }
 
@@ -445,7 +445,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
         using var wordDocument = WordprocessingDocument.Open(filePath, true);
         var body = wordDocument.MainDocumentPart?.Document?.Body;
-        
+
         if (body == null)
         {
             throw new InvalidOperationException($"Document body not found in {filePath}");
@@ -453,7 +453,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
         // Process all text elements in the document
         var textElements = body.Descendants<Text>().ToList();
-        
+
         foreach (var textElement in textElements)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -479,7 +479,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
         // Save the document
         wordDocument.MainDocumentPart?.Document?.Save();
-        
+
         _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", replacementCount, filePath);
         return Task.FromResult(replacementCount);
     }
@@ -500,7 +500,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             {
                 var textElements = body.Descendants<Text>().ToList();
                 var placeholderCounts = new Dictionary<string, int>();
-                
+
                 foreach (var textElement in textElements)
                 {
                     if (cancellationToken.IsCancellationRequested)
@@ -519,7 +519,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                     var placeholderName = kvp.Key;
                     var count = kvp.Value;
                     var hasReplacement = replacementMap.Mappings.TryGetValue(placeholderName, out var replacement);
-                    
+
                     replacementDetails.Add(new ReplacementDetail
                     {
                         PlaceholderName = placeholderName,
@@ -539,7 +539,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 ReplacementCount = 0,
                 CanProcess = false,
                 ErrorMessage = ex.Message,
-                ReplacementDetails = Array.Empty<ReplacementDetail>()
+                ReplacementDetails = []
             });
         }
 
@@ -564,37 +564,37 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         ArgumentNullException.ThrowIfNull(replacementMap);
 
         var startTime = DateTime.UtcNow;
-        
+
         try
         {
             var replacementCount = await ProcessDocumentReplacementsAsync(templateFile.FullPath, replacementMap, cancellationToken);
-            
+
             var endTime = DateTime.UtcNow;
             var duration = endTime - startTime;
 
             var fileResult = FileReplaceResult.Success(
-                templateFile.FullPath, 
-                replacementCount, 
+                templateFile.FullPath,
+                replacementCount,
                 processingDuration: duration);
 
             return ReplaceResult.Success(
-                new[] { fileResult },
+                [fileResult],
                 duration);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to replace placeholders in template {TemplatePath}", templateFile.FullPath);
-            
+
             var endTime = DateTime.UtcNow;
             var duration = endTime - startTime;
-            
+
             var fileResult = FileReplaceResult.Failure(
-                templateFile.FullPath, 
+                templateFile.FullPath,
                 ex.Message,
                 duration);
 
             return ReplaceResult.Success(
-                new[] { fileResult },
+                [fileResult],
                 duration);
         }
     }

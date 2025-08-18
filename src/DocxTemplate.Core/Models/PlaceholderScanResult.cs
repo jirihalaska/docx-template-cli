@@ -45,7 +45,7 @@ public record PlaceholderScanResult
     /// <summary>
     /// List of errors encountered during scanning
     /// </summary>
-    public IReadOnlyList<ScanError> Errors { get; init; } = Array.Empty<ScanError>();
+    public IReadOnlyList<ScanError> Errors { get; init; } = [];
 
     /// <summary>
     /// Gets the number of unique placeholders found
@@ -141,7 +141,7 @@ public record PlaceholderScanResult
             FilesWithPlaceholders = filesWithPlaceholders,
             TotalOccurrences = totalOccurrences,
             FailedFiles = 0,
-            Errors = Array.Empty<ScanError>()
+            Errors = []
         };
     }
 

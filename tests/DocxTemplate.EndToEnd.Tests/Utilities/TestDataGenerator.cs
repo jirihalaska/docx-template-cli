@@ -316,7 +316,7 @@ public class TestDataGenerator
         }
     }
 
-    private async Task CopyDirectoryAsync(string sourceDir, string destDir)
+    private Task CopyDirectoryAsync(string sourceDir, string destDir)
     {
         Directory.CreateDirectory(destDir);
 
@@ -327,5 +327,7 @@ public class TestDataGenerator
             Directory.CreateDirectory(Path.GetDirectoryName(destFile) ?? throw new InvalidOperationException());
             File.Copy(file, destFile, true);
         }
+
+        return Task.CompletedTask;
     }
 }

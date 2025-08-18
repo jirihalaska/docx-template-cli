@@ -12,7 +12,7 @@ public class CommandIntegrationTests : IDisposable
     private readonly CliProcessExecutor _cliExecutor;
     private readonly TestEnvironmentProvisioner _environmentProvisioner;
     private readonly WorkflowStateValidator _workflowValidator;
-    private readonly List<TestEnvironment> _testEnvironments = new();
+    private readonly List<TestEnvironment> _testEnvironments = [];
 
     public CommandIntegrationTests()
     {
@@ -202,8 +202,8 @@ public class CommandIntegrationTests : IDisposable
         // assert - Validate workflow state
         var workflowExpectation = new WorkflowExpectation
         {
-            ExpectedCommandSequence = new List<string> { "list-sets", "discover", "scan", "copy", "replace" },
-            RequireJsonOutput = new List<string> { "list-sets", "discover", "scan", "copy", "replace" },
+            ExpectedCommandSequence = ["list-sets", "discover", "scan", "copy", "replace"],
+            RequireJsonOutput = ["list-sets", "discover", "scan", "copy", "replace"],
             RequireTemplateSetConsistency = false, // Different commands use different parameters
             AllowTemplateSetChanges = true
         };
@@ -367,24 +367,24 @@ public class CommandIntegrationTests : IDisposable
         var spec = new TestEnvironmentSpec
         {
             Name = testName,
-            TemplateSets = new List<TemplateSetSpec>
-            {
+            TemplateSets =
+            [
                 new()
                 {
                     Name = "TestTemplateSet",
                     DocumentCount = 3,
-                    Placeholders = new List<string> { "client_name", "date", "amount", "description" },
+                    Placeholders = ["client_name", "date", "amount", "description"],
                     IncludeCzechCharacters = false
                 }
-            },
-            ReplacementMappings = new List<ReplacementMappingSpec>
-            {
+            ],
+            ReplacementMappings =
+            [
                 new()
                 {
                     Name = "standard",
                     Values = CreateStandardReplacementMapping()
                 }
-            }
+            ]
         };
 
         var environment = await _environmentProvisioner.CreateTestEnvironmentAsync(spec);

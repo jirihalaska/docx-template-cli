@@ -28,8 +28,8 @@ public class TemplateDiscoveryService : ITemplateDiscoveryService
         CancellationToken cancellationToken = default)
     {
         return await DiscoverTemplatesAsync(
-            folderPath, 
-            new[] { "*.docx" }, 
+            folderPath,
+            ["*.docx"], 
             recursive, 
             cancellationToken);
     }

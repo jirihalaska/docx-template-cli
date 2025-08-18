@@ -395,9 +395,12 @@ public class TemplateSetDiscoveryService : ITemplateSetService
             return false;
 
         // Check for reserved names (Windows)
-        string[] reservedNames = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", 
+        string[] reservedNames =
+        [
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", 
                                   "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", 
-                                  "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+                                  "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        ];
         
         if (reservedNames.Contains(setName.ToUpperInvariant()))
             return false;

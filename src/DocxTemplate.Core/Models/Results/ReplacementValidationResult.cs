@@ -165,13 +165,13 @@ public record ReplacementValidationResult
         return new ReplacementValidationResult
         {
             IsValid = true,
-            Errors = Array.Empty<string>(),
-            Warnings = warnings ?? Array.Empty<string>(),
+            Errors = [],
+            Warnings = warnings ?? [],
             ValidMappings = validMappings,
-            MissingRequiredMappings = Array.Empty<string>(),
-            MissingOptionalMappings = missingOptionalMappings ?? Array.Empty<string>(),
-            UnusedMappings = unusedMappings ?? Array.Empty<string>(),
-            InvalidMappings = Array.Empty<InvalidMapping>(),
+            MissingRequiredMappings = [],
+            MissingOptionalMappings = missingOptionalMappings ?? [],
+            UnusedMappings = unusedMappings ?? [],
+            InvalidMappings = [],
             ValidationDuration = validationDuration,
             PlaceholdersValidated = validMappings.Count + (missingOptionalMappings?.Count ?? 0),
             MappingsValidated = validMappings.Count + (unusedMappings?.Count ?? 0)
@@ -209,12 +209,12 @@ public record ReplacementValidationResult
         {
             IsValid = false,
             Errors = errors,
-            Warnings = warnings ?? Array.Empty<string>(),
-            ValidMappings = validMappings ?? Array.Empty<string>(),
-            MissingRequiredMappings = missingRequiredMappings ?? Array.Empty<string>(),
-            MissingOptionalMappings = missingOptionalMappings ?? Array.Empty<string>(),
-            UnusedMappings = unusedMappings ?? Array.Empty<string>(),
-            InvalidMappings = invalidMappings ?? Array.Empty<InvalidMapping>(),
+            Warnings = warnings ?? [],
+            ValidMappings = validMappings ?? [],
+            MissingRequiredMappings = missingRequiredMappings ?? [],
+            MissingOptionalMappings = missingOptionalMappings ?? [],
+            UnusedMappings = unusedMappings ?? [],
+            InvalidMappings = invalidMappings ?? [],
             ValidationDuration = validationDuration,
             PlaceholdersValidated = validCount + missingRequired + missingOptional,
             MappingsValidated = validCount + unusedCount

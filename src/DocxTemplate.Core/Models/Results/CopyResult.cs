@@ -39,7 +39,7 @@ public record CopyResult
     /// <summary>
     /// List of errors encountered during copying
     /// </summary>
-    public IReadOnlyList<CopyError> Errors { get; init; } = Array.Empty<CopyError>();
+    public IReadOnlyList<CopyError> Errors { get; init; } = [];
 
     /// <summary>
     /// Number of files successfully copied
@@ -147,7 +147,7 @@ public record CopyResult
             CopiedFiles = copiedFiles,
             Duration = duration,
             FailedFiles = 0,
-            Errors = Array.Empty<CopyError>()
+            Errors = []
         };
     }
 
@@ -182,7 +182,7 @@ public record CopyResult
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         
@@ -269,7 +269,7 @@ public record CopiedFile
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         

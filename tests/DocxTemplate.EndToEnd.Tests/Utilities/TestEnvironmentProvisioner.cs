@@ -8,8 +8,8 @@ namespace DocxTemplate.EndToEnd.Tests.Utilities;
 /// </summary>
 public class TestEnvironmentProvisioner : IDisposable
 {
-    private readonly List<string> _temporaryDirectories = new();
-    private readonly List<string> _temporaryFiles = new();
+    private readonly List<string> _temporaryDirectories = [];
+    private readonly List<string> _temporaryFiles = [];
     private bool _disposed;
 
     /// <summary>
@@ -190,21 +190,31 @@ public class TestEnvironmentProvisioner : IDisposable
     {
         return complexity switch
         {
-            DocumentComplexity.Simple => new List<DocumentComplexitySpec>
-            {
-                new() { Name = "Simple", HasTables = false, HasImages = false, PlaceholderCount = 5 }
-            },
-            DocumentComplexity.Medium => new List<DocumentComplexitySpec>
-            {
+            DocumentComplexity.Simple =>
+                [new() { Name = "Simple", HasTables = false, HasImages = false, PlaceholderCount = 5 }],
+            DocumentComplexity.Medium =>
+            [
                 new() { Name = "SimpleTable", HasTables = true, HasImages = false, PlaceholderCount = 10 },
-                new() { Name = "WithFormatting", HasTables = false, HasImages = false, PlaceholderCount = 8, HasComplexFormatting = true }
-            },
-            DocumentComplexity.Complex => new List<DocumentComplexitySpec>
-            {
-                new() { Name = "Full", HasTables = true, HasImages = true, PlaceholderCount = 20, HasComplexFormatting = true },
-                new() { Name = "CzechHeavy", HasTables = true, HasImages = false, PlaceholderCount = 15, HasCzechCharacters = true }
-            },
-            _ => new List<DocumentComplexitySpec>()
+                new()
+                {
+                    Name = "WithFormatting", HasTables = false, HasImages = false, PlaceholderCount = 8,
+                    HasComplexFormatting = true
+                }
+            ],
+            DocumentComplexity.Complex =>
+            [
+                new()
+                {
+                    Name = "Full", HasTables = true, HasImages = true, PlaceholderCount = 20,
+                    HasComplexFormatting = true
+                },
+                new()
+                {
+                    Name = "CzechHeavy", HasTables = true, HasImages = false, PlaceholderCount = 15,
+                    HasCzechCharacters = true
+                }
+            ],
+            _ => []
         };
     }
 
@@ -259,12 +269,12 @@ public class TestEnvironmentProvisioner : IDisposable
 /// </summary>
 public class TestEnvironmentSpec
 {
-    public string Name { get; set; } = string.Empty;
-    public List<TemplateSetSpec> TemplateSets { get; set; } = new();
+    public string Name { get; init; } = string.Empty;
+    public List<TemplateSetSpec> TemplateSets { get; init; } = [];
     public bool GenerateTestDocuments { get; set; }
     public DocumentComplexity DocumentComplexity { get; set; } = DocumentComplexity.Simple;
-    public List<ReplacementMappingSpec> ReplacementMappings { get; set; } = new();
-    public List<AdditionalTestFileSpec> AdditionalTestFiles { get; set; } = new();
+    public List<ReplacementMappingSpec> ReplacementMappings { get; init; } = [];
+    public List<AdditionalTestFileSpec> AdditionalTestFiles { get; set; } = [];
 }
 
 /// <summary>
@@ -272,11 +282,11 @@ public class TestEnvironmentSpec
 /// </summary>
 public class TemplateSetSpec
 {
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
     public string SourcePath { get; set; } = string.Empty;
-    public int DocumentCount { get; set; } = 3;
-    public List<string> Placeholders { get; set; } = new();
-    public bool IncludeCzechCharacters { get; set; }
+    public int DocumentCount { get; init; } = 3;
+    public List<string> Placeholders { get; init; } = [];
+    public bool IncludeCzechCharacters { get; init; }
 }
 
 /// <summary>
@@ -285,7 +295,7 @@ public class TemplateSetSpec
 public class ReplacementMappingSpec
 {
     public string Name { get; set; } = string.Empty;
-    public Dictionary<string, string> Values { get; set; } = new();
+    public Dictionary<string, string> Values { get; init; } = [];
 }
 
 /// <summary>
@@ -312,7 +322,7 @@ public enum DocumentComplexity
 /// </summary>
 public class DocumentComplexitySpec
 {
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
     public bool HasTables { get; set; }
     public bool HasImages { get; set; }
     public int PlaceholderCount { get; set; }
@@ -325,8 +335,8 @@ public class DocumentComplexitySpec
 /// </summary>
 public class TestEnvironment
 {
-    public string Name { get; set; } = string.Empty;
-    public string RootDirectory { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string RootDirectory { get; init; } = string.Empty;
     public string TemplatesDirectory { get; set; } = string.Empty;
     public string OutputDirectory { get; set; } = string.Empty;
     public string DataDirectory { get; set; } = string.Empty;

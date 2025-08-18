@@ -236,7 +236,7 @@ public record CopySpaceEstimate
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         int order = 0;
         double size = Math.Abs(bytes);
         

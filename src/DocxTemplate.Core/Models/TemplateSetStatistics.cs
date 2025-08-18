@@ -255,8 +255,8 @@ public record TemplateSetStatistics
             LargestSetBySize = emptySet,
             MostRecentSet = emptySet,
             TemplateCountDistribution = new Dictionary<string, int>(),
-            CommonFilePatterns = Array.Empty<FilePattern>(),
-            EmptyOrInvalidSets = Array.Empty<string>(),
+            CommonFilePatterns = [],
+            EmptyOrInvalidSets = [],
             AnalysisDuration = analysisDuration
         };
     }
@@ -301,7 +301,7 @@ public record TemplateSetStatistics
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         int order = 0;
         double size = bytes;
         
@@ -368,7 +368,7 @@ public record TemplateSetSummary
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         int order = 0;
         double size = bytes;
         

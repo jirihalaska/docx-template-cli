@@ -16,51 +16,51 @@ public class CopyCommand : Command
     public CopyCommand() : base("copy", "Copy DOCX templates to target directory")
     {
         var sourceOption = new Option<string>(
-            new[] { "--source", "-s" },
+            ["--source", "-s"],
             "Source directory path containing templates to copy")
         {
             IsRequired = true
         };
 
         var targetOption = new Option<string>(
-            new[] { "--target", "-t" },
+            ["--target", "-t"],
             "Target directory path where templates will be copied")
         {
             IsRequired = true
         };
 
         var preserveStructureOption = new Option<bool>(
-            new[] { "--preserve-structure", "-p" },
+            ["--preserve-structure", "-p"],
             getDefaultValue: () => true,
             "Preserve directory structure in target location");
 
         var overwriteOption = new Option<bool>(
-            new[] { "--overwrite", "--force", "-f" },
+            ["--overwrite", "--force", "-f"],
             getDefaultValue: () => false,
             "Overwrite existing files in target location");
 
         var dryRunOption = new Option<bool>(
-            new[] { "--dry-run", "-d" },
+            ["--dry-run", "-d"],
             getDefaultValue: () => false,
             "Show what would be copied without performing actual operations");
 
         var formatOption = new Option<OutputFormat>(
-            new[] { "--format", "-o" },
+            ["--format", "-o"],
             getDefaultValue: () => OutputFormat.Text,
             "Output format (text, json, table, csv)");
 
         var quietOption = new Option<bool>(
-            new[] { "--quiet", "-q" },
+            ["--quiet", "-q"],
             getDefaultValue: () => false,
             "Suppress progress messages");
 
         var validateOption = new Option<bool>(
-            new[] { "--validate", "-v" },
+            ["--validate", "-v"],
             getDefaultValue: () => false,
             "Validate copy operation before executing");
 
         var showEstimateOption = new Option<bool>(
-            new[] { "--estimate", "-e" },
+            ["--estimate", "-e"],
             getDefaultValue: () => false,
             "Show disk space estimate for the copy operation");
 
@@ -216,7 +216,7 @@ public class CopyCommand : Command
                 if (!quiet)
                 {
                     Console.WriteLine($"Copy operation completed: {copyResult.GetSummary()}");
-                    
+
                     if (copyResult.FailedFiles > 0)
                     {
                         Console.WriteLine($"Warnings: {copyResult.FailedFiles} file(s) failed to copy");
@@ -406,7 +406,7 @@ public class CopyCommand : Command
         }
 
         Console.WriteLine("╚══════════════════════════════════════════════════════╧═══════════╧═══════════╝");
-        
+
         if (result.CopiedFiles.Count > 20)
         {
             Console.WriteLine($"... and {result.CopiedFiles.Count - 20} more file(s)");

@@ -17,7 +17,7 @@ public class CliProcessExecutor : IDisposable
     {
         _cliExecutablePath = cliExecutablePath ?? throw new ArgumentNullException(nameof(cliExecutablePath));
         _defaultTimeout = defaultTimeout ?? TimeSpan.FromMinutes(2);
-        
+
         if (!File.Exists(_cliExecutablePath))
         {
             throw new FileNotFoundException($"CLI executable not found at: {_cliExecutablePath}");
@@ -28,8 +28,8 @@ public class CliProcessExecutor : IDisposable
     /// Executes a CLI command and returns the result
     /// </summary>
     public async Task<CliExecutionResult> ExecuteAsync(
-        string command, 
-        string? workingDirectory = null, 
+        string command,
+        string? workingDirectory = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -65,7 +65,7 @@ public class CliProcessExecutor : IDisposable
         };
 
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             process.Start();
@@ -86,7 +86,7 @@ public class CliProcessExecutor : IDisposable
                     // Log kill exception but don't throw
                     System.Diagnostics.Debug.WriteLine($"Failed to kill process: {killEx.Message}");
                 }
-                
+
                 throw new TimeoutException($"CLI command '{command}' timed out after {actualTimeout}");
             }
 
@@ -111,13 +111,13 @@ public class CliProcessExecutor : IDisposable
     /// Executes a CLI command and deserializes JSON output
     /// </summary>
     public async Task<T> ExecuteAndDeserializeAsync<T>(
-        string command, 
-        string? workingDirectory = null, 
+        string command,
+        string? workingDirectory = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         var result = await ExecuteAsync(command, workingDirectory, timeout, cancellationToken);
-        
+
         if (result.ExitCode != 0)
         {
             throw new InvalidOperationException(
@@ -136,7 +136,7 @@ public class CliProcessExecutor : IDisposable
             return JsonSerializer.Deserialize<T>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
-            });
+            }) ?? throw new InvalidOperationException();
         }
         catch (JsonException ex)
         {
@@ -156,7 +156,7 @@ public class CliProcessExecutor : IDisposable
         // Look for JSON starting with { or [
         var lines = output.Split('\n');
         var jsonStart = -1;
-        
+
         for (int i = 0; i < lines.Length; i++)
         {
             var trimmed = lines[i].Trim();
@@ -185,7 +185,7 @@ public class CliProcessExecutor : IDisposable
     {
         var assemblyDirectory = Path.GetDirectoryName(typeof(CliProcessExecutor).Assembly.Location) ?? throw new InvalidOperationException("Unable to determine assembly location");
         var solutionRoot = FindSolutionRoot(assemblyDirectory);
-        
+
         // Try different executable names based on platform
         var possibleNames = new[]
         {
@@ -201,12 +201,12 @@ public class CliProcessExecutor : IDisposable
         if (configuration != "Debug") configurationsToTry.Add("Debug");
 
         var checkedPaths = new List<string>();
-        
+
         foreach (var config in configurationsToTry)
         {
             var cliProjectPath = Path.Combine(solutionRoot, "src", "DocxTemplate.CLI", "bin", config, "net9.0");
             checkedPaths.Add(cliProjectPath);
-            
+
             foreach (var name in possibleNames)
             {
                 var path = Path.Combine(cliProjectPath, name);
@@ -221,7 +221,7 @@ public class CliProcessExecutor : IDisposable
     private static string FindSolutionRoot(string startPath)
     {
         var current = new DirectoryInfo(startPath);
-        
+
         while (current != null && !current.GetFiles("*.sln").Any())
         {
             current = current.Parent;

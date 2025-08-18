@@ -138,7 +138,7 @@ public record PlaceholderStatistics
             FilesScanned = filesScanned,
             FilesWithPlaceholders = 0,
             AveragePerFile = 0,
-            MostCommonPlaceholders = Array.Empty<Placeholder>(),
+            MostCommonPlaceholders = [],
             PlaceholderDistribution = new Dictionary<int, int>(),
             ScanDuration = scanDuration
         };

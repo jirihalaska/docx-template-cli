@@ -30,7 +30,7 @@ public class ReplacementValidationException : DocxTemplateException
     /// </summary>
     public ReplacementValidationException() : base("Replacement validation failed")
     {
-        ValidationErrors = Array.Empty<string>();
+        ValidationErrors = [];
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public class ReplacementValidationException : DocxTemplateException
     /// <param name="message">The message that describes the error</param>
     public ReplacementValidationException(string message) : base(message)
     {
-        ValidationErrors = Array.Empty<string>();
+        ValidationErrors = [];
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public class ReplacementValidationException : DocxTemplateException
     {
         PlaceholderName = placeholderName;
         ValidationRule = validationRule;
-        ValidationErrors = new[] { $"{placeholderName}: {validationRule}" };
+        ValidationErrors = [$"{placeholderName}: {validationRule}"];
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class ReplacementValidationException : DocxTemplateException
         PlaceholderName = placeholderName;
         ReplacementValue = replacementValue;
         ValidationRule = validationRule;
-        ValidationErrors = new[] { $"{placeholderName}: {validationRule}" };
+        ValidationErrors = [$"{placeholderName}: {validationRule}"];
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public class ReplacementValidationException : DocxTemplateException
     /// <param name="innerException">The exception that is the cause of the current exception</param>
     public ReplacementValidationException(string message, Exception innerException) : base(message, innerException)
     {
-        ValidationErrors = Array.Empty<string>();
+        ValidationErrors = [];
     }
 
     /// <summary>

@@ -45,7 +45,7 @@ public record BackupResult
     /// <summary>
     /// List of errors encountered during backup
     /// </summary>
-    public IReadOnlyList<BackupError> Errors { get; init; } = Array.Empty<BackupError>();
+    public IReadOnlyList<BackupError> Errors { get; init; } = [];
 
     /// <summary>
     /// Total number of files attempted (successful + failed)
@@ -125,7 +125,7 @@ public record BackupResult
             Duration = duration,
             BackupDirectory = backupDirectory,
             FailedFiles = 0,
-            Errors = Array.Empty<BackupError>()
+            Errors = []
         };
     }
 
@@ -163,7 +163,7 @@ public record BackupResult
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         
@@ -250,7 +250,7 @@ public record BackupDetail
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
         

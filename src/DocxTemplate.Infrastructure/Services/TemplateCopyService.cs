@@ -57,10 +57,11 @@ public class TemplateCopyService : ITemplateCopyService
             var duration = DateTime.UtcNow - startTime;
             
             return CopyResult.WithFailures(
-                Array.Empty<CopiedFile>(),
+                [],
                 duration,
                 0,
-                new[] { new CopyError { SourcePath = sourcePath, TargetPath = targetPath, Message = ex.Message, ExceptionType = ex.GetType().Name } });
+                [new CopyError { SourcePath = sourcePath, TargetPath = targetPath, Message = ex.Message, ExceptionType = ex.GetType().Name }
+                ]);
         }
     }
 
@@ -99,10 +100,11 @@ public class TemplateCopyService : ITemplateCopyService
             var failureDuration = DateTime.UtcNow - startTime;
             
             return CopyResult.WithFailures(
-                Array.Empty<CopiedFile>(),
+                [],
                 failureDuration,
                 templateFiles.Count,
-                new[] { new CopyError { SourcePath = string.Empty, TargetPath = targetPath, Message = $"Failed to create target directory: {ex.Message}", ExceptionType = ex.GetType().Name } });
+                [new CopyError { SourcePath = string.Empty, TargetPath = targetPath, Message = $"Failed to create target directory: {ex.Message}", ExceptionType = ex.GetType().Name }
+                ]);
         }
 
         // Create directory structure if preserving structure
@@ -524,7 +526,7 @@ public class TemplateCopyService : ITemplateCopyService
     {
         if (bytes == 0) return "0 B";
         
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         int order = 0;
         double size = bytes;
         

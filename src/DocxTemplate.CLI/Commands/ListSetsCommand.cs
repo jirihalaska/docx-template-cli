@@ -14,24 +14,24 @@ public class ListSetsCommand : Command
     public ListSetsCommand() : base("list-sets", "List all template sets in the templates directory")
     {
         var templatesOption = new Option<string>(
-            new[] { "--templates", "-t" },
+            ["--templates", "-t"],
             "Path to the templates root directory")
         {
             IsRequired = true
         };
 
         var formatOption = new Option<OutputFormat>(
-            new[] { "--format", "-f" },
+            ["--format", "-f"],
             getDefaultValue: () => OutputFormat.Text,
             "Output format (text, json, table, list)");
 
         var detailsOption = new Option<bool>(
-            new[] { "--details", "-d" },
+            ["--details", "-d"],
             getDefaultValue: () => false,
             "Show detailed information about each template set");
 
         var includeEmptyOption = new Option<bool>(
-            new[] { "--include-empty", "-e" },
+            ["--include-empty", "-e"],
             getDefaultValue: () => false,
             "Include empty folders (folders without .docx files)");
 
@@ -62,10 +62,10 @@ public class ListSetsCommand : Command
             try
             {
                 logger?.LogDebug("Listing template sets in: {Path}", templatesPath);
-                
+
                 var templateSets = await templateSetService.ListTemplateSetsAsync(
-                    templatesPath, 
-                    includeEmpty, 
+                    templatesPath,
+                    includeEmpty,
                     cancellationToken);
 
                 switch (format)
@@ -186,12 +186,12 @@ public class ListSetsCommand : Command
         foreach (var ts in templateSets.OrderBy(t => t.Name))
         {
             Console.WriteLine($"{index}. {ts.Name} ({ts.TemplateCount} files, {ts.DisplaySize})");
-            
+
             if (showDetails)
             {
                 Console.WriteLine($"   Path: {ts.FullPath}");
                 Console.WriteLine($"   Last Modified: {ts.LastModified:yyyy-MM-dd HH:mm:ss}");
-                
+
                 if (ts.HasSubfolders)
                 {
                     Console.WriteLine($"   Directory Depth: {ts.DirectoryDepth} levels");
@@ -204,7 +204,7 @@ public class ListSetsCommand : Command
                     {
                         Console.WriteLine($"     - {template.RelativePath} ({template.DisplaySize})");
                     }
-                    
+
                     if (ts.Templates.Count > 3)
                     {
                         Console.WriteLine($"     ... and {ts.Templates.Count - 3} more");
@@ -213,7 +213,7 @@ public class ListSetsCommand : Command
 
                 Console.WriteLine();
             }
-            
+
             index++;
         }
 
@@ -229,17 +229,17 @@ public class ListSetsCommand : Command
     private static string FormatBytes(long bytes)
     {
         if (bytes == 0) return "0 B";
-        
-        string[] sizes = { "B", "KB", "MB", "GB" };
+
+        string[] sizes = ["B", "KB", "MB", "GB"];
         int order = 0;
         double size = bytes;
-        
+
         while (size >= 1024 && order < sizes.Length - 1)
         {
             order++;
             size /= 1024;
         }
-        
+
         return $"{size:0.#} {sizes[order]}";
     }
 }

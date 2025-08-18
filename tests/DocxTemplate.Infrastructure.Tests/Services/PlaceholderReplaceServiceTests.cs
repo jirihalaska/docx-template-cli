@@ -37,7 +37,7 @@ public class PlaceholderReplaceServiceTests
         
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/test/folder/test.docx" });
+            .Returns(["/test/folder/test.docx"]);
         _mockFileSystemService.Setup(fs => fs.GetFileName("/test/folder/test.docx")).Returns("test.docx");
         _mockFileSystemService.Setup(fs => fs.GetFileSize("/test/folder/test.docx")).Returns(1024);
         _mockFileSystemService.Setup(fs => fs.GetLastWriteTime("/test/folder/test.docx")).Returns(DateTime.UtcNow);
@@ -179,7 +179,7 @@ public class PlaceholderReplaceServiceTests
         
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly))
-            .Returns(new[] { "/test/folder/test.docx" });
+            .Returns(["/test/folder/test.docx"]);
         _mockFileSystemService.Setup(fs => fs.GetFileName("/test/folder/test.docx")).Returns("test.docx");
         _mockFileSystemService.Setup(fs => fs.GetFileSize("/test/folder/test.docx")).Returns(1024);
         _mockFileSystemService.Setup(fs => fs.GetLastWriteTime("/test/folder/test.docx")).Returns(DateTime.UtcNow);

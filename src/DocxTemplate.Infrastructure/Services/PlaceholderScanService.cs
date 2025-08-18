@@ -51,12 +51,12 @@ public class PlaceholderScanService : IPlaceholderScanService
             var duration = DateTime.UtcNow - startTime;
             
             return PlaceholderScanResult.WithErrors(
-                Array.Empty<Placeholder>(),
+                [],
                 0,
                 duration,
                 0,
                 0,
-                new[] { new ScanError { FilePath = folderPath, Message = ex.Message, ExceptionType = ex.GetType().Name } });
+                [new ScanError { FilePath = folderPath, Message = ex.Message, ExceptionType = ex.GetType().Name }]);
         }
     }
 
@@ -100,7 +100,7 @@ public class PlaceholderScanService : IPlaceholderScanService
                 return new ScanFileResult
                 {
                     FilePath = templateFile.FullPath,
-                    Placeholders = Array.Empty<Placeholder>(),
+                    Placeholders = [],
                     Error = new ScanError
                     {
                         FilePath = templateFile.FullPath,
@@ -137,7 +137,7 @@ public class PlaceholderScanService : IPlaceholderScanService
                 {
                     if (!allPlaceholders.ContainsKey(placeholder.Name))
                     {
-                        allPlaceholders[placeholder.Name] = new List<PlaceholderLocation>();
+                        allPlaceholders[placeholder.Name] = [];
                     }
 
                     allPlaceholders[placeholder.Name].AddRange(placeholder.Locations);
@@ -217,7 +217,7 @@ public class PlaceholderScanService : IPlaceholderScanService
     public IReadOnlyList<string> ExtractPlaceholderNames(string content, string pattern = @"\{\{.*?\}\}")
     {
         if (string.IsNullOrEmpty(content))
-            return Array.Empty<string>();
+            return [];
 
         ValidatePattern(pattern);
 
@@ -333,7 +333,7 @@ public class PlaceholderScanService : IPlaceholderScanService
             return new ScanFileResult
             {
                 FilePath = templatePath,
-                Placeholders = Array.Empty<Placeholder>(),
+                Placeholders = [],
                 Error = new ScanError
                 {
                     FilePath = templatePath,
@@ -384,7 +384,7 @@ public class PlaceholderScanService : IPlaceholderScanService
 
                 if (!placeholders.ContainsKey(name))
                 {
-                    placeholders[name] = new List<PlaceholderLocation>();
+                    placeholders[name] = [];
                 }
 
                 // Count occurrences of this placeholder in the text

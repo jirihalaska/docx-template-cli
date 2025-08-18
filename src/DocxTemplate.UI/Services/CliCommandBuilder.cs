@@ -8,7 +8,7 @@ public class CliCommandBuilder
     {
         return new CliCommand("list-sets", new[]
         {
-            "--templates", templatesPath,
+            "--templates", QuotePathIfNeeded(templatesPath),
             "--format", "json"
         });
     }
@@ -17,7 +17,7 @@ public class CliCommandBuilder
     {
         return new CliCommand("scan", new[]
         {
-            "--path", path,
+            "--path", QuotePathIfNeeded(path),
             "--format", "json"
         });
     }
@@ -26,8 +26,8 @@ public class CliCommandBuilder
     {
         return new CliCommand("copy", new[]
         {
-            "--source", source,
-            "--target", target,
+            "--source", QuotePathIfNeeded(source),
+            "--target", QuotePathIfNeeded(target),
             "--format", "json"
         });
     }
@@ -36,9 +36,23 @@ public class CliCommandBuilder
     {
         return new CliCommand("replace", new[]
         {
-            "--folder", folder,
-            "--map", mapFile,
+            "--folder", QuotePathIfNeeded(folder),
+            "--map", QuotePathIfNeeded(mapFile),
             "--format", "json"
         });
+    }
+
+    private static string QuotePathIfNeeded(string path)
+    {
+        // Quote the path if it contains spaces and isn't already quoted
+        if (string.IsNullOrEmpty(path))
+            return path;
+            
+        if (path.Contains(' ') && !path.StartsWith('"') && !path.EndsWith('"'))
+        {
+            return $"\"{path}\"";
+        }
+        
+        return path;
     }
 }

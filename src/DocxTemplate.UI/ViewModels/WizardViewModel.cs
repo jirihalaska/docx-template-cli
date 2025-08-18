@@ -39,7 +39,7 @@ public class WizardViewModel : ViewModelBase
             _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
             _serviceProvider.GetRequiredService<PlaceholderDiscoveryViewModel>(),
             _serviceProvider.GetRequiredService<PlaceholderInputViewModel>(),
-            null!, // Placeholder for Step 4
+            _serviceProvider.GetRequiredService<OutputFolderSelectionViewModel>(),
             null!  // Placeholder for Step 5
         };
 
@@ -59,12 +59,17 @@ public class WizardViewModel : ViewModelBase
             DataContext = _stepViewModels[2]
         };
         
+        var step4View = new Step4OutputSelectionView
+        {
+            DataContext = _stepViewModels[3]
+        };
+        
         _stepViews = new List<UserControl>
         {
             step1View,
             step2View,
             step3View,
-            new Step4OutputSelectionView(),
+            step4View,
             new Step5ProcessingResultsView()
         };
 

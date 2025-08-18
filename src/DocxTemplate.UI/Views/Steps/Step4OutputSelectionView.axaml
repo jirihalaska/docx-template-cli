@@ -2,36 +2,141 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:DocxTemplate.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DocxTemplate.UI.Views.Steps.Step4OutputSelectionView">
+             x:Class="DocxTemplate.UI.Views.Steps.Step4OutputSelectionView"
+             x:DataType="vm:OutputFolderSelectionViewModel">
 
   <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
           CornerRadius="8"
           Padding="20">
-    <StackPanel Spacing="15">
+    <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Center">
       
-      <TextBlock Text="Výběr výstupní složky"
+      <!-- Step Title -->
+      <TextBlock Text="{Binding StepTitle}"
                  FontSize="24"
                  FontWeight="Bold"
                  HorizontalAlignment="Center" />
       
-      <TextBlock Text="Vyberte složku, kde budou uloženy zpracované dokumenty."
+      <!-- Step Description -->
+      <TextBlock Text="{Binding StepDescription}"
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"
                  TextWrapping="Wrap" />
       
-      <Rectangle Height="200" 
-                 Fill="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                 Stroke="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                 StrokeDashArray="5,5"
-                 RadiusX="4"
-                 RadiusY="4" />
+      <!-- Main Selection Area -->
+      <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1"
+              CornerRadius="6"
+              Padding="20"
+              MinHeight="120">
+        
+        <StackPanel Spacing="15" VerticalAlignment="Center">
+          
+          <!-- Select Folder Button -->
+          <Button Content="Vybrat výstupní složku"
+                  Command="{Binding SelectFolderCommand}"
+                  HorizontalAlignment="Center"
+                  Padding="20,10"
+                  FontSize="16"
+                  IsEnabled="{Binding !IsSelectingFolder}" />
+          
+          <!-- Loading indicator -->
+          <TextBlock Text="Otevírám dialog pro výběr složky..."
+                     HorizontalAlignment="Center"
+                     FontStyle="Italic"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                     IsVisible="{Binding IsSelectingFolder}" />
+          
+        </StackPanel>
+      </Border>
       
-      <TextBlock Text="[Obsah kroku bude implementován v budoucích story]"
-                 FontStyle="Italic"
+      <!-- Selected Folder Display -->
+      <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1"
+              CornerRadius="4"
+              Padding="15"
+              IsVisible="{Binding HasSelectedFolder}">
+        
+        <StackPanel Spacing="10">
+          
+          <TextBlock Text="Vybraná výstupní složka:"
+                     FontSize="14"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+          
+          <!-- Folder Path Display with scrolling support -->
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                        VerticalScrollBarVisibility="Disabled"
+                        MaxHeight="100">
+            <TextBlock Text="{Binding FolderDisplayText}"
+                       FontSize="14"
+                       FontFamily="Consolas,Monaco,monospace"
+                       TextWrapping="NoWrap"
+                       VerticalAlignment="Center"
+                       Padding="5" />
+          </ScrollViewer>
+          
+        </StackPanel>
+      </Border>
+      
+      <!-- Validation Message -->
+      <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1"
+              CornerRadius="4"
+              Padding="15"
+              IsVisible="{Binding ValidationMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+        
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          
+          <!-- Status Icon - Success -->
+          <Border Width="20" Height="20" 
+                  Background="Green"
+                  CornerRadius="10"
+                  VerticalAlignment="Top"
+                  IsVisible="{Binding IsValid}">
+            <TextBlock Text="✓"
+                       FontSize="12"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold" />
+          </Border>
+          
+          <!-- Status Icon - Error -->
+          <Border Width="20" Height="20" 
+                  Background="Red"
+                  CornerRadius="10"
+                  VerticalAlignment="Top"
+                  IsVisible="{Binding !IsValid}">
+            <TextBlock Text="✗"
+                       FontSize="12"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold" />
+          </Border>
+          
+          <!-- Validation Message -->
+          <TextBlock Text="{Binding ValidationMessage}"
+                     FontSize="14"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center" />
+          
+        </StackPanel>
+      </Border>
+      
+      <!-- No Folder Selected Message -->
+      <TextBlock Text="Žádná složka není vybrána. Pro pokračování musíte vybrat výstupní složku."
+                 FontSize="14"
+                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding !HasSelectedFolder}" />
                  
     </StackPanel>
   </Border>

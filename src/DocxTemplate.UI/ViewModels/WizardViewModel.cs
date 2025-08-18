@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using ReactiveUI;
 using DocxTemplate.UI.Models;
@@ -18,6 +19,7 @@ public class WizardViewModel : ViewModelBase
     private readonly List<UserControl> _stepViews;
     private readonly List<StepViewModelBase> _stepViewModels;
     private readonly IServiceProvider _serviceProvider;
+    private IDisposable? _validationSubscription;
 
     public WizardViewModel(IServiceProvider serviceProvider)
     {
@@ -81,12 +83,19 @@ public class WizardViewModel : ViewModelBase
             step5View
         };
 
-        var canGoBack = this.WhenAnyValue(x => x.CurrentStep, step => step > 1);
-        var canGoNext = this.WhenAnyValue(x => x.CurrentStep, step => step < TotalSteps)
-            .CombineLatest(this.WhenAnyValue(x => x.CanAdvanceToNextStep), (hasNext, canAdvance) => hasNext && canAdvance);
+        var canGoBack = this.WhenAnyValue(x => x.CurrentStep)
+            .Select(step => step > 1)
+            .ObserveOn(RxApp.MainThreadScheduler);
+            
+        var canGoNext = this.WhenAnyValue(x => x.CurrentStep)
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.CanAdvanceToNextStep).ObserveOn(RxApp.MainThreadScheduler), 
+                (step, canAdvance) => step < TotalSteps && canAdvance)
+            .ObserveOn(RxApp.MainThreadScheduler);
 
-        NextCommand = ReactiveCommand.Create(GoToNextStep, canGoNext);
-        BackCommand = ReactiveCommand.Create(GoToPreviousStep, canGoBack);
+        NextCommand = ReactiveCommand.Create(GoToNextStep, canGoNext, RxApp.MainThreadScheduler);
+        BackCommand = ReactiveCommand.Create(GoToPreviousStep, canGoBack, RxApp.MainThreadScheduler);
 
         this.WhenAnyValue(x => x.CurrentStep)
             .Subscribe(UpdateStepStates);
@@ -107,7 +116,19 @@ public class WizardViewModel : ViewModelBase
     public bool CanAdvanceToNextStep
     {
         get => _canAdvanceToNextStep;
-        set => this.RaiseAndSetIfChanged(ref _canAdvanceToNextStep, value);
+        set
+        {
+            // Ensure property changes happen on UI thread
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            {
+                this.RaiseAndSetIfChanged(ref _canAdvanceToNextStep, value);
+            }
+            else
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                    this.RaiseAndSetIfChanged(ref _canAdvanceToNextStep, value));
+            }
+        }
     }
 
     public string CurrentStepTitle => Steps[CurrentStep - 1].Title;
@@ -158,11 +179,21 @@ public class WizardViewModel : ViewModelBase
 
     private void UpdateStepStates(int currentStep)
     {
+        // Ensure we're on UI thread
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateStepStates(currentStep));
+            return;
+        }
+        
         for (int i = 0; i < Steps.Count; i++)
         {
             Steps[i].IsActive = (i + 1) == currentStep;
         }
 
+        // Dispose previous subscription
+        _validationSubscription?.Dispose();
+        
         // Update CanAdvanceToNextStep based on current step validation
         var currentStepViewModel = _stepViewModels[currentStep - 1];
         CanAdvanceToNextStep = currentStepViewModel?.ValidateStep() ?? true;
@@ -170,7 +201,8 @@ public class WizardViewModel : ViewModelBase
         // Subscribe to validation changes for reactive updates
         if (currentStepViewModel != null)
         {
-            currentStepViewModel.WhenAnyValue(x => x.IsValid)
+            _validationSubscription = currentStepViewModel.WhenAnyValue(x => x.IsValid)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(isValid => CanAdvanceToNextStep = isValid);
         }
 

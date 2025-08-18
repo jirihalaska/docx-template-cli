@@ -52,8 +52,21 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
         get => _selectedTemplateSet;
         set
         {
-            this.RaiseAndSetIfChanged(ref _selectedTemplateSet, value);
-            UpdateValidation();
+            // If we're already on UI thread, update directly
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            {
+                this.RaiseAndSetIfChanged(ref _selectedTemplateSet, value);
+                UpdateValidation();
+            }
+            else
+            {
+                // Post to UI thread if we're on a different thread
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    this.RaiseAndSetIfChanged(ref _selectedTemplateSet, value);
+                    UpdateValidation();
+                });
+            }
         }
     }
 
@@ -180,15 +193,24 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
     /// <param name="templateSet">Selected template set</param>
     private void OnTemplateSetSelected(TemplateSetItemViewModel templateSet)
     {
-        // Deselect all other template sets
-        foreach (var ts in TemplateSets)
+        // If we're already on UI thread, execute directly
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
         {
-            ts.IsSelected = false;
-        }
+            // Deselect all other template sets
+            foreach (var ts in TemplateSets)
+            {
+                ts.IsSelected = false;
+            }
 
-        // Select the chosen template set
-        templateSet.IsSelected = true;
-        SelectedTemplateSet = templateSet;
+            // Select the chosen template set
+            templateSet.IsSelected = true;
+            SelectedTemplateSet = templateSet;
+        }
+        else
+        {
+            // Post to UI thread if we're on a different thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => OnTemplateSetSelected(templateSet));
+        }
     }
 }
 

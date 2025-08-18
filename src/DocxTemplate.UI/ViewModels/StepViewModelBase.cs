@@ -76,12 +76,30 @@ public abstract class StepViewModelBase : ViewModelBase, IStepValidator
     /// </summary>
     protected void UpdateValidation()
     {
-        var wasValid = IsValid;
-        var isNowValid = ValidateStep();
-        
-        if (wasValid != isNowValid)
+        // If we're already on UI thread, execute directly
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
         {
-            this.RaisePropertyChanged(nameof(IsValid));
+            var wasValid = IsValid;
+            var isNowValid = ValidateStep();
+            
+            if (wasValid != isNowValid)
+            {
+                this.RaisePropertyChanged(nameof(IsValid));
+            }
+        }
+        else
+        {
+            // Post to UI thread if we're on a different thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                var wasValid = IsValid;
+                var isNowValid = ValidateStep();
+                
+                if (wasValid != isNowValid)
+                {
+                    this.RaisePropertyChanged(nameof(IsValid));
+                }
+            });
         }
     }
 }

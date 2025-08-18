@@ -183,19 +183,24 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
     {
         if (SelectedTemplateSet == null)
         {
-            HasScanError = true;
-            ScanErrorMessage = "Není vybrána žádná sada šablon. Vraťte se zpět a vyberte šablony.";
-            UpdateValidation();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                HasScanError = true;
+                ScanErrorMessage = "Není vybrána žádná sada šablon. Vraťte se zpět a vyberte šablony.";
+                UpdateValidation();
+            });
             return;
         }
 
-        IsScanning = true;
-        HasScanCompleted = false;
-        HasScanError = false;
-        ScanStatusMessage = "Prohledávání šablon...";
-        ScanErrorMessage = string.Empty;
-        
-        UpdateValidation();
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            IsScanning = true;
+            HasScanCompleted = false;
+            HasScanError = false;
+            ScanStatusMessage = "Prohledávání šablon...";
+            ScanErrorMessage = string.Empty;
+            UpdateValidation();
+        });
 
         try
         {
@@ -220,14 +225,20 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         }
         catch (Exception ex)
         {
-            HasScanError = true;
-            ScanErrorMessage = $"Chyba při prohledávání šablon: {ex.Message}";
-            ScanStatusMessage = "Prohledávání selhalo";
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                HasScanError = true;
+                ScanErrorMessage = $"Chyba při prohledávání šablon: {ex.Message}";
+                ScanStatusMessage = "Prohledávání selhalo";
+            });
         }
         finally
         {
-            IsScanning = false;
-            UpdateValidation();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                IsScanning = false;
+                UpdateValidation();
+            });
         }
     }
 
@@ -236,36 +247,57 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
     /// </summary>
     private async Task ProcessScanResult(PlaceholderScanResult scanResult)
     {
-        await Task.Run(() =>
+        // Process data in background thread
+        var processedData = await Task.Run(() =>
         {
-            DiscoveredPlaceholders.Clear();
-
             // Sort placeholders by discovery order (first occurrence determines position)
             // Use the first location as the reference point for ordering
             var sortedPlaceholders = scanResult.Placeholders
                 .OrderBy(p => p.Locations.FirstOrDefault()?.FilePath ?? "")
                 .ThenBy(p => p.Locations.FirstOrDefault()?.CharacterPositions?.FirstOrDefault() ?? 0)
+                .Select(p => new PlaceholderItemViewModel(p))
                 .ToList();
 
-            foreach (var placeholder in sortedPlaceholders)
+            var statusMessage = scanResult.IsSuccessful
+                ? $"Dokončeno: nalezeno {scanResult.UniquePlaceholderCount} zástupných symbolů ({scanResult.TotalOccurrences} výskytů)"
+                : null;
+            
+            var errorMessage = !scanResult.IsSuccessful
+                ? $"Prohledávání dokončeno s chybami: {string.Join(", ", scanResult.Errors.Select(e => e.DisplayMessage))}"
+                : null;
+
+            return new
             {
-                var viewModel = new PlaceholderItemViewModel(placeholder);
-                DiscoveredPlaceholders.Add(viewModel);
+                Placeholders = sortedPlaceholders,
+                TotalPlaceholders = scanResult.UniquePlaceholderCount,
+                TotalOccurrences = scanResult.TotalOccurrences,
+                IsSuccessful = scanResult.IsSuccessful,
+                StatusMessage = statusMessage,
+                ErrorMessage = errorMessage
+            };
+        });
+
+        // Update UI properties on UI thread
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            DiscoveredPlaceholders.Clear();
+            foreach (var placeholder in processedData.Placeholders)
+            {
+                DiscoveredPlaceholders.Add(placeholder);
             }
 
-            TotalPlaceholdersFound = scanResult.UniquePlaceholderCount;
-            TotalOccurrences = scanResult.TotalOccurrences;
+            TotalPlaceholdersFound = processedData.TotalPlaceholders;
+            TotalOccurrences = processedData.TotalOccurrences;
             
-            if (scanResult.IsSuccessful)
+            if (processedData.IsSuccessful)
             {
                 HasScanCompleted = true;
-                ScanStatusMessage = $"Dokončeno: nalezeno {TotalPlaceholdersFound} zástupných symbolů ({TotalOccurrences} výskytů)";
+                ScanStatusMessage = processedData.StatusMessage;
             }
             else
             {
                 HasScanError = true;
-                var errorMessages = scanResult.Errors.Select(e => e.DisplayMessage).ToList();
-                ScanErrorMessage = $"Prohledávání dokončeno s chybami: {string.Join(", ", errorMessages)}";
+                ScanErrorMessage = processedData.ErrorMessage;
             }
         });
     }

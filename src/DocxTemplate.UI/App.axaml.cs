@@ -6,14 +6,22 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using DocxTemplate.UI.ViewModels;
 using DocxTemplate.UI.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DocxTemplate.UI;
 
 public partial class App : Application
 {
+    private ServiceProvider? _serviceProvider;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.RegisterServices();
+        _serviceProvider = services.BuildServiceProvider();
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -23,9 +31,13 @@ public partial class App : Application
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
+            
+            var mainWindowViewModel = _serviceProvider?.GetRequiredService<MainWindowViewModel>() 
+                ?? throw new InvalidOperationException("Failed to resolve MainWindowViewModel");
+                
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(),
+                DataContext = mainWindowViewModel,
             };
         }
 

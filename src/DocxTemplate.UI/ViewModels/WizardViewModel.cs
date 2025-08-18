@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reactive;
@@ -6,6 +7,7 @@ using ReactiveUI;
 using DocxTemplate.UI.Models;
 using DocxTemplate.UI.Views.Steps;
 using Avalonia.Controls;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -14,9 +16,13 @@ public class WizardViewModel : ViewModelBase
     private int _currentStep = 1;
     private const int TotalSteps = 5;
     private readonly List<UserControl> _stepViews;
+    private readonly List<StepViewModelBase> _stepViewModels;
+    private readonly IServiceProvider _serviceProvider;
 
-    public WizardViewModel()
+    public WizardViewModel(IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        
         var stepList = new List<StepInfo>
         {
             new() { Title = "Vyberte sadu šablon", IsActive = true },
@@ -27,9 +33,25 @@ public class WizardViewModel : ViewModelBase
         };
         Steps = new ReadOnlyCollection<StepInfo>(stepList);
 
+        // Initialize step ViewModels
+        _stepViewModels = new List<StepViewModelBase>
+        {
+            _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
+            null!, // Placeholder for Step 2
+            null!, // Placeholder for Step 3  
+            null!, // Placeholder for Step 4
+            null!  // Placeholder for Step 5
+        };
+
+        // Initialize step views with their ViewModels
+        var step1View = new Step1TemplateSelectionView
+        {
+            DataContext = _stepViewModels[0]
+        };
+        
         _stepViews = new List<UserControl>
         {
-            new Step1TemplateSelectionView(),
+            step1View,
             new Step2PlaceholderDiscoveryView(),
             new Step3PlaceholderInputView(),
             new Step4OutputSelectionView(),
@@ -76,8 +98,16 @@ public class WizardViewModel : ViewModelBase
     {
         if (CurrentStep < TotalSteps)
         {
+            // Deactivate current step
+            var currentStepViewModel = _stepViewModels[CurrentStep - 1];
+            currentStepViewModel?.OnStepDeactivated();
+            
             Steps[CurrentStep - 1].IsCompleted = true;
             CurrentStep++;
+            
+            // Activate next step
+            var nextStepViewModel = _stepViewModels[CurrentStep - 1];
+            nextStepViewModel?.OnStepActivated();
         }
     }
 
@@ -85,7 +115,15 @@ public class WizardViewModel : ViewModelBase
     {
         if (CurrentStep > 1)
         {
+            // Deactivate current step
+            var currentStepViewModel = _stepViewModels[CurrentStep - 1];
+            currentStepViewModel?.OnStepDeactivated();
+            
             CurrentStep--;
+            
+            // Activate previous step
+            var previousStepViewModel = _stepViewModels[CurrentStep - 1];
+            previousStepViewModel?.OnStepActivated();
         }
     }
 
@@ -94,6 +132,17 @@ public class WizardViewModel : ViewModelBase
         for (int i = 0; i < Steps.Count; i++)
         {
             Steps[i].IsActive = (i + 1) == currentStep;
+        }
+
+        // Update CanAdvanceToNextStep based on current step validation
+        var currentStepViewModel = _stepViewModels[currentStep - 1];
+        CanAdvanceToNextStep = currentStepViewModel?.ValidateStep() ?? true;
+        
+        // Subscribe to validation changes for reactive updates
+        if (currentStepViewModel != null)
+        {
+            currentStepViewModel.WhenAnyValue(x => x.IsValid)
+                .Subscribe(isValid => CanAdvanceToNextStep = isValid);
         }
 
         this.RaisePropertyChanged(nameof(CurrentStepTitle));

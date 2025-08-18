@@ -2,36 +2,147 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DocxTemplate.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DocxTemplate.UI.Views.Steps.Step1TemplateSelectionView">
+             x:Class="DocxTemplate.UI.Views.Steps.Step1TemplateSelectionView"
+             x:DataType="vm:TemplateSetSelectionViewModel">
 
   <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
           CornerRadius="8"
           Padding="20">
-    <StackPanel Spacing="15">
+    <StackPanel Spacing="20">
       
-      <TextBlock Text="Vyberte sadu šablon"
+      <!-- Step Title -->
+      <TextBlock Text="{Binding StepTitle}"
                  FontSize="24"
                  FontWeight="Bold"
                  HorizontalAlignment="Center" />
       
-      <TextBlock Text="Zde budete moci vybrat sadu šablon pro zpracování."
+      <!-- Step Description -->
+      <TextBlock Text="{Binding StepDescription}"
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"
                  TextWrapping="Wrap" />
-      
-      <Rectangle Height="200" 
-                 Fill="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                 Stroke="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                 StrokeDashArray="5,5"
-                 RadiusX="4"
-                 RadiusY="4" />
-      
-      <TextBlock Text="[Obsah kroku bude implementován v budoucích story]"
-                 FontStyle="Italic"
-                 HorizontalAlignment="Center"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+
+      <!-- Loading Indicator -->
+      <ProgressBar IsVisible="{Binding IsLoading}"
+                   IsIndeterminate="True"
+                   Height="4"
+                   Margin="0,10" />
+
+      <!-- Error Message -->
+      <Border IsVisible="{Binding HasError}"
+              Background="{DynamicResource SystemFillColorCriticalBrush}"
+              CornerRadius="4"
+              Padding="15">
+        <StackPanel Spacing="10">
+          <TextBlock Text="⚠️ Chyba"
+                     FontWeight="Bold"
+                     Foreground="White" />
+          <TextBlock Text="{Binding ErrorText}"
+                     Foreground="White"
+                     TextWrapping="Wrap" />
+          <Button Content="Zkusit znovu"
+                  Command="{Binding RefreshCommand}"
+                  HorizontalAlignment="Left"
+                  Classes="accent" />
+        </StackPanel>
+      </Border>
+
+      <!-- Template Sets Grid -->
+      <ScrollViewer MaxHeight="400"
+                    IsVisible="{Binding !HasError}">
+        <ItemsControl ItemsSource="{Binding TemplateSets}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" 
+                         HorizontalAlignment="Center" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TemplateSetItemViewModel">
+              <Button Margin="10"
+                      MinWidth="200"
+                      MaxWidth="250"
+                      Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                      BorderThickness="2"
+                      CornerRadius="8"
+                      Padding="15"
+                      Command="{Binding $parent[UserControl].((vm:TemplateSetSelectionViewModel)DataContext).SelectTemplateSetCommand}"
+                      CommandParameter="{Binding}">
+                
+                <!-- Button styles for selection state -->
+                <Button.Styles>
+                  <Style Selector="Button:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+                  </Style>
+                  <Style Selector="Button" x:DataType="vm:TemplateSetItemViewModel">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                  </Style>
+                  <Style Selector="Button" x:DataType="vm:TemplateSetItemViewModel">
+                    <Style.Setters>
+                      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                    </Style.Setters>
+                  </Style>
+                </Button.Styles>
+
+                <Button.Content>
+                  <StackPanel Spacing="8">
+                  <!-- Template Set Name -->
+                  <TextBlock Text="{Binding Name}"
+                             FontSize="16"
+                             FontWeight="Bold"
+                             TextWrapping="Wrap"
+                             HorizontalAlignment="Center" />
+                  
+                  <!-- File Count -->
+                  <TextBlock Text="{Binding DisplayText}"
+                             FontSize="12"
+                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                             HorizontalAlignment="Center" />
+                  
+                  <!-- Total Size -->
+                  <TextBlock Text="{Binding TotalSizeFormatted}"
+                             FontSize="11"
+                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                             HorizontalAlignment="Center" />
+                             
+                    <!-- Selection Indicator -->
+                    <Border IsVisible="{Binding IsSelected}"
+                            Background="{DynamicResource SystemAccentColor}"
+                            CornerRadius="2"
+                            Padding="5,2"
+                            HorizontalAlignment="Center">
+                      <TextBlock Text="✓ Vybráno"
+                                 FontSize="10"
+                                 Foreground="White"
+                                 FontWeight="Bold" />
+                    </Border>
+                  </StackPanel>
+                </Button.Content>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- Empty State -->
+      <StackPanel IsVisible="{Binding !HasError}"
+                  Spacing="10"
+                  HorizontalAlignment="Center">
+        <TextBlock Text="📁"
+                   FontSize="48"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding !TemplateSets.Count}" />
+        <TextBlock Text="Vytvořte složku './templates' a přidejte do ní podsložky s vašimi šablonami .docx"
+                   FontSize="12"
+                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding !TemplateSets.Count}" />
+      </StackPanel>
                  
     </StackPanel>
   </Border>

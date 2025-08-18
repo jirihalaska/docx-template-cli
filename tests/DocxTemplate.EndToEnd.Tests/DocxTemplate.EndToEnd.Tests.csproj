@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\DocxTemplate.CLI\DocxTemplate.CLI.csproj" />
     <ProjectReference Include="..\..\src\DocxTemplate.Core\DocxTemplate.Core.csproj" />
     <ProjectReference Include="..\..\src\DocxTemplate.Infrastructure\DocxTemplate.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\DocxTemplate.UI\DocxTemplate.UI.csproj" />
     <ProjectReference Include="..\DocxTemplate.TestUtilities\DocxTemplate.TestUtilities.csproj" />
   </ItemGroup>
 

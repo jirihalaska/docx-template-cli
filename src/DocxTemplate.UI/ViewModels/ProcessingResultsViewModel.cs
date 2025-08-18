@@ -22,6 +22,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private string _logFilePath = "";
     private string _outputFolderPath = "";
     private string _templateSetName = "";
+    private string _templateSetPath = "";
     private int _placeholderCount = 0;
     private Dictionary<string, string> _placeholderValues = new();
     private CancellationTokenSource? _cancellationTokenSource;
@@ -123,7 +124,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
 
     public void SetProcessingData(string templateSetPath, string outputPath, Dictionary<string, string> placeholders)
     {
-        // Extract just the directory name from the full path
+        // Store the full path for CLI commands
+        _templateSetPath = templateSetPath ?? "";
+        // Extract just the directory name for display
         TemplateSetName = Path.GetFileName(templateSetPath?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? "Neznámá sada";
         OutputFolderPath = outputPath;
         _placeholderValues = placeholders ?? new Dictionary<string, string>();
@@ -222,10 +225,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
-            var templateSetPath = Path.GetDirectoryName(TemplateSetName) ?? "";
+            // Use the stored full template set path
             var arguments = new[]
             {
-                "--source", $"\"{templateSetPath}\"",
+                "--source", $"\"{_templateSetPath}\"",
                 "--target", $"\"{OutputFolderPath}\"",
                 "--format", "json"
             };

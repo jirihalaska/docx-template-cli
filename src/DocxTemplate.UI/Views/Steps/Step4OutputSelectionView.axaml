@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DocxTemplate.UI.Views.Steps.Step4OutputSelectionView">
+
+  <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+          CornerRadius="8"
+          Padding="20">
+    <StackPanel Spacing="15">
+      
+      <TextBlock Text="Výběr výstupní složky"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center" />
+      
+      <TextBlock Text="Vyberte složku, kde budou uloženy zpracované dokumenty."
+                 FontSize="14"
+                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap" />
+      
+      <Rectangle Height="200" 
+                 Fill="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                 Stroke="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                 StrokeDashArray="5,5"
+                 RadiusX="4"
+                 RadiusY="4" />
+      
+      <TextBlock Text="[Obsah kroku bude implementován v budoucích story]"
+                 FontStyle="Italic"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                 
+    </StackPanel>
+  </Border>
+
+</UserControl>

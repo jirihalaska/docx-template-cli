@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DocxTemplate.UI.ViewModels"
+             xmlns:models="using:DocxTemplate.UI.Models"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="DocxTemplate.UI.Views.WizardControl"
+             x:DataType="vm:WizardViewModel">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    
+    <!-- Step Indicator Title -->
+    <TextBlock Grid.Row="0" 
+               Text="{Binding StepIndicatorText}"
+               FontSize="16"
+               FontWeight="SemiBold"
+               HorizontalAlignment="Center"
+               Margin="0,10" />
+    
+    <!-- Step Indicators -->
+    <StackPanel Grid.Row="1" 
+                Orientation="Horizontal"
+                HorizontalAlignment="Center"
+                Margin="0,10">
+      <ItemsControl ItemsSource="{Binding Steps}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="15"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:StepInfo">
+            <Border Width="20" Height="20"
+                    CornerRadius="10"
+                    Classes.active="{Binding IsActive}"
+                    Classes.completed="{Binding IsCompleted}">
+              <Border.Styles>
+                <Style Selector="Border">
+                  <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                  <Setter Property="BorderThickness" Value="2"/>
+                </Style>
+                <Style Selector="Border.active">
+                  <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>
+                </Style>
+                <Style Selector="Border.completed">
+                  <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                </Style>
+              </Border.Styles>
+              <TextBlock Text="✓" 
+                         IsVisible="{Binding IsCompleted}"
+                         Foreground="White"
+                         FontSize="12"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <!-- Step Content Container -->
+    <ContentControl Grid.Row="2"
+                    Content="{Binding CurrentStepContent}"
+                    Margin="20" />
+
+    <!-- Navigation Buttons -->
+    <StackPanel Grid.Row="3"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="10"
+                Margin="20">
+      
+      <Button Content="Zpět"
+              Command="{Binding BackCommand}"
+              MinWidth="80"
+              Padding="12,6"
+              TabIndex="100" />
+              
+      <Button Content="Další"
+              Command="{Binding NextCommand}"
+              MinWidth="80"
+              Padding="12,6"
+              Classes="accent"
+              TabIndex="101"
+              IsDefault="True" />
+    </StackPanel>
+
+  </Grid>
+</UserControl>

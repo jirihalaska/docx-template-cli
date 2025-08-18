@@ -197,7 +197,7 @@ docx-template copy --source <source_dir> --target <target_dir> [options]
   --estimate, -e       Show disk space estimate (default: false)
 ```
 
-#### Command: replace (Not Yet Implemented)
+#### Command: replace
 ```bash
 docx-template replace --folder <path> --map <file> [options]
   --folder, -f         Target folder with copied templates (required)
@@ -205,12 +205,10 @@ docx-template replace --folder <path> --map <file> [options]
   --backup, -b         Create backups (default: true)
   --recursive, -r      Include subdirectories (default: true)
   --dry-run, -d        Preview replacements without modifying
-  --format, -o         Output format (text|json|table, default: text)
+  --format, -o         Output format (text|json, default: text)
   --quiet, -q          Suppress progress messages (default: false)
   --pattern, -p        Placeholder pattern (default: {{.*?}})
 ```
-
-**Note:** The replace command is planned for implementation in Story 03.001.
 
 ### Output Formats
 
@@ -286,7 +284,7 @@ DocxTemplate.Tests/           # Test Projects
 ## Success Metrics
 
 ### Technical Metrics
-- [ ] All 5 CLI commands fully functional (4 of 5 implemented, replace pending)
+- [x] All 5 CLI commands fully functional (5 of 5 implemented)
 - [x] Comprehensive unit test coverage achieved (46.6%, 90% deferred to v2.1)
 - [ ] <10 second processing for 100 files
 - [ ] Zero memory leaks in 24-hour stress test
@@ -321,8 +319,8 @@ DocxTemplate.Tests/           # Test Projects
 - [x] Implement copy command
 - [x] Integration tests
 
-### Phase 3: Advanced Commands (Week 3) 🔄 IN PROGRESS
-- [ ] Implement replace command (Story 03.001 - Pending)
+### Phase 3: Advanced Commands (Week 3) ✅ COMPLETED
+- [x] Implement replace command (Story 03.001 - Completed)
 - [x] Error handling and recovery
 
 ### Phase 4: Polish & Testing (Week 4) 🔄 IN PROGRESS

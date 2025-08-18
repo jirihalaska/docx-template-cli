@@ -27,6 +27,7 @@ public static class ServiceRegistration
         services.AddTransient<PlaceholderDiscoveryViewModel>();
         services.AddTransient<PlaceholderInputViewModel>();
         services.AddTransient<OutputFolderSelectionViewModel>();
+        services.AddTransient<ProcessingResultsViewModel>();
         
         return services;
     }

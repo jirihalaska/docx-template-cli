@@ -2,38 +2,144 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DocxTemplate.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DocxTemplate.UI.Views.Steps.Step5ProcessingResultsView">
+             x:Class="DocxTemplate.UI.Views.Steps.Step5ProcessingResultsView"
+             x:DataType="vm:ProcessingResultsViewModel">
 
   <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
           CornerRadius="8"
           Padding="20">
-    <StackPanel Spacing="15">
-      
-      <TextBlock Text="Zpracování a výsledky"
-                 FontSize="24"
-                 FontWeight="Bold"
-                 HorizontalAlignment="Center" />
-      
-      <TextBlock Text="Sledujte průběh zpracování a zobrazte výsledky."
-                 FontSize="14"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                 HorizontalAlignment="Center"
-                 TextWrapping="Wrap" />
-      
-      <Rectangle Height="200" 
-                 Fill="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                 Stroke="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                 StrokeDashArray="5,5"
-                 RadiusX="4"
-                 RadiusY="4" />
-      
-      <TextBlock Text="[Obsah kroku bude implementován v budoucích story]"
-                 FontStyle="Italic"
-                 HorizontalAlignment="Center"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                 
-    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="20">
+        
+        <TextBlock Text="Zpracování a výsledky"
+                   FontSize="24"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center" />
+        
+        <TextBlock Text="Sledujte průběh zpracování a zobrazte výsledky."
+                   FontSize="14"
+                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                   HorizontalAlignment="Center"
+                   TextWrapping="Wrap" />
+        
+        <!-- Processing Summary Section -->
+        <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="15"
+                IsVisible="{Binding !IsProcessingComplete}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Shrnutí zpracování"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ProcessingSummary}"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       LineHeight="18" />
+            <Button Content="Zpracovat šablony"
+                    Command="{Binding ProcessTemplatesCommand}"
+                    HorizontalAlignment="Center"
+                    Padding="20,8"
+                    FontWeight="SemiBold"
+                    IsEnabled="{Binding !IsProcessing}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Processing Progress Section -->
+        <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="15"
+                IsVisible="{Binding IsProcessing}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Zpracovává se..."
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <ProgressBar IsIndeterminate="True"
+                         Height="8"
+                         Margin="0,5" />
+            <TextBlock Text="{Binding ProcessingStatus}"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <!-- Processing Results Section -->
+        <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="15"
+                IsVisible="{Binding IsProcessingComplete}">
+          <StackPanel Spacing="15">
+            
+            <!-- Success Results -->
+            <StackPanel Spacing="10" IsVisible="{Binding ProcessingSuccessful}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Ellipse Width="12" Height="12" Fill="Green" />
+                <TextBlock Text="Zpracování dokončeno úspěšně"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="Green" />
+              </StackPanel>
+              <TextBlock Text="{Binding ProcessingResults}"
+                         FontSize="12"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- Error Results -->
+            <StackPanel Spacing="10" IsVisible="{Binding !ProcessingSuccessful}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Ellipse Width="12" Height="12" Fill="Red" />
+                <TextBlock Text="Zpracování selhalo"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="Red" />
+              </StackPanel>
+              <TextBlock Text="{Binding ProcessingResults}"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="Red" />
+            </StackPanel>
+
+            <!-- Log File Information -->
+            <StackPanel Spacing="5" IsVisible="{Binding LogFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="{Binding LogFilePath, StringFormat='Log: {0}'}"
+                         FontSize="10"
+                         FontFamily="Consolas"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Orientation="Horizontal" 
+                        Spacing="10" 
+                        HorizontalAlignment="Center"
+                        Margin="0,10,0,0">
+              
+              <Button Content="Otevřít složku"
+                      Command="{Binding OpenFolderCommand}"
+                      Padding="15,8"
+                      IsVisible="{Binding ProcessingSuccessful}" />
+              
+              <Button Content="Otevřít log"
+                      Command="{Binding OpenLogCommand}"
+                      Padding="15,8" />
+              
+              <Button Content="Začít znovu"
+                      Command="{Binding StartOverCommand}"
+                      Padding="15,8"
+                      Classes="accent" />
+              
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        
+      </StackPanel>
+    </ScrollViewer>
   </Border>
 
 </UserControl>

@@ -34,13 +34,16 @@ public class WizardViewModel : ViewModelBase
         Steps = new ReadOnlyCollection<StepInfo>(stepList);
 
         // Initialize step ViewModels
+        var processingResultsViewModel = _serviceProvider.GetRequiredService<ProcessingResultsViewModel>();
+        processingResultsViewModel.RequestNavigationToStep += (step) => CurrentStep = step;
+        
         _stepViewModels = new List<StepViewModelBase>
         {
             _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
             _serviceProvider.GetRequiredService<PlaceholderDiscoveryViewModel>(),
             _serviceProvider.GetRequiredService<PlaceholderInputViewModel>(),
             _serviceProvider.GetRequiredService<OutputFolderSelectionViewModel>(),
-            null!  // Placeholder for Step 5
+            processingResultsViewModel
         };
 
         // Initialize step views with their ViewModels
@@ -64,13 +67,18 @@ public class WizardViewModel : ViewModelBase
             DataContext = _stepViewModels[3]
         };
         
+        var step5View = new Step5ProcessingResultsView
+        {
+            DataContext = _stepViewModels[4]
+        };
+        
         _stepViews = new List<UserControl>
         {
             step1View,
             step2View,
             step3View,
             step4View,
-            new Step5ProcessingResultsView()
+            step5View
         };
 
         var canGoBack = this.WhenAnyValue(x => x.CurrentStep, step => step > 1);
@@ -196,6 +204,26 @@ public class WizardViewModel : ViewModelBase
             if (step2ViewModel != null && step3ViewModel != null)
             {
                 step3ViewModel.SetDiscoveredPlaceholders(step2ViewModel.DiscoveredPlaceholders);
+            }
+        }
+        
+        // Step 4 to Step 5: Pass all processing data for final step
+        if (fromStep == 4 && toStep == 5)
+        {
+            var step1ViewModel = _stepViewModels[0] as TemplateSetSelectionViewModel;
+            var step3ViewModel = _stepViewModels[2] as PlaceholderInputViewModel;
+            var step4ViewModel = _stepViewModels[3] as OutputFolderSelectionViewModel;
+            var step5ViewModel = _stepViewModels[4] as ProcessingResultsViewModel;
+            
+            if (step1ViewModel?.SelectedTemplateSet != null && 
+                step3ViewModel != null && 
+                step4ViewModel?.SelectedFolderPath != null && 
+                step5ViewModel != null)
+            {
+                step5ViewModel.SetProcessingData(
+                    step1ViewModel.SelectedTemplateSet.TemplateSetInfo.Path,
+                    step4ViewModel.SelectedFolderPath,
+                    step3ViewModel.GetReplacementMapping());
             }
         }
     }

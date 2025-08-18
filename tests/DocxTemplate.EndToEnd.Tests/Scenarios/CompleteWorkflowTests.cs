@@ -116,11 +116,9 @@ public class CompleteWorkflowTests : IDisposable
         foreach (var outputFile in outputFiles)
         {
             var originalFile = FindCorrespondingOriginalFile(outputFile, environment);
-            if (originalFile != null)
-            {
-                var validation = await _documentValidator.ValidateCharacterPreservationAsync(originalFile, outputFile);
-                validation.IsCharactersPreserved.Should().BeTrue($"Czech characters should be preserved in {outputFile}. Issues: {string.Join(", ", validation.Issues)}");
-            }
+
+            var validation = await _documentValidator.ValidateCharacterPreservationAsync(originalFile, outputFile);
+            validation.IsCharactersPreserved.Should().BeTrue($"Czech characters should be preserved in {outputFile}. Issues: {string.Join(", ", validation.Issues)}");
         }
     }
 
@@ -309,15 +307,23 @@ public class CompleteWorkflowTests : IDisposable
     private async Task ValidateProcessedDocumentsAsync(TestEnvironment environment)
     {
         var outputFiles = Directory.GetFiles(environment.OutputDirectory, "*.docx", SearchOption.AllDirectories);
+        
+        // First, verify that files were actually processed
+        outputFiles.Should().NotBeEmpty("Processed files should exist in output directory after complete workflow");
+        
+        // Get expected file count from template directory
+        var templateFiles = Directory.GetFiles(environment.TemplatesDirectory, "*.docx", SearchOption.AllDirectories);
+        templateFiles.Should().NotBeEmpty("Template files should exist to validate against");
+        
+        // Verify we have the expected number of output files
+        outputFiles.Length.Should().Be(templateFiles.Length, 
+            $"Output should contain same number of files as templates. Templates: {templateFiles.Length}, Output: {outputFiles.Length}");
 
         foreach (var outputFile in outputFiles)
         {
             var originalFile = FindCorrespondingOriginalFile(outputFile, environment);
-            if (originalFile != null)
-            {
-                var validation = await _documentValidator.ValidateDocumentIntegrityAsync(originalFile, outputFile);
-                validation.IsValid.Should().BeTrue($"document integrity should be maintained for {outputFile}. Issues: {string.Join(", ", validation.StructureIssues.Concat(validation.CharacterIssues))}");
-            }
+            var validation = await _documentValidator.ValidateDocumentIntegrityAsync(originalFile, outputFile);
+            validation.IsValid.Should().BeTrue($"document integrity should be maintained for {outputFile}. Issues: {string.Join(", ", validation.StructureIssues.Concat(validation.CharacterIssues))}");
         }
     }
 

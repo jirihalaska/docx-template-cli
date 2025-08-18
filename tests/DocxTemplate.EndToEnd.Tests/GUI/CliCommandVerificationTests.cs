@@ -84,13 +84,14 @@ public class CliCommandVerificationTests : GuiTestBase
         var copiedFiles = Directory.GetFiles(outputPath, "*.*", SearchOption.AllDirectories);
         copiedFiles.Should().NotBeEmpty("Copied directory should contain files");
 
-        // Verify source files exist in output
+        // Verify source files exist in output (with source folder name preserved)
         var sourceFiles = Directory.GetFiles(templateSetPath, "*.*", SearchOption.AllDirectories);
+        var sourceDirectoryName = Path.GetFileName(templateSetPath);
         foreach (var sourceFile in sourceFiles)
         {
             var relativePath = Path.GetRelativePath(templateSetPath, sourceFile);
-            var targetFile = Path.Combine(outputPath, relativePath);
-            File.Exists(targetFile).Should().BeTrue($"File {relativePath} should be copied to output directory");
+            var targetFile = Path.Combine(outputPath, sourceDirectoryName, relativePath);
+            File.Exists(targetFile).Should().BeTrue($"File {relativePath} should be copied to output directory under source folder {sourceDirectoryName}");
         }
     }
 

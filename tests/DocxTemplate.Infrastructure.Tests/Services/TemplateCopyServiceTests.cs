@@ -103,8 +103,11 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.DirectoryExists(sourcePath)).Returns(true);
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
         _mockFileSystemService.Setup(x => x.FileExists("/source/test.docx")).Returns(true);
-        var expectedTargetPath = Path.Combine(targetPath, "test.docx");
+        // With the fix, the source directory name "source" should be preserved
+        var expectedTargetPath = Path.Combine(targetPath, "source", "test.docx");
         _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath)).Returns(false);
+        _mockFileSystemService.Setup(x => x.DirectoryExists(Path.Combine(targetPath, "source"))).Returns(false);
+        _mockFileSystemService.Setup(x => x.CreateDirectory(Path.Combine(targetPath, "source")));
         _mockFileSystemService.Setup(x => x.CopyFile("/source/test.docx", expectedTargetPath, It.IsAny<bool>()));
 
         _mockDiscoveryService

@@ -44,9 +44,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
         var canOpenFolder = this.WhenAnyValue(
             x => x.IsProcessingComplete,
             x => x.ProcessingSuccessful,
-            x => x.OutputFolderPath,
-            (isComplete, isSuccessful, outputPath) => 
-                isComplete && isSuccessful && !string.IsNullOrEmpty(outputPath) && Directory.Exists(outputPath));
+            x => x.ActualTargetFolderPath,
+            (isComplete, isSuccessful, actualTargetPath) => 
+                isComplete && isSuccessful && !string.IsNullOrEmpty(actualTargetPath) && Directory.Exists(actualTargetPath));
 
         var canOpenLog = this.WhenAnyValue(
             x => x.LogFilePath,
@@ -106,6 +106,18 @@ public class ProcessingResultsViewModel : StepViewModelBase
         set => this.RaiseAndSetIfChanged(ref _templateSetName, value);
     }
 
+    public string ActualTargetFolderPath
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_templateSetPath) || string.IsNullOrEmpty(OutputFolderPath))
+                return OutputFolderPath;
+                
+            var sourceDirectoryName = Path.GetFileName(_templateSetPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            return Path.Combine(OutputFolderPath, sourceDirectoryName);
+        }
+    }
+
     public int PlaceholderCount
     {
         get => _placeholderCount;
@@ -133,6 +145,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         PlaceholderCount = _placeholderValues.Count;
         
         this.RaisePropertyChanged(nameof(ProcessingSummary));
+        this.RaisePropertyChanged(nameof(ActualTargetFolderPath));
     }
 
     private async Task ProcessTemplatesAsync()
@@ -265,7 +278,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         {
             var arguments = new[]
             {
-                "--folder", $"\"{OutputFolderPath}\"",
+                "--folder", $"\"{ActualTargetFolderPath}\"",
                 "--map", $"\"{mappingFilePath}\"",
                 "--format", "json"
             };
@@ -283,7 +296,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
 
     private void OpenFolder()
     {
-        if (!Directory.Exists(OutputFolderPath))
+        if (!Directory.Exists(ActualTargetFolderPath))
             return;
 
         try
@@ -291,7 +304,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
             var startInfo = new ProcessStartInfo
             {
                 UseShellExecute = true,
-                FileName = OutputFolderPath
+                FileName = ActualTargetFolderPath
             };
             Process.Start(startInfo);
         }

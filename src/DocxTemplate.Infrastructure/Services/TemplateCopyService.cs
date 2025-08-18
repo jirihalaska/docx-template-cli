@@ -49,7 +49,7 @@ public class TemplateCopyService : ITemplateCopyService
         try
         {
             var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, recursive: true, cancellationToken);
-            return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, cancellationToken);
+            return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, sourcePath, cancellationToken);
         }
         catch (Exception ex) when (ex is not TemplateNotFoundException && ex is not FileAccessException)
         {
@@ -72,6 +72,20 @@ public class TemplateCopyService : ITemplateCopyService
         bool preserveStructure = true,
         bool overwrite = false,
         CancellationToken cancellationToken = default)
+    {
+        return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Internal overload that includes source path for maintaining directory structure
+    /// </summary>
+    private async Task<CopyResult> CopyTemplatesAsync(
+        IReadOnlyList<TemplateFile> templateFiles,
+        string targetPath,
+        bool preserveStructure,
+        bool overwrite,
+        string? sourcePath,
+        CancellationToken cancellationToken)
     {
         if (templateFiles == null)
             throw new ArgumentNullException(nameof(templateFiles));
@@ -128,7 +142,7 @@ public class TemplateCopyService : ITemplateCopyService
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var copiedFile = await CopyTemplateFileAsync(templateFile, targetPath, overwrite, cancellationToken);
+                var copiedFile = await CopyTemplateFileAsync(templateFile, targetPath, overwrite, preserveStructure, sourcePath, cancellationToken);
                 copiedFiles.Add(copiedFile);
             }
             catch (Exception ex)
@@ -138,7 +152,7 @@ public class TemplateCopyService : ITemplateCopyService
                 errors.Add(new CopyError
                 {
                     SourcePath = templateFile.FullPath,
-                    TargetPath = GetTargetFilePath(templateFile, targetPath, preserveStructure),
+                    TargetPath = GetTargetFilePath(templateFile, targetPath, preserveStructure, sourcePath),
                     Message = ex.Message,
                     ExceptionType = ex.GetType().Name
                 });
@@ -170,6 +184,20 @@ public class TemplateCopyService : ITemplateCopyService
         bool overwrite = false,
         CancellationToken cancellationToken = default)
     {
+        return CopyTemplateFileAsync(sourceFile, targetPath, overwrite, preserveStructure: true, sourcePath: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Internal overload that includes structure and source path parameters
+    /// </summary>
+    private Task<CopiedFile> CopyTemplateFileAsync(
+        TemplateFile sourceFile,
+        string targetPath,
+        bool overwrite,
+        bool preserveStructure,
+        string? sourcePath,
+        CancellationToken cancellationToken)
+    {
         if (sourceFile == null)
             throw new ArgumentNullException(nameof(sourceFile));
 
@@ -185,8 +213,13 @@ public class TemplateCopyService : ITemplateCopyService
         string targetFilePath;
         if (_fileSystemService.DirectoryExists(targetPath))
         {
-            // targetPath is a directory, use the source filename
-            targetFilePath = Path.Combine(targetPath, sourceFile.FileName);
+            // targetPath is a directory, calculate path based on structure preservation
+            targetFilePath = GetTargetFilePath(sourceFile, targetPath, preserveStructure, sourcePath);
+            var targetDir = Path.GetDirectoryName(targetFilePath);
+            if (!string.IsNullOrEmpty(targetDir) && !_fileSystemService.DirectoryExists(targetDir))
+            {
+                _fileSystemService.CreateDirectory(targetDir);
+            }
         }
         else
         {
@@ -312,7 +345,7 @@ public class TemplateCopyService : ITemplateCopyService
             int filesToOverwrite = 0;
             foreach (var templateFile in templateFiles)
             {
-                var targetFilePath = GetTargetFilePath(templateFile, targetPath, preserveStructure: true);
+                var targetFilePath = GetTargetFilePath(templateFile, targetPath, preserveStructure: true, sourcePath);
                 
                 if (_fileSystemService.FileExists(targetFilePath))
                 {
@@ -345,7 +378,7 @@ public class TemplateCopyService : ITemplateCopyService
             // Calculate space requirements
             var totalSize = templateFiles.Sum(f => f.SizeInBytes);
             var directoriesToCreate = templateFiles
-                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true)))
+                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, sourcePath)))
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
                 .Count(d => !_fileSystemService.DirectoryExists(d!));
@@ -478,7 +511,7 @@ public class TemplateCopyService : ITemplateCopyService
 
             // Get all unique directory paths
             var directoriesToCreate = templateFiles
-                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true)))
+                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, null)))
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
                 .Where(d => !_fileSystemService.DirectoryExists(d!))
@@ -510,11 +543,21 @@ public class TemplateCopyService : ITemplateCopyService
         }
     }
 
-    private string GetTargetFilePath(TemplateFile templateFile, string targetPath, bool preserveStructure)
+    private string GetTargetFilePath(TemplateFile templateFile, string targetPath, bool preserveStructure, string? sourcePath = null)
     {
         if (preserveStructure)
         {
-            return Path.Combine(targetPath, templateFile.RelativePath);
+            // If we have a source path, include the source directory name to maintain top-level folder structure
+            if (!string.IsNullOrEmpty(sourcePath))
+            {
+                var sourceDirectoryName = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                return Path.Combine(targetPath, sourceDirectoryName, templateFile.RelativePath);
+            }
+            else
+            {
+                // Fallback to original behavior when source path is not available
+                return Path.Combine(targetPath, templateFile.RelativePath);
+            }
         }
         else
         {

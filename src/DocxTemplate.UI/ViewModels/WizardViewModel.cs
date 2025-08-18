@@ -38,7 +38,7 @@ public class WizardViewModel : ViewModelBase
         {
             _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
             _serviceProvider.GetRequiredService<PlaceholderDiscoveryViewModel>(),
-            null!, // Placeholder for Step 3  
+            _serviceProvider.GetRequiredService<PlaceholderInputViewModel>(),
             null!, // Placeholder for Step 4
             null!  // Placeholder for Step 5
         };
@@ -54,11 +54,16 @@ public class WizardViewModel : ViewModelBase
             DataContext = _stepViewModels[1]
         };
         
+        var step3View = new Step3PlaceholderInputView
+        {
+            DataContext = _stepViewModels[2]
+        };
+        
         _stepViews = new List<UserControl>
         {
             step1View,
             step2View,
-            new Step3PlaceholderInputView(),
+            step3View,
             new Step4OutputSelectionView(),
             new Step5ProcessingResultsView()
         };
@@ -177,8 +182,16 @@ public class WizardViewModel : ViewModelBase
             }
         }
         
-        // Add more step-to-step data transfers here as needed
-        // Example: Step 2 to Step 3: Pass discovered placeholders for input
-        // if (fromStep == 2 && toStep == 3) { ... }
+        // Step 2 to Step 3: Pass discovered placeholders for input
+        if (fromStep == 2 && toStep == 3)
+        {
+            var step2ViewModel = _stepViewModels[1] as PlaceholderDiscoveryViewModel;
+            var step3ViewModel = _stepViewModels[2] as PlaceholderInputViewModel;
+            
+            if (step2ViewModel != null && step3ViewModel != null)
+            {
+                step3ViewModel.SetDiscoveredPlaceholders(step2ViewModel.DiscoveredPlaceholders);
+            }
+        }
     }
 }

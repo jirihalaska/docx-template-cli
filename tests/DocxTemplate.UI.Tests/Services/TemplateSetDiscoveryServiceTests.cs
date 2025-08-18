@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.UI.Services;
-using NSubstitute;
+using Moq;
 using Xunit;
 
 namespace DocxTemplate.UI.Tests.Services;
@@ -14,13 +15,13 @@ namespace DocxTemplate.UI.Tests.Services;
 /// </summary>
 public class TemplateSetDiscoveryServiceTests
 {
-    private readonly ICliCommandService _mockCliCommandService;
+    private readonly Mock<ICliCommandService> _mockCliCommandService;
     private readonly TemplateSetDiscoveryService _service;
 
     public TemplateSetDiscoveryServiceTests()
     {
-        _mockCliCommandService = Substitute.For<ICliCommandService>();
-        _service = new TemplateSetDiscoveryService(_mockCliCommandService);
+        _mockCliCommandService = new Mock<ICliCommandService>();
+        _service = new TemplateSetDiscoveryService(_mockCliCommandService.Object);
     }
 
     [Fact]
@@ -50,8 +51,8 @@ public class TemplateSetDiscoveryServiceTests
             """;
 
         _mockCliCommandService
-            .ExecuteCommandAsync("list-sets", Arg.Any<string[]>())
-            .Returns(jsonResponse);
+            .Setup(x => x.ExecuteCommandAsync("list-sets", It.IsAny<string[]>()))
+            .ReturnsAsync(jsonResponse);
 
         // act
         var result = await _service.DiscoverTemplateSetsAsync(templatesPath);
@@ -83,8 +84,8 @@ public class TemplateSetDiscoveryServiceTests
             """;
 
         _mockCliCommandService
-            .ExecuteCommandAsync("list-sets", Arg.Any<string[]>())
-            .Returns(jsonResponse);
+            .Setup(x => x.ExecuteCommandAsync("list-sets", It.IsAny<string[]>()))
+            .ReturnsAsync(jsonResponse);
 
         // act
         var result = await _service.DiscoverTemplateSetsAsync(templatesPath);
@@ -101,8 +102,8 @@ public class TemplateSetDiscoveryServiceTests
         const string templatesPath = "./templates";
 
         _mockCliCommandService
-            .ExecuteCommandAsync("list-sets", Arg.Any<string[]>())
-            .Returns(string.Empty);
+            .Setup(x => x.ExecuteCommandAsync("list-sets", It.IsAny<string[]>()))
+            .ReturnsAsync(string.Empty);
 
         // act
         var result = await _service.DiscoverTemplateSetsAsync(templatesPath);
@@ -119,8 +120,8 @@ public class TemplateSetDiscoveryServiceTests
         const string templatesPath = "./templates";
 
         _mockCliCommandService
-            .When(x => x.ExecuteCommandAsync("list-sets", Arg.Any<string[]>()))
-            .Do(x => throw new InvalidOperationException("CLI command failed"));
+            .Setup(x => x.ExecuteCommandAsync("list-sets", It.IsAny<string[]>()))
+            .ThrowsAsync(new InvalidOperationException("CLI command failed"));
 
         // act
         var result = await _service.DiscoverTemplateSetsAsync(templatesPath);
@@ -157,21 +158,21 @@ public class TemplateSetDiscoveryServiceTests
             """;
 
         _mockCliCommandService
-            .ExecuteCommandAsync("list-sets", Arg.Any<string[]>())
-            .Returns(jsonResponse);
+            .Setup(x => x.ExecuteCommandAsync("list-sets", It.IsAny<string[]>()))
+            .ReturnsAsync(jsonResponse);
 
         // act
         await _service.DiscoverTemplateSetsAsync(templatesPath);
 
         // assert
-        await _mockCliCommandService.Received(1).ExecuteCommandAsync(
+        _mockCliCommandService.Verify(x => x.ExecuteCommandAsync(
             "list-sets",
-            Arg.Is<string[]>(args =>
+            It.Is<string[]>(args =>
                 args.Length == 4 &&
                 args[0] == "--templates" &&
                 args[1] == templatesPath &&
                 args[2] == "--format" &&
-                args[3] == "json"));
+                args[3] == "json")), Times.Once);
     }
 
     [Fact]

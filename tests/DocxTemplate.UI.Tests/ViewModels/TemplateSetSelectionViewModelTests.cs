@@ -1,6 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using DocxTemplate.UI.Services;
 using DocxTemplate.UI.ViewModels;
-using NSubstitute;
+using Moq;
+using Xunit;
 
 namespace DocxTemplate.UI.Tests.ViewModels;
 
@@ -9,13 +15,13 @@ namespace DocxTemplate.UI.Tests.ViewModels;
 /// </summary>
 public class TemplateSetSelectionViewModelTests
 {
-    private readonly ITemplateSetDiscoveryService _mockDiscoveryService;
+    private readonly Mock<ITemplateSetDiscoveryService> _mockDiscoveryService;
     private readonly TemplateSetSelectionViewModel _viewModel;
 
     public TemplateSetSelectionViewModelTests()
     {
-        _mockDiscoveryService = Substitute.For<ITemplateSetDiscoveryService>();
-        _viewModel = new TemplateSetSelectionViewModel(_mockDiscoveryService);
+        _mockDiscoveryService = new Mock<ITemplateSetDiscoveryService>();
+        _viewModel = new TemplateSetSelectionViewModel(_mockDiscoveryService.Object);
     }
 
     [Fact]
@@ -89,8 +95,8 @@ public class TemplateSetSelectionViewModelTests
         };
 
         _mockDiscoveryService
-            .DiscoverTemplateSetsAsync("./templates", Arg.Any<System.Threading.CancellationToken>())
-            .Returns(templateSetInfos);
+            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(templateSetInfos);
 
         // act
         await _viewModel.LoadTemplateSetsAsync();
@@ -112,8 +118,8 @@ public class TemplateSetSelectionViewModelTests
         var emptyList = new List<TemplateSetInfo>();
 
         _mockDiscoveryService
-            .DiscoverTemplateSetsAsync("./templates", Arg.Any<System.Threading.CancellationToken>())
-            .Returns(emptyList);
+            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(emptyList);
 
         // act
         await _viewModel.LoadTemplateSetsAsync();
@@ -131,8 +137,8 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         const string errorMessage = "Network error";
         _mockDiscoveryService
-            .When(x => x.DiscoverTemplateSetsAsync("./templates", Arg.Any<System.Threading.CancellationToken>()))
-            .Do(x => throw new Exception(errorMessage));
+            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception(errorMessage));
 
         // act
         await _viewModel.LoadTemplateSetsAsync();
@@ -182,8 +188,8 @@ public class TemplateSetSelectionViewModelTests
         };
 
         _mockDiscoveryService
-            .DiscoverTemplateSetsAsync("./templates", Arg.Any<CancellationToken>())
-            .Returns(templateSetInfos);
+            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(templateSetInfos);
 
         // act & assert - just verify it doesn't throw
         // The actual loading logic is tested separately in LoadTemplateSetsAsync tests

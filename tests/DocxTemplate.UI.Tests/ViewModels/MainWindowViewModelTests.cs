@@ -3,6 +3,7 @@ using DocxTemplate.UI.Services;
 using DocxTemplate.Core.Services;
 using Moq;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace DocxTemplate.UI.Tests.ViewModels;
 
@@ -16,7 +17,7 @@ public class MainWindowViewModelTests
         mockServiceProvider.Setup(sp => sp.GetService(typeof(TemplateSetSelectionViewModel)))
             .Returns(new Mock<TemplateSetSelectionViewModel>(Mock.Of<ITemplateSetDiscoveryService>()).Object);
         mockServiceProvider.Setup(sp => sp.GetService(typeof(PlaceholderDiscoveryViewModel)))
-            .Returns(new Mock<PlaceholderDiscoveryViewModel>(Mock.Of<IPlaceholderScanService>()).Object);
+            .Returns(new Mock<PlaceholderDiscoveryViewModel>(Mock.Of<ICliCommandService>()).Object);
         mockServiceProvider.Setup(sp => sp.GetService(typeof(PlaceholderInputViewModel)))
             .Returns(new Mock<PlaceholderInputViewModel>().Object);
         mockServiceProvider.Setup(sp => sp.GetService(typeof(OutputFolderSelectionViewModel)))

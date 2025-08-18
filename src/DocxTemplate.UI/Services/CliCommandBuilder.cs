@@ -4,7 +4,7 @@ public class CliCommandBuilder
 {
     public record CliCommand(string CommandName, string[] Arguments);
 
-    public CliCommand BuildListSetsCommand(string templatesPath)
+    public virtual CliCommand BuildListSetsCommand(string templatesPath)
     {
         return new CliCommand("list-sets", new[]
         {
@@ -13,7 +13,7 @@ public class CliCommandBuilder
         });
     }
 
-    public CliCommand BuildScanCommand(string path)
+    public virtual CliCommand BuildScanCommand(string path)
     {
         return new CliCommand("scan", new[]
         {
@@ -22,7 +22,7 @@ public class CliCommandBuilder
         });
     }
 
-    public CliCommand BuildCopyCommand(string source, string target)
+    public virtual CliCommand BuildCopyCommand(string source, string target)
     {
         return new CliCommand("copy", new[]
         {
@@ -32,7 +32,7 @@ public class CliCommandBuilder
         });
     }
 
-    public CliCommand BuildReplaceCommand(string folder, string mapFile)
+    public virtual CliCommand BuildReplaceCommand(string folder, string mapFile)
     {
         return new CliCommand("replace", new[]
         {

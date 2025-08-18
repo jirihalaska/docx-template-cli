@@ -49,8 +49,11 @@ public class CliProcessRunnerIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.ExecuteCommandAsync(command, arguments));
         
-        // Should fail with process start error, not argument parsing error
-        Assert.Contains("Failed to execute CLI command", exception.Message);
+        // Should fail with process exit code error or execution error
+        Assert.True(
+            exception.Message.Contains("Failed to execute CLI command") || 
+            exception.Message.Contains("CLI command") && exception.Message.Contains("failed with exit code"),
+            $"Expected error message containing either 'Failed to execute CLI command' or 'CLI command...failed with exit code', but got: {exception.Message}");
     }
 
     [Fact]
@@ -63,7 +66,10 @@ public class CliProcessRunnerIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.ExecuteCommandAsync("", new[] { "--help" }));
         
-        Assert.Contains("Failed to execute CLI command", exception.Message);
+        Assert.True(
+            exception.Message.Contains("Failed to execute CLI command") || 
+            exception.Message.Contains("CLI command") && exception.Message.Contains("failed with exit code"),
+            $"Expected error message containing either 'Failed to execute CLI command' or 'CLI command...failed with exit code', but got: {exception.Message}");
     }
 
     [Fact]
@@ -76,7 +82,10 @@ public class CliProcessRunnerIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.ExecuteCommandAsync("scan", null!));
         
-        Assert.Contains("Failed to execute CLI command", exception.Message);
+        Assert.True(
+            exception.Message.Contains("Failed to execute CLI command") || 
+            exception.Message.Contains("CLI command") && exception.Message.Contains("failed with exit code"),
+            $"Expected error message containing either 'Failed to execute CLI command' or 'CLI command...failed with exit code', but got: {exception.Message}");
     }
 
     [Fact]

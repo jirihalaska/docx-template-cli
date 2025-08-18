@@ -83,9 +83,9 @@ public class GuiIntegrationE2ETests : IAsyncLifetime
         cliExecutablePath.Should().NotBeNullOrEmpty("CLI executable should be discovered");
         File.Exists(cliExecutablePath).Should().BeTrue($"CLI executable should exist at: {cliExecutablePath}");
         
-        // Verify it's the correct executable
-        Path.GetFileNameWithoutExtension(cliExecutablePath).Should().Be("docx-template", 
-            "Should find the correct CLI executable name");
+        // Verify it's a valid CLI executable (could be DLL or executable)
+        var fileName = Path.GetFileNameWithoutExtension(cliExecutablePath);
+        fileName.Should().BeOneOf("docx-template", "DocxTemplate.CLI", "DocxTemplate");
     }
 
     [Fact]

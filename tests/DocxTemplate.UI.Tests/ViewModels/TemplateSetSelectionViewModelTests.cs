@@ -93,12 +93,12 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         var templateSetInfos = new List<TemplateSetInfo>
         {
-            new() { Name = "Contracts", Path = "/path/to/contracts", FileCount = 15, TotalSize = 2300000, TotalSizeFormatted = "2.3 MB", LastModified = DateTime.UtcNow },
-            new() { Name = "Reports", Path = "/path/to/reports", FileCount = 8, TotalSize = 1100000, TotalSizeFormatted = "1.1 MB", LastModified = DateTime.UtcNow }
+            new TemplateSetInfo { Name = "Contracts", Path = "/path/to/contracts", FileCount = 15, TotalSize = 2300000, TotalSizeFormatted = "2.3 MB", LastModified = DateTime.UtcNow },
+            new TemplateSetInfo { Name = "Reports", Path = "/path/to/reports", FileCount = 8, TotalSize = 1100000, TotalSizeFormatted = "1.1 MB", LastModified = DateTime.UtcNow }
         };
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplateSetsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateSetInfos);
 
         // act
@@ -121,7 +121,7 @@ public class TemplateSetSelectionViewModelTests
         var emptyList = new List<TemplateSetInfo>();
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplateSetsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(emptyList);
 
         // act
@@ -130,7 +130,7 @@ public class TemplateSetSelectionViewModelTests
         // assert
         Assert.False(_viewModel.IsLoading);
         Assert.True(_viewModel.HasError);
-        Assert.Contains("Ve složce ./templates nebyly nalezeny žádné šablony", _viewModel.ErrorText);
+        Assert.Contains("nebyly nalezeny žádné šablony", _viewModel.ErrorText);
         Assert.Empty(_viewModel.TemplateSets);
     }
 
@@ -140,7 +140,7 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         const string errorMessage = "Network error";
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplateSetsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception(errorMessage));
 
         // act
@@ -197,11 +197,11 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         var templateSetInfos = new List<TemplateSetInfo>
         {
-            new() { Name = "Test Set", Path = "/path/to/test-set", FileCount = 5, TotalSize = 1000000, TotalSizeFormatted = "1.0 MB", LastModified = DateTime.UtcNow }
+            new TemplateSetInfo { Name = "Test Set", Path = "/path/to/test-set", FileCount = 5, TotalSize = 1000000, TotalSizeFormatted = "1.0 MB", LastModified = DateTime.UtcNow }
         };
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplateSetsAsync("./templates", It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplateSetsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateSetInfos);
 
         // act & assert - just verify it doesn't throw

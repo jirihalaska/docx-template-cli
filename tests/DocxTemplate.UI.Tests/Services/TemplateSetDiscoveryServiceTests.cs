@@ -177,7 +177,7 @@ public class TemplateSetDiscoveryServiceTests
             It.Is<string[]>(args =>
                 args.Length == 4 &&
                 args[0] == "--templates" &&
-                args[1] == templatesPath &&
+                args[1] == "/test/path" &&  // This should match the mocked CliCommandBuilder output
                 args[2] == "--format" &&
                 args[3] == "json")), Times.Once);
     }

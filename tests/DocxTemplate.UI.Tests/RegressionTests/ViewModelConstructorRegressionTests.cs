@@ -76,9 +76,11 @@ public class ViewModelConstructorRegressionTests
         var parameters = constructorInfo.GetParameters();
         
         // act & assert
-        parameters.Should().HaveCount(1, "ProcessingResultsViewModel should have exactly one constructor parameter");
+        parameters.Should().HaveCount(2, "ProcessingResultsViewModel should have exactly two constructor parameters");
         parameters[0].ParameterType.Should().Be(typeof(ICliCommandService),
-            "ProcessingResultsViewModel constructor should accept ICliCommandService");
+            "ProcessingResultsViewModel constructor should accept ICliCommandService as first parameter");
+        parameters[1].ParameterType.Should().Be(typeof(CliCommandBuilder),
+            "ProcessingResultsViewModel constructor should accept CliCommandBuilder as second parameter");
     }
 
     [Fact]
@@ -86,9 +88,10 @@ public class ViewModelConstructorRegressionTests
     {
         // arrange
         var mockCliCommandService = new Mock<ICliCommandService>();
+        var mockCommandBuilder = new Mock<CliCommandBuilder>();
         
         // act
-        Action construct = () => new ProcessingResultsViewModel(mockCliCommandService.Object);
+        Action construct = () => new ProcessingResultsViewModel(mockCliCommandService.Object, mockCommandBuilder.Object);
         
         // assert
         construct.Should().NotThrow(
@@ -160,7 +163,6 @@ public class ViewModelConstructorRegressionTests
     [Theory]
     [InlineData(typeof(MainWindowViewModel), typeof(WizardViewModel))]
     [InlineData(typeof(PlaceholderDiscoveryViewModel), typeof(ICliCommandService))]
-    [InlineData(typeof(ProcessingResultsViewModel), typeof(ICliCommandService))]
     [InlineData(typeof(TemplateSetSelectionViewModel), typeof(ITemplateSetDiscoveryService))]
     public void ViewModelConstructor_ShouldMatchExpectedServiceType(Type viewModelType, Type expectedServiceType)
     {
@@ -182,7 +184,6 @@ public class ViewModelConstructorRegressionTests
         var correctMockTypes = new[]
         {
             (typeof(PlaceholderDiscoveryViewModel), typeof(ICliCommandService)), // This was wrong in original tests
-            (typeof(ProcessingResultsViewModel), typeof(ICliCommandService)),
             (typeof(TemplateSetSelectionViewModel), typeof(ITemplateSetDiscoveryService))
         };
 

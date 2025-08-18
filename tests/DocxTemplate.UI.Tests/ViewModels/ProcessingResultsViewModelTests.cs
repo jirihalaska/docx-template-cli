@@ -14,19 +14,28 @@ namespace DocxTemplate.UI.Tests.ViewModels;
 public class ProcessingResultsViewModelTests
 {
     private readonly Mock<ICliCommandService> _mockCliCommandService;
+    private readonly Mock<CliCommandBuilder> _mockCommandBuilder;
     private readonly ProcessingResultsViewModel _viewModel;
 
     public ProcessingResultsViewModelTests()
     {
         _mockCliCommandService = new Mock<ICliCommandService>();
-        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object);
+        _mockCommandBuilder = new Mock<CliCommandBuilder>();
+        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object, _mockCommandBuilder.Object);
     }
 
     [Fact]
     public void Constructor_WithNullCliCommandService_ThrowsArgumentNullException()
     {
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => new ProcessingResultsViewModel(null!));
+        Assert.Throws<ArgumentNullException>(() => new ProcessingResultsViewModel(null!, _mockCommandBuilder.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullCommandBuilder_ThrowsArgumentNullException()
+    {
+        // act & assert
+        Assert.Throws<ArgumentNullException>(() => new ProcessingResultsViewModel(_mockCliCommandService.Object, null!));
     }
 
     [Fact]
@@ -34,9 +43,10 @@ public class ProcessingResultsViewModelTests
     {
         // arrange
         var cliService = new Mock<ICliCommandService>();
+        var commandBuilder = new Mock<CliCommandBuilder>();
 
         // act
-        var viewModel = new ProcessingResultsViewModel(cliService.Object);
+        var viewModel = new ProcessingResultsViewModel(cliService.Object, commandBuilder.Object);
 
         // assert
         Assert.False(viewModel.IsProcessing);
@@ -124,6 +134,15 @@ public class ProcessingResultsViewModelTests
         var outputPath = "/test/output";
         var placeholders = new Dictionary<string, string> { { "{{name}}", "Test" } };
         _viewModel.SetProcessingData(templateSetPath, outputPath, placeholders);
+
+        // Mock CliCommandBuilder to return expected command objects
+        _mockCommandBuilder
+            .Setup(x => x.BuildCopyCommand(templateSetPath, outputPath))
+            .Returns(new CliCommandBuilder.CliCommand("copy", new[] { "--source", templateSetPath, "--target", outputPath, "--format", "json" }));
+
+        _mockCommandBuilder
+            .Setup(x => x.BuildReplaceCommand(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(new CliCommandBuilder.CliCommand("replace", new[] { "--folder", "test", "--map", "test", "--format", "json" }));
 
         _mockCliCommandService
             .Setup(x => x.ExecuteCommandAsync("copy", It.IsAny<string[]>()))
@@ -261,6 +280,14 @@ public class ProcessingResultsViewModelTests
                 new Dictionary<string, string> { { "{{test}}", "value" } });
 
             // Complete a successful processing to set the right state
+            // Mock CliCommandBuilder
+            _mockCommandBuilder
+                .Setup(x => x.BuildCopyCommand("/test/templates", tempFolder))
+                .Returns(new CliCommandBuilder.CliCommand("copy", new[] { "--source", "/test/templates", "--target", tempFolder, "--format", "json" }));
+            _mockCommandBuilder
+                .Setup(x => x.BuildReplaceCommand(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(new CliCommandBuilder.CliCommand("replace", new[] { "--folder", "test", "--map", "test", "--format", "json" }));
+
             _mockCliCommandService
                 .Setup(x => x.ExecuteCommandAsync("copy", It.IsAny<string[]>()))
                 .ReturnsAsync("Copy successful");

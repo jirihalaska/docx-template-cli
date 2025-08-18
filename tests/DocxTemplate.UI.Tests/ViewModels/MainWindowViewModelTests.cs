@@ -23,7 +23,7 @@ public class MainWindowViewModelTests
         mockServiceProvider.Setup(sp => sp.GetService(typeof(OutputFolderSelectionViewModel)))
             .Returns(new Mock<OutputFolderSelectionViewModel>().Object);
         mockServiceProvider.Setup(sp => sp.GetService(typeof(ProcessingResultsViewModel)))
-            .Returns(new Mock<ProcessingResultsViewModel>(Mock.Of<ICliCommandService>()).Object);
+            .Returns(new Mock<ProcessingResultsViewModel>(Mock.Of<ICliCommandService>(), Mock.Of<CliCommandBuilder>()).Object);
         
         return new WizardViewModel(mockServiceProvider.Object);
     }

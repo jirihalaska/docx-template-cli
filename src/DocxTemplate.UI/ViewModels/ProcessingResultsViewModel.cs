@@ -27,9 +27,12 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private Dictionary<string, string> _placeholderValues = new();
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public ProcessingResultsViewModel(ICliCommandService cliCommandService)
+    private readonly CliCommandBuilder _commandBuilder;
+
+    public ProcessingResultsViewModel(ICliCommandService cliCommandService, CliCommandBuilder commandBuilder)
     {
         _cliCommandService = cliCommandService ?? throw new ArgumentNullException(nameof(cliCommandService));
+        _commandBuilder = commandBuilder ?? throw new ArgumentNullException(nameof(commandBuilder));
 
         var canProcessTemplates = this.WhenAnyValue(
             x => x.IsProcessing,
@@ -238,15 +241,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
-            // Use the stored full template set path
-            var arguments = new[]
-            {
-                "--source", $"\"{_templateSetPath}\"",
-                "--target", $"\"{OutputFolderPath}\"",
-                "--format", "json"
-            };
+            // Use CliCommandBuilder to construct the copy command
+            var cliCommand = _commandBuilder.BuildCopyCommand(_templateSetPath, OutputFolderPath);
 
-            var result = await _cliCommandService.ExecuteCommandAsync("copy", arguments);
+            var result = await _cliCommandService.ExecuteCommandAsync(cliCommand.CommandName, cliCommand.Arguments);
             await logFile.WriteLineAsync($"Copy command output: {result}");
             return (true, "");
         }
@@ -276,14 +274,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
-            var arguments = new[]
-            {
-                "--folder", $"\"{ActualTargetFolderPath}\"",
-                "--map", $"\"{mappingFilePath}\"",
-                "--format", "json"
-            };
+            // Use CliCommandBuilder to construct the replace command
+            var cliCommand = _commandBuilder.BuildReplaceCommand(ActualTargetFolderPath, mappingFilePath);
 
-            var result = await _cliCommandService.ExecuteCommandAsync("replace", arguments);
+            var result = await _cliCommandService.ExecuteCommandAsync(cliCommand.CommandName, cliCommand.Arguments);
             await logFile.WriteLineAsync($"Replace command output: {result}");
             return (true, "");
         }

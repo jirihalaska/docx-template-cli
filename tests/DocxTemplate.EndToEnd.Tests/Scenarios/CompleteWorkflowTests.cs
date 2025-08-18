@@ -331,7 +331,8 @@ public class CompleteWorkflowTests : IDisposable
     {
         var outputFileName = Path.GetFileName(outputFile);
         var originalFiles = Directory.GetFiles(environment.TemplatesDirectory, outputFileName, SearchOption.AllDirectories);
-        return originalFiles.FirstOrDefault() ?? throw new InvalidOperationException();
+        return originalFiles.FirstOrDefault() ?? 
+            throw new InvalidOperationException($"Could not find original template file '{outputFileName}' in templates directory '{environment.TemplatesDirectory}'");
     }
 
     public void Dispose()

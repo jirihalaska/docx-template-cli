@@ -126,7 +126,7 @@ public class TemplateCopyService : ITemplateCopyService
         {
             try
             {
-                await CreateDirectoryStructureAsync(templateFiles, targetPath, cancellationToken);
+                await CreateDirectoryStructureAsync(templateFiles, targetPath, sourcePath, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -490,6 +490,7 @@ public class TemplateCopyService : ITemplateCopyService
     public Task<IReadOnlyList<string>> CreateDirectoryStructureAsync(
         IReadOnlyList<TemplateFile> templateFiles,
         string targetPath,
+        string? sourcePath = null,
         CancellationToken cancellationToken = default)
     {
         if (templateFiles == null)
@@ -511,7 +512,7 @@ public class TemplateCopyService : ITemplateCopyService
 
             // Get all unique directory paths
             var directoriesToCreate = templateFiles
-                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, null)))
+                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, sourcePath)))
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
                 .Where(d => !_fileSystemService.DirectoryExists(d!))

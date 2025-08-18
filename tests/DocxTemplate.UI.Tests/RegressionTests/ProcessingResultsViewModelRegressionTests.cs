@@ -22,7 +22,8 @@ public class ProcessingResultsViewModelRegressionTests
     public ProcessingResultsViewModelRegressionTests()
     {
         _mockCliCommandService = new Mock<ICliCommandService>();
-        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object);
+        var mockCommandBuilder = new Mock<CliCommandBuilder>();
+        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object, mockCommandBuilder.Object);
     }
 
     [Fact]

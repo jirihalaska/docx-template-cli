@@ -103,5 +103,6 @@ public interface ITemplateCopyService
     Task<IReadOnlyList<string>> CreateDirectoryStructureAsync(
         IReadOnlyList<TemplateFile> templateFiles,
         string targetPath,
+        string? sourcePath = null,
         CancellationToken cancellationToken = default);
 }

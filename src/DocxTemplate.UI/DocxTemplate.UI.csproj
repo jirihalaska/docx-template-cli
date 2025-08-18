@@ -36,4 +36,47 @@
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplate.Core\DocxTemplate.Core.csproj" />
   </ItemGroup>
+
+  <!-- Build CLI project and copy executable to UI output directory -->
+  <Target Name="BuildAndCopyCliExecutable" AfterTargets="Build">
+    <PropertyGroup>
+      <CliProjectPath>$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\DocxTemplate.CLI.csproj</CliProjectPath>
+      <CliOutputPath>$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\bin\$(Configuration)\$(TargetFramework)</CliOutputPath>
+      <CliExecutableName Condition="$([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI.exe</CliExecutableName>
+      <CliExecutableName Condition="!$([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI</CliExecutableName>
+      <CliExecutableSource>$(CliOutputPath)/$(CliExecutableName)</CliExecutableSource>
+      <CliExecutableTarget Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(OutputPath)docx-template.exe</CliExecutableTarget>
+      <CliExecutableTarget Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(OutputPath)docx-template</CliExecutableTarget>
+    </PropertyGroup>
+    
+    <Message Text="Building CLI project: $(CliProjectPath)" Importance="high" />
+    
+    <!-- Build the CLI project -->
+    <MSBuild Projects="$(CliProjectPath)" 
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" 
+             Targets="Build" />
+    
+    <Message Text="Copying CLI executable from $(CliExecutableSource) to $(CliExecutableTarget)" Importance="high" />
+    
+    <!-- Copy the CLI executable to UI output directory with the expected name -->
+    <Copy SourceFiles="$(CliExecutableSource)" 
+          DestinationFiles="$(CliExecutableTarget)" 
+          Condition="Exists('$(CliExecutableSource)')"
+          SkipUnchangedFiles="true" />
+          
+    <!-- Also copy required runtime dependencies if they exist -->
+    <ItemGroup>
+      <CliRuntimeFiles Include="$(CliOutputPath)/*.dll" />
+      <CliRuntimeFiles Include="$(CliOutputPath)/*.json" />
+      <CliRuntimeFiles Include="$(CliOutputPath)/*.pdb" Condition="'$(Configuration)' == 'Debug'" />
+    </ItemGroup>
+    
+    <Copy SourceFiles="@(CliRuntimeFiles)" 
+          DestinationFolder="$(OutputPath)" 
+          SkipUnchangedFiles="true" 
+          Condition="@(CliRuntimeFiles) != ''" />
+          
+    <Warning Text="CLI executable not found at $(CliExecutableSource) after build attempt." 
+             Condition="!Exists('$(CliExecutableSource)')" />
+  </Target>
 </Project>

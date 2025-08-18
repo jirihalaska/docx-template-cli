@@ -17,8 +17,16 @@ public static class ServiceRegistration
     public static IServiceCollection RegisterServices(this IServiceCollection services)
     {
         // Register CLI services
-        services.AddSingleton<ICliCommandService, CliProcessRunner>();
+        services.AddSingleton<ICliExecutableDiscoveryService, CliExecutableDiscoveryService>();
+        services.AddSingleton<CliCommandServiceFactory>();
         services.AddSingleton<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
+        
+        // Register ICliCommandService as a factory-created instance
+        services.AddSingleton<ICliCommandService>(provider => 
+        {
+            var factory = provider.GetRequiredService<CliCommandServiceFactory>();
+            return factory.CreateAsync().GetAwaiter().GetResult();
+        });
         
         // Register ViewModels
         services.AddTransient<MainWindowViewModel>();

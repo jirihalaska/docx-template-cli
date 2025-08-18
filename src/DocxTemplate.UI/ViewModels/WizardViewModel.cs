@@ -90,6 +90,9 @@ public class WizardViewModel : ViewModelBase
 
         this.WhenAnyValue(x => x.CurrentStep)
             .Subscribe(UpdateStepStates);
+        
+        // Activate the first step
+        _stepViewModels[0]?.OnStepActivated();
     }
 
     public ReadOnlyCollection<StepInfo> Steps { get; }

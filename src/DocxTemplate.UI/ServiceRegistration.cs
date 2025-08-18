@@ -20,13 +20,17 @@ public static class ServiceRegistration
         // Register CLI services as transient to avoid startup deadlock
         services.AddTransient<ICliExecutableDiscoveryService, CliExecutableDiscoveryService>();
         services.AddTransient<CliCommandServiceFactory>();
+        services.AddTransient<CliCommandBuilder>();
         services.AddTransient<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
         
         // Register ICliCommandService factory that won't block startup
         services.AddTransient<ICliCommandService>(provider =>
         {
             var factory = provider.GetRequiredService<CliCommandServiceFactory>();
-            return factory.CreateAsync().GetAwaiter().GetResult();
+            // Create CLI service synchronously to avoid deadlock
+            var discoveryService = provider.GetRequiredService<ICliExecutableDiscoveryService>();
+            var cliPath = discoveryService.DiscoverCliExecutableAsync().GetAwaiter().GetResult();
+            return new CliProcessRunner(cliPath);
         });
         
         // Register ViewModels

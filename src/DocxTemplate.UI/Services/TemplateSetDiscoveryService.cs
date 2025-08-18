@@ -12,11 +12,13 @@ namespace DocxTemplate.UI.Services;
 public class TemplateSetDiscoveryService : ITemplateSetDiscoveryService
 {
     private readonly ICliCommandService _cliCommandService;
+    private readonly CliCommandBuilder _commandBuilder;
     private readonly CliResultParser _resultParser;
 
-    public TemplateSetDiscoveryService(ICliCommandService cliCommandService)
+    public TemplateSetDiscoveryService(ICliCommandService cliCommandService, CliCommandBuilder commandBuilder)
     {
         _cliCommandService = cliCommandService ?? throw new ArgumentNullException(nameof(cliCommandService));
+        _commandBuilder = commandBuilder ?? throw new ArgumentNullException(nameof(commandBuilder));
         _resultParser = new CliResultParser();
     }
 
@@ -30,13 +32,13 @@ public class TemplateSetDiscoveryService : ITemplateSetDiscoveryService
 
         try
         {
-            var arguments = new[]
-            {
-                "--templates", templatesPath,
-                "--format", "json"
-            };
+            // Use CliCommandBuilder to construct the command
+            var cliCommand = _commandBuilder.BuildListSetsCommand(templatesPath);
 
-            var jsonOutput = await _cliCommandService.ExecuteCommandAsync("list-sets", arguments);
+            // Execute the command using the structured command data
+            var jsonOutput = await _cliCommandService.ExecuteCommandAsync(
+                cliCommand.CommandName, 
+                cliCommand.Arguments);
 
             if (string.IsNullOrWhiteSpace(jsonOutput))
             {

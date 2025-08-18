@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Threading;
@@ -15,7 +16,7 @@ namespace DocxTemplate.UI.ViewModels;
 public class TemplateSetSelectionViewModel : StepViewModelBase
 {
     private readonly ITemplateSetDiscoveryService _templateSetDiscoveryService;
-    private readonly string _templatesPath = "./templates";
+    private readonly string _templatesPath = Path.Combine(AppContext.BaseDirectory, "templates");
     
     private ObservableCollection<TemplateSetItemViewModel> _templateSets;
     private TemplateSetItemViewModel? _selectedTemplateSet;
@@ -124,7 +125,8 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
         base.OnStepActivated();
         
         // Load template sets when step is activated
-        _ = Task.Run(async () => await LoadTemplateSetsAsync());
+        // Run on UI thread to avoid cross-thread issues with ObservableCollection
+        _ = LoadTemplateSetsAsync();
     }
 
     /// <summary>

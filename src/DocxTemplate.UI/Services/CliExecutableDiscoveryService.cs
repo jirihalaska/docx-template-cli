@@ -12,10 +12,11 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     public CliExecutableDiscoveryService()
     {
-        // Platform-specific executable names
+        // Prefer DLL over executable since the executables may not have proper runtime
+        // Platform-specific executable names - DLL first, then executables
         _executableNames = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-            ? new[] { "docx-template.exe", "DocxTemplate.CLI.exe" }
-            : new[] { "docx-template", "DocxTemplate.CLI" };
+            ? new[] { "DocxTemplate.CLI.dll", "docx-template.exe", "DocxTemplate.CLI.exe" }
+            : new[] { "DocxTemplate.CLI.dll", "docx-template", "DocxTemplate.CLI" };
     }
 
     public Task<string> DiscoverCliExecutableAsync()
@@ -42,15 +43,34 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
         try
         {
             using var process = new Process();
-            process.StartInfo = new ProcessStartInfo
+            
+            ProcessStartInfo startInfo;
+            if (cliExecutablePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                FileName = cliExecutablePath,
-                Arguments = "--version",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"{cliExecutablePath} --version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+            }
+            else
+            {
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = cliExecutablePath,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+            }
+            
+            process.StartInfo = startInfo;
 
             process.Start();
 
@@ -76,11 +96,9 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     private static string GetGuiExecutableDirectory()
     {
-        // For single-file apps, use AppContext.BaseDirectory instead of Assembly.Location
-        var guiExecutablePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        
-        return Path.GetDirectoryName(guiExecutablePath) ?? 
-               throw new InvalidOperationException("Could not determine GUI executable directory");
+        // Use AppContext.BaseDirectory which points to the application's directory
+        // This works correctly for both single-file apps and regular deployments
+        return AppContext.BaseDirectory;
     }
 
     private static async Task<bool> WaitForExitAsync(Process process, TimeSpan timeout)

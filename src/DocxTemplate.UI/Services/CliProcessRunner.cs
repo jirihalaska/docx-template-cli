@@ -28,15 +28,34 @@ public class CliProcessRunner : ICliCommandService
     {
         var fullCommand = string.Join(" ", new[] { command }.Concat(arguments ?? Array.Empty<string>()));
         
-        var processStartInfo = new ProcessStartInfo
+        ProcessStartInfo processStartInfo;
+        
+        // Check if we need to use dotnet to run the CLI DLL
+        if (_cliExecutablePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
-            FileName = _cliExecutablePath,
-            Arguments = fullCommand,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            processStartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"{_cliExecutablePath} {fullCommand}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+        }
+        else
+        {
+            // Try to run the executable directly first, if it fails, fall back to DLL
+            processStartInfo = new ProcessStartInfo
+            {
+                FileName = _cliExecutablePath,
+                Arguments = fullCommand,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+        }
 
         using var process = new Process { StartInfo = processStartInfo };
         

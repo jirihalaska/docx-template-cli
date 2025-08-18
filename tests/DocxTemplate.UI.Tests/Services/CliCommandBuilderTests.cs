@@ -16,7 +16,8 @@ public class CliCommandBuilderTests
         var result = _builder.BuildListSetsCommand(templatesPath);
 
         // assert
-        Assert.Equal("list-sets --templates \"./templates\" --format json", result);
+        Assert.Equal("list-sets", result.CommandName);
+        Assert.Equal(new[] { "--templates", "./templates", "--format", "json" }, result.Arguments);
     }
 
     [Fact]
@@ -29,7 +30,8 @@ public class CliCommandBuilderTests
         var result = _builder.BuildScanCommand(path);
 
         // assert
-        Assert.Equal("scan --path \"./templates/contracts\" --format json", result);
+        Assert.Equal("scan", result.CommandName);
+        Assert.Equal(new[] { "--path", "./templates/contracts", "--format", "json" }, result.Arguments);
     }
 
     [Fact]
@@ -43,7 +45,8 @@ public class CliCommandBuilderTests
         var result = _builder.BuildCopyCommand(source, target);
 
         // assert
-        Assert.Equal("copy --source \"./templates/contracts\" --target \"./output\" --format json", result);
+        Assert.Equal("copy", result.CommandName);
+        Assert.Equal(new[] { "--source", "./templates/contracts", "--target", "./output", "--format", "json" }, result.Arguments);
     }
 
     [Fact]
@@ -57,6 +60,7 @@ public class CliCommandBuilderTests
         var result = _builder.BuildReplaceCommand(folder, mapFile);
 
         // assert
-        Assert.Equal("replace --folder \"./output\" --map \"./values.json\" --format json", result);
+        Assert.Equal("replace", result.CommandName);
+        Assert.Equal(new[] { "--folder", "./output", "--map", "./values.json", "--format", "json" }, result.Arguments);
     }
 }

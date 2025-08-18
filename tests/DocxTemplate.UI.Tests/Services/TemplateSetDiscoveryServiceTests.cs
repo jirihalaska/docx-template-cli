@@ -21,7 +21,14 @@ public class TemplateSetDiscoveryServiceTests
     public TemplateSetDiscoveryServiceTests()
     {
         _mockCliCommandService = new Mock<ICliCommandService>();
-        _service = new TemplateSetDiscoveryService(_mockCliCommandService.Object);
+        var mockCommandBuilder = new Mock<CliCommandBuilder>();
+        mockCommandBuilder.Setup(x => x.BuildListSetsCommand(It.IsAny<string>()))
+                          .Returns(new CliCommandBuilder.CliCommand("list-sets", new[] 
+                          { 
+                              "--templates", "/test/path", 
+                              "--format", "json" 
+                          }));
+        _service = new TemplateSetDiscoveryService(_mockCliCommandService.Object, mockCommandBuilder.Object);
     }
 
     [Fact]
@@ -180,6 +187,6 @@ public class TemplateSetDiscoveryServiceTests
     {
         // arrange, act & assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TemplateSetDiscoveryService(null!));
+            new TemplateSetDiscoveryService(null!, new CliCommandBuilder()));
     }
 }

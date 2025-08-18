@@ -2,23 +2,43 @@ namespace DocxTemplate.UI.Services;
 
 public class CliCommandBuilder
 {
-    public string BuildListSetsCommand(string templatesPath)
+    public record CliCommand(string CommandName, string[] Arguments);
+
+    public CliCommand BuildListSetsCommand(string templatesPath)
     {
-        return $"list-sets --templates \"{templatesPath}\" --format json";
+        return new CliCommand("list-sets", new[]
+        {
+            "--templates", templatesPath,
+            "--format", "json"
+        });
     }
 
-    public string BuildScanCommand(string path)
+    public CliCommand BuildScanCommand(string path)
     {
-        return $"scan --path \"{path}\" --format json";
+        return new CliCommand("scan", new[]
+        {
+            "--path", path,
+            "--format", "json"
+        });
     }
 
-    public string BuildCopyCommand(string source, string target)
+    public CliCommand BuildCopyCommand(string source, string target)
     {
-        return $"copy --source \"{source}\" --target \"{target}\" --format json";
+        return new CliCommand("copy", new[]
+        {
+            "--source", source,
+            "--target", target,
+            "--format", "json"
+        });
     }
 
-    public string BuildReplaceCommand(string folder, string mapFile)
+    public CliCommand BuildReplaceCommand(string folder, string mapFile)
     {
-        return $"replace --folder \"{folder}\" --map \"{mapFile}\" --format json";
+        return new CliCommand("replace", new[]
+        {
+            "--folder", folder,
+            "--map", mapFile,
+            "--format", "json"
+        });
     }
 }

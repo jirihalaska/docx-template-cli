@@ -79,4 +79,30 @@
     <Warning Text="CLI executable not found at $(CliExecutableSource) after build attempt." 
              Condition="!Exists('$(CliExecutableSource)')" />
   </Target>
+
+  <!-- Copy templates folder to UI output directory for testing -->
+  <Target Name="CopyTemplatesFolder" AfterTargets="Build">
+    <PropertyGroup>
+      <TemplatesSourcePath>$(MSBuildThisFileDirectory)../../templates</TemplatesSourcePath>
+      <TemplatesTargetPath>$(OutputPath)templates</TemplatesTargetPath>
+    </PropertyGroup>
+    
+    <Message Text="Copying templates folder from $(TemplatesSourcePath) to $(TemplatesTargetPath)" Importance="high" />
+    
+    <!-- Create target directory if it doesn't exist -->
+    <MakeDir Directories="$(TemplatesTargetPath)" Condition="Exists('$(TemplatesSourcePath)') AND !Exists('$(TemplatesTargetPath)')" />
+    
+    <!-- Copy all files from templates directory -->
+    <ItemGroup>
+      <TemplateFiles Include="$(TemplatesSourcePath)/**/*.*" />
+    </ItemGroup>
+    
+    <Copy SourceFiles="@(TemplateFiles)" 
+          DestinationFiles="@(TemplateFiles->'$(TemplatesTargetPath)/%(RecursiveDir)%(Filename)%(Extension)')" 
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(TemplatesSourcePath)')" />
+          
+    <Warning Text="Templates folder not found at $(TemplatesSourcePath). Testing data will not be available." 
+             Condition="!Exists('$(TemplatesSourcePath)')" />
+  </Target>
 </Project>

@@ -311,15 +311,20 @@ public class CompleteWorkflowTests : IDisposable
         // First, verify that files were actually processed
         outputFiles.Should().NotBeEmpty("Processed files should exist in output directory after complete workflow");
         
-        // Get expected file count from template directory
-        var templateFiles = Directory.GetFiles(environment.TemplatesDirectory, "*.docx", SearchOption.AllDirectories);
+        // Get expected file count from the specific template set that was copied
+        var templateSetPath = Path.Combine(environment.TemplatesDirectory, "TestTemplateSet");
+        var templateFiles = Directory.GetFiles(templateSetPath, "*.docx", SearchOption.AllDirectories);
         templateFiles.Should().NotBeEmpty("Template files should exist to validate against");
         
-        // Verify we have the expected number of output files
-        outputFiles.Length.Should().Be(templateFiles.Length, 
-            $"Output should contain same number of files as templates. Templates: {templateFiles.Length}, Output: {outputFiles.Length}");
+        // Filter out backup files from validation (backup folders start with "backup_")
+        // The replace command creates backups by default, so we validate only the processed files
+        var nonBackupFiles = outputFiles.Where(f => !f.Contains("/backup_") && !f.Contains("\\backup_")).ToArray();
+        
+        // Verify we have the expected number of non-backup output files
+        nonBackupFiles.Length.Should().Be(templateFiles.Length, 
+            $"Output should contain same number of non-backup files as templates. Templates: {templateFiles.Length}, Non-backup Output: {nonBackupFiles.Length}");
 
-        foreach (var outputFile in outputFiles)
+        foreach (var outputFile in nonBackupFiles)
         {
             var originalFile = FindCorrespondingOriginalFile(outputFile, environment);
             var validation = await _documentValidator.ValidateDocumentIntegrityAsync(originalFile, outputFile);

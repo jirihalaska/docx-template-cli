@@ -8,6 +8,7 @@ using DocxTemplate.UI.ViewModels;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using static DocxTemplate.UI.Services.CliCommandBuilder;
 
 namespace DocxTemplate.UI.Tests.RegressionTests;
 
@@ -17,13 +18,22 @@ namespace DocxTemplate.UI.Tests.RegressionTests;
 public class ProcessingResultsViewModelRegressionTests
 {
     private readonly Mock<ICliCommandService> _mockCliCommandService;
+    private readonly Mock<CliCommandBuilder> _mockCommandBuilder;
     private readonly ProcessingResultsViewModel _viewModel;
 
     public ProcessingResultsViewModelRegressionTests()
     {
         _mockCliCommandService = new Mock<ICliCommandService>();
-        var mockCommandBuilder = new Mock<CliCommandBuilder>();
-        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object, mockCommandBuilder.Object);
+        _mockCommandBuilder = new Mock<CliCommandBuilder>();
+        
+        // Set up mock command builder to return expected command structures
+        _mockCommandBuilder.Setup(x => x.BuildCopyCommand(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((string source, string target) => new CliCommand("copy", new[] { "--source", $"\"{source}\"", "--target", $"\"{target}\"" }));
+            
+        _mockCommandBuilder.Setup(x => x.BuildReplaceCommand(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((string folder, string mapping) => new CliCommand("replace", new[] { "--folder", $"\"{folder}\"", "--map", $"\"{mapping}\"" }));
+        
+        _viewModel = new ProcessingResultsViewModel(_mockCliCommandService.Object, _mockCommandBuilder.Object);
     }
 
     [Fact]
@@ -53,15 +63,9 @@ public class ProcessingResultsViewModelRegressionTests
         var outputPath = "/tmp/output";
         var placeholders = new Dictionary<string, string> { { "company", "Test Corp" } };
         
-        // Mock successful CLI commands
+        // Mock successful CLI command responses
         _mockCliCommandService.Setup(x => x.ExecuteCommandAsync("copy", It.IsAny<string[]>()))
-            .ReturnsAsync("Copy completed successfully")
-            .Callback<string, string[]>((command, args) =>
-            {
-                // Verify the copy command receives the full path, not just directory name
-                args.Should().Contain($"\"{fullTemplatePath}\"", 
-                    "Copy command should receive the full template path that was stored");
-            });
+            .ReturnsAsync("Copy completed successfully");
             
         _mockCliCommandService.Setup(x => x.ExecuteCommandAsync("replace", It.IsAny<string[]>()))
             .ReturnsAsync("Replace completed successfully");
@@ -75,14 +79,18 @@ public class ProcessingResultsViewModelRegressionTests
         _viewModel.ProcessingSuccessful.Should().BeTrue("Processing should complete without path errors");
         _viewModel.IsProcessingComplete.Should().BeTrue();
         
-        // Verify copy command was called with correct arguments
+        // Verify CliCommandBuilder was called with correct paths
+        _mockCommandBuilder.Verify(x => x.BuildCopyCommand(fullTemplatePath, outputPath), 
+            Times.Once, "CliCommandBuilder should be called with full template path and output path");
+            
+        // Verify the CLI commands were executed
         _mockCliCommandService.Verify(x => x.ExecuteCommandAsync("copy", 
             It.Is<string[]>(args => 
                 args.Contains("--source") && 
                 args.Contains($"\"{fullTemplatePath}\"") &&
                 args.Contains("--target") &&
                 args.Contains($"\"{outputPath}\"")
-            )), Times.Once, "Copy command should be called with full template path and output path");
+            )), Times.Once, "Copy command should be executed with correct arguments");
     }
 
     [Fact]
@@ -166,7 +174,8 @@ public class ProcessingResultsViewModelRegressionTests
         
         // assert - Should fail gracefully and not call replace
         _viewModel.ProcessingSuccessful.Should().BeFalse("Processing should fail when copy fails");
-        _viewModel.ProcessingResults.Should().Contain("Copy failed due to path issue");
+        _viewModel.ProcessingResults.Should().Contain("Copy failed due to path issue", 
+            "Error message should be preserved in processing results");
         
         // Verify replace was never called
         _mockCliCommandService.Verify(x => x.ExecuteCommandAsync("replace", It.IsAny<string[]>()), 

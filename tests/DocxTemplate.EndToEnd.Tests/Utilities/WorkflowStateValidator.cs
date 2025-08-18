@@ -354,16 +354,23 @@ public class WorkflowStateValidator
             return;
         }
 
-        if (!data.TryGetProperty("replacements", out var replacements))
+        if (!data.TryGetProperty("summary", out var summary))
         {
-            result.ValidationErrors.Add("replace output missing 'replacements' property in data");
+            result.ValidationErrors.Add("replace output missing 'summary' property in data");
             result.IsValid = false;
             return;
         }
 
-        if (replacements.ValueKind != JsonValueKind.Array)
+        if (!data.TryGetProperty("file_results", out var fileResults))
         {
-            result.ValidationErrors.Add("replace 'replacements' property should be an array");
+            result.ValidationErrors.Add("replace output missing 'file_results' property in data");
+            result.IsValid = false;
+            return;
+        }
+
+        if (fileResults.ValueKind != JsonValueKind.Array)
+        {
+            result.ValidationErrors.Add("replace 'file_results' property should be an array");
             result.IsValid = false;
         }
         

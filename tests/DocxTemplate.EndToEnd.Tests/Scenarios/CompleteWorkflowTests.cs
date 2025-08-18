@@ -23,7 +23,7 @@ public class CompleteWorkflowTests : IDisposable
     }
 
     /// <summary>
-    /// Tests complete workflow: list-sets → discover → scan → copy
+    /// Tests complete workflow: list-sets → discover → scan → copy → replace
     /// </summary>
     [Fact]
     public async Task CompleteWorkflow_ProcessesTemplateSetSuccessfully()
@@ -67,7 +67,18 @@ public class CompleteWorkflowTests : IDisposable
         var outputFiles = Directory.GetFiles(environment.OutputDirectory, "*.docx", SearchOption.AllDirectories);
         outputFiles.Should().NotBeEmpty("copied files should exist in output directory");
 
-        // Verify document integrity after copy workflow
+        // Step 5: Replace placeholders with values
+        var replacementMapping = CreateReplacementMapping();
+        var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
+        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = replacementMapping }, new JsonSerializerOptions { WriteIndented = true }));
+        
+        var replaceResult = await _cliExecutor.ExecuteAsync(
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", 
+            environment.RootDirectory);
+        
+        replaceResult.IsSuccess.Should().BeTrue($"replace should succeed. Error: {replaceResult.StandardError}");
+
+        // Verify document integrity after complete workflow
         await ValidateProcessedDocumentsAsync(environment);
     }
 
@@ -93,11 +104,12 @@ public class CompleteWorkflowTests : IDisposable
         // assert - For now just verify copy works, replace not implemented yet
         copyResult.IsSuccess.Should().BeTrue($"copy with Czech characters should succeed. Error: {copyResult.StandardError}");
         
-        // TODO: Replace command not implemented yet
-        // var replaceResult = await _cliExecutor.ExecuteAsync(
-        //     $"replace --target \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", 
-        //     environment.RootDirectory);
-        // replaceResult.IsSuccess.Should().BeTrue($"replace with Czech characters should succeed. Error: {replaceResult.StandardError}");
+        // Step 5: Replace placeholders with Czech values
+        var replaceResult = await _cliExecutor.ExecuteAsync(
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", 
+            environment.RootDirectory);
+        
+        replaceResult.IsSuccess.Should().BeTrue($"replace with Czech characters should succeed. Error: {replaceResult.StandardError}");
 
         // Validate Czech character preservation
         var outputFiles = Directory.GetFiles(environment.OutputDirectory, "*.docx", SearchOption.AllDirectories);
@@ -173,17 +185,17 @@ public class CompleteWorkflowTests : IDisposable
             environment.RootDirectory,
             TimeSpan.FromMinutes(5)); // Extended timeout for large sets
 
-        // TODO: Replace command not implemented yet
-        // var replaceResult = await _cliExecutor.ExecuteAsync(
-        //     $"replace --target \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", 
-        //     environment.RootDirectory,
-        //     TimeSpan.FromMinutes(5));
+        // Step 2: Replace placeholders in copied files
+        var replaceResult = await _cliExecutor.ExecuteAsync(
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", 
+            environment.RootDirectory,
+            TimeSpan.FromMinutes(5));
 
         stopwatch.Stop();
 
         // assert
         copyResult.IsSuccess.Should().BeTrue($"large set copy should succeed. Error: {copyResult.StandardError}");
-        // replaceResult.IsSuccess.Should().BeTrue($"large set replace should succeed. Error: {replaceResult.StandardError}");
+        replaceResult.IsSuccess.Should().BeTrue($"large set replace should succeed. Error: {replaceResult.StandardError}");
         
         // Performance validation - should complete within reasonable time
         stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromMinutes(3), "large template set processing should complete within 3 minutes");

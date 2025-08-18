@@ -43,6 +43,7 @@ rootCommand.AddCommand(new ListSetsCommand());
 rootCommand.AddCommand(new DiscoverCommand());
 rootCommand.AddCommand(new ScanCommand());
 rootCommand.AddCommand(new CopyCommand());
+rootCommand.AddCommand(new ReplaceCommand());
 
 // Execute
 return await middleware.InvokeAsync(args);

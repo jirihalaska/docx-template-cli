@@ -32,7 +32,10 @@ public class CommandIntegrationTests : IDisposable
         var environment = await CreateStandardTestEnvironmentAsync("CommandCombinations");
         var replacementMapping = CreateStandardReplacementMapping();
         var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
-        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(replacementMapping, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = replacementMapping }, new JsonSerializerOptions { WriteIndented = true }));
+        
+        // Copy templates first for replace command to have files to work with
+        await _cliExecutor.ExecuteAsync($"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\"", environment.RootDirectory);
 
         var testCombinations = new[]
         {
@@ -43,17 +46,15 @@ public class CommandIntegrationTests : IDisposable
             new { Command = $"discover --path \"{environment.TemplatesDirectory}\" --format json", ExpectedSuccess = true },
             new { Command = $"scan --path \"{environment.TemplatesDirectory}\"", ExpectedSuccess = true },
             new { Command = $"scan --path \"{environment.TemplatesDirectory}\" --pattern \"{{{{.*?}}}}\"", ExpectedSuccess = true },
-            new { Command = $"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\"", ExpectedSuccess = true },
-            // Replace command not implemented yet
-            // new { Command = $"replace --target \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", ExpectedSuccess = true },
+            // Note: copy was already executed in arrange section, replace command can now work on copied files
+            new { Command = $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", ExpectedSuccess = true },
             
             // Error conditions - CLI commands properly return non-zero exit codes for errors
             new { Command = "list-sets --templates \"/nonexistent/path\"", ExpectedSuccess = false },
             new { Command = "discover --path \"/nonexistent/path\"", ExpectedSuccess = false },
             new { Command = "scan --path \"/nonexistent/path\"", ExpectedSuccess = true }, // scan returns 0 but logs error
-            new { Command = "copy --source \"/nonexistent/path\" --target \"/tmp\"", ExpectedSuccess = false }
-            // Replace command not implemented yet
-            // new { Command = "replace --target \"/nonexistent/path\" --map \"/nonexistent/mapping.json\"", ExpectedSuccess = false }
+            new { Command = "copy --source \"/nonexistent/path\" --target \"/tmp\"", ExpectedSuccess = false },
+            new { Command = "replace --folder \"/nonexistent/path\" --map \"/nonexistent/mapping.json\"", ExpectedSuccess = false }
         };
 
         // act & assert
@@ -89,9 +90,8 @@ public class CommandIntegrationTests : IDisposable
             $"list-sets --templates \"{environment.TemplatesDirectory}\" --format json",
             $"discover --path \"{environment.TemplatesDirectory}\" --format json",
             $"scan --path \"{environment.TemplatesDirectory}\" --format json",
-            $"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\" --format json"
-            // Replace command not implemented yet
-            // $"replace --target \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json"
+            $"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\" --format json",
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json"
         };
 
         // act & assert
@@ -136,9 +136,10 @@ public class CommandIntegrationTests : IDisposable
             new { Command = "discover --path \"\"", ExpectedError = "path" },
             new { Command = "scan --path \"\"", ExpectedError = "path" },
             new { Command = $"copy --source \"{environment.TemplatesDirectory}\" --target \"\"", ExpectedError = "target" },
+            new { Command = "replace", ExpectedError = "folder" },
             
-            // Invalid file paths - replace command not implemented yet
-            // new { Command = "replace --target \"/nonexistent\" --map \"/nonexistent.json\"", ExpectedError = "path" }
+            // Invalid file paths
+            new { Command = "replace --folder \"/nonexistent\" --map \"/nonexistent.json\"", ExpectedError = "path" }
         };
 
         // act & assert
@@ -189,11 +190,20 @@ public class CommandIntegrationTests : IDisposable
             environment.RootDirectory);
         commands.Add(copyResult);
 
+        // Setup mapping file for replace command
+        var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
+        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = CreateStandardReplacementMapping() }, new JsonSerializerOptions { WriteIndented = true }));
+
+        var replaceResult = await _cliExecutor.ExecuteAsync(
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json", 
+            environment.RootDirectory);
+        commands.Add(replaceResult);
+
         // assert - Validate workflow state
         var workflowExpectation = new WorkflowExpectation
         {
-            ExpectedCommandSequence = new List<string> { "list-sets", "discover", "scan", "copy" },
-            RequireJsonOutput = new List<string> { "list-sets", "discover", "scan", "copy" },
+            ExpectedCommandSequence = new List<string> { "list-sets", "discover", "scan", "copy", "replace" },
+            RequireJsonOutput = new List<string> { "list-sets", "discover", "scan", "copy", "replace" },
             RequireTemplateSetConsistency = false, // Different commands use different parameters
             AllowTemplateSetChanges = true
         };
@@ -215,7 +225,10 @@ public class CommandIntegrationTests : IDisposable
         // arrange
         var environment = await CreateStandardTestEnvironmentAsync("OutputConsistency");
         var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
-        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(CreateStandardReplacementMapping(), new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = CreateStandardReplacementMapping() }, new JsonSerializerOptions { WriteIndented = true }));
+        
+        // Copy templates first for replace command
+        await _cliExecutor.ExecuteAsync($"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\"", environment.RootDirectory);
 
         var commandOutputTests = new[]
         {
@@ -238,6 +251,11 @@ public class CommandIntegrationTests : IDisposable
                 Command = $"discover --path \"{environment.TemplatesDirectory}\" --format json", 
                 ExpectedFormat = "json",
                 RequiredElements = new[] { "templates" }
+            },
+            new { 
+                Command = $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json", 
+                ExpectedFormat = "json",
+                RequiredElements = new[] { "summary" }
             }
         };
 
@@ -271,6 +289,12 @@ public class CommandIntegrationTests : IDisposable
                         jsonElement.TryGetProperty("data", out var data).Should().BeTrue("JSON should have data property");
                         data.TryGetProperty("templates", out _).Should().BeTrue(
                             $"JSON output from '{test.Command}' should contain property 'templates' in data. Actual output: {jsonContent}");
+                    }
+                    else if (requiredElement == "summary")
+                    {
+                        jsonElement.TryGetProperty("data", out var data).Should().BeTrue("JSON should have data property");
+                        data.TryGetProperty("summary", out _).Should().BeTrue(
+                            $"JSON output from '{test.Command}' should contain property 'summary' in data. Actual output: {jsonContent}");
                     }
                     else
                     {
@@ -406,7 +430,8 @@ public class CommandIntegrationTests : IDisposable
         }
         else if (command.Contains("replace"))
         {
-            data.TryGetProperty("replacements", out _).Should().BeTrue("replace should have replacements property in data");
+            data.TryGetProperty("summary", out _).Should().BeTrue("replace should have summary property in data");
+            data.TryGetProperty("file_results", out _).Should().BeTrue("replace should have file_results property in data");
         }
     }
 

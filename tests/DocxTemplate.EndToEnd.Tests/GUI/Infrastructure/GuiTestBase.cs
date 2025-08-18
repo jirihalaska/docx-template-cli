@@ -2,6 +2,13 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
+using Avalonia.Headless.XUnit;
+using Avalonia.Controls;
+using Avalonia;
+using Microsoft.Extensions.DependencyInjection;
+using DocxTemplate.UI.Views;
+using DocxTemplate.UI.ViewModels;
+using DocxTemplate.UI;
 
 namespace DocxTemplate.EndToEnd.Tests.GUI.Infrastructure;
 
@@ -39,6 +46,28 @@ public abstract class GuiTestBase : IAsyncLifetime
             }
         }
         await Task.CompletedTask;
+    }
+    
+    protected MainWindow CreateMainWindow()
+    {
+        // Initialize Avalonia if not already initialized
+        if (Application.Current == null)
+        {
+            var app = new TestApp();
+            app.Initialize();
+        }
+        
+        // Setup dependency injection same as the real app
+        var services = new ServiceCollection();
+        services.RegisterServices();
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var mainWindowViewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
+        
+        return new MainWindow
+        {
+            DataContext = mainWindowViewModel
+        };
     }
     
     protected async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)

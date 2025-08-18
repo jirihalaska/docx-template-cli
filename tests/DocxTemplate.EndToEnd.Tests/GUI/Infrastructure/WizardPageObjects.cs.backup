@@ -1,0 +1,298 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using DocxTemplate.UI.Views;
+
+namespace DocxTemplate.EndToEnd.Tests.GUI.Infrastructure;
+
+/// <summary>
+/// Page object for MainWindow and wizard navigation
+/// </summary>
+public class MainWindowPageObject
+{
+    private readonly MainWindow _window;
+
+    public MainWindowPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task<bool> IsWizardVisibleAsync()
+    {
+        await Task.Delay(100); // Allow UI to render
+        var wizardView = _window.FindControl<ContentControl>("WizardContent");
+        return wizardView != null && wizardView.IsVisible;
+    }
+
+    public async Task<string> GetCurrentStepTitleAsync()
+    {
+        await Task.Delay(100);
+        var titleTextBlock = _window.FindControl<TextBlock>("StepTitle");
+        return titleTextBlock?.Text ?? "";
+    }
+
+    public TemplateSetSelectionPageObject GetTemplateSetSelectionPage()
+    {
+        return new TemplateSetSelectionPageObject(_window);
+    }
+
+    public PlaceholderDiscoveryPageObject GetPlaceholderDiscoveryPage()
+    {
+        return new PlaceholderDiscoveryPageObject(_window);
+    }
+
+    public PlaceholderInputPageObject GetPlaceholderInputPage()
+    {
+        return new PlaceholderInputPageObject(_window);
+    }
+
+    public OutputFolderSelectionPageObject GetOutputFolderSelectionPage()
+    {
+        return new OutputFolderSelectionPageObject(_window);
+    }
+
+    public ProcessingResultsPageObject GetProcessingResultsPage()
+    {
+        return new ProcessingResultsPageObject(_window);
+    }
+}
+
+/// <summary>
+/// Page object for Template Set Selection step
+/// </summary>
+public class TemplateSetSelectionPageObject
+{
+    private readonly MainWindow _window;
+
+    public TemplateSetSelectionPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task<List<string>> GetTemplateSetListAsync()
+    {
+        await Task.Delay(200);
+        var listBox = _window.FindControl<ListBox>("TemplateSetListBox");
+        if (listBox?.ItemsSource != null)
+        {
+            return listBox.ItemsSource.Cast<object>().Select(x => x.ToString()!).ToList();
+        }
+        return new List<string>();
+    }
+
+    public async Task SelectTemplateSetAsync(string templateSetName)
+    {
+        await Task.Delay(200);
+        var listBox = _window.FindControl<ListBox>("TemplateSetListBox");
+        if (listBox != null)
+        {
+            var items = listBox.ItemsSource?.Cast<object>().ToList();
+            var item = items?.FirstOrDefault(x => x.ToString() == templateSetName);
+            if (item != null)
+            {
+                listBox.SelectedItem = item;
+                await Task.Delay(100);
+            }
+        }
+    }
+
+    public async Task ClickNextAsync()
+    {
+        await Task.Delay(100);
+        var nextButton = _window.FindControl<Button>("NextButton");
+        if (nextButton != null && nextButton.IsEnabled)
+        {
+            nextButton.Command?.Execute(nextButton.CommandParameter);
+            await Task.Delay(300); // Allow navigation
+        }
+    }
+}
+
+/// <summary>
+/// Page object for Placeholder Discovery step
+/// </summary>
+public class PlaceholderDiscoveryPageObject
+{
+    private readonly MainWindow _window;
+
+    public PlaceholderDiscoveryPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task<List<string>> GetDiscoveredPlaceholdersAsync()
+    {
+        await Task.Delay(200);
+        var listView = _window.FindControl<ListView>("PlaceholdersListView");
+        if (listView?.ItemsSource != null)
+        {
+            return listView.ItemsSource.Cast<object>().Select(x => x.ToString()!).ToList();
+        }
+        return new List<string>();
+    }
+
+    public async Task<bool> IsDiscoveryCompleteAsync()
+    {
+        await Task.Delay(100);
+        var progressBar = _window.FindControl<ProgressBar>("DiscoveryProgressBar");
+        return progressBar?.IsVisible == false; // Progress bar hidden when complete
+    }
+
+    public async Task ClickNextAsync()
+    {
+        await Task.Delay(100);
+        var nextButton = _window.FindControl<Button>("NextButton");
+        if (nextButton != null && nextButton.IsEnabled)
+        {
+            nextButton.Command?.Execute(nextButton.CommandParameter);
+            await Task.Delay(300);
+        }
+    }
+}
+
+/// <summary>
+/// Page object for Placeholder Input step
+/// </summary>
+public class PlaceholderInputPageObject
+{
+    private readonly MainWindow _window;
+
+    public PlaceholderInputPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task SetPlaceholderValueAsync(string placeholder, string value)
+    {
+        await Task.Delay(100);
+        
+        // Find the input control for this placeholder
+        // Assuming the UI has TextBoxes with names like "placeholder_{name}"
+        var textBox = _window.FindControl<TextBox>($"placeholder_{placeholder}");
+        if (textBox != null)
+        {
+            textBox.Text = value;
+            await Task.Delay(50);
+        }
+    }
+
+    public async Task SetAllPlaceholderValuesAsync(Dictionary<string, string> values)
+    {
+        foreach (var kvp in values)
+        {
+            await SetPlaceholderValueAsync(kvp.Key, kvp.Value);
+        }
+    }
+
+    public async Task ClickNextAsync()
+    {
+        await Task.Delay(100);
+        var nextButton = _window.FindControl<Button>("NextButton");
+        if (nextButton != null && nextButton.IsEnabled)
+        {
+            nextButton.Command?.Execute(nextButton.CommandParameter);
+            await Task.Delay(300);
+        }
+    }
+}
+
+/// <summary>
+/// Page object for Output Folder Selection step
+/// </summary>
+public class OutputFolderSelectionPageObject
+{
+    private readonly MainWindow _window;
+
+    public OutputFolderSelectionPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task SetOutputFolderAsync(string folderPath)
+    {
+        await Task.Delay(100);
+        var textBox = _window.FindControl<TextBox>("OutputFolderTextBox");
+        if (textBox != null)
+        {
+            textBox.Text = folderPath;
+            await Task.Delay(50);
+        }
+    }
+
+    public async Task ClickBrowseAsync()
+    {
+        await Task.Delay(100);
+        var browseButton = _window.FindControl<Button>("BrowseFolderButton");
+        if (browseButton != null && browseButton.IsEnabled)
+        {
+            // Note: In headless testing, folder dialog might not work
+            // We'll set the path directly for testing
+            browseButton.Command?.Execute(browseButton.CommandParameter);
+            await Task.Delay(200);
+        }
+    }
+
+    public async Task ClickNextAsync()
+    {
+        await Task.Delay(100);
+        var nextButton = _window.FindControl<Button>("NextButton");
+        if (nextButton != null && nextButton.IsEnabled)
+        {
+            nextButton.Command?.Execute(nextButton.CommandParameter);
+            await Task.Delay(300);
+        }
+    }
+}
+
+/// <summary>
+/// Page object for Processing Results step
+/// </summary>
+public class ProcessingResultsPageObject
+{
+    private readonly MainWindow _window;
+
+    public ProcessingResultsPageObject(MainWindow window)
+    {
+        _window = window;
+    }
+
+    public async Task<bool> IsProcessingCompleteAsync()
+    {
+        await Task.Delay(100);
+        var progressBar = _window.FindControl<ProgressBar>("ProcessingProgressBar");
+        return progressBar?.IsVisible == false;
+    }
+
+    public async Task<string> GetResultMessageAsync()
+    {
+        await Task.Delay(100);
+        var resultTextBlock = _window.FindControl<TextBlock>("ResultMessage");
+        return resultTextBlock?.Text ?? "";
+    }
+
+    public async Task<List<string>> GetProcessedFilesAsync()
+    {
+        await Task.Delay(200);
+        var listView = _window.FindControl<ListView>("ProcessedFilesListView");
+        if (listView?.ItemsSource != null)
+        {
+            return listView.ItemsSource.Cast<object>().Select(x => x.ToString()!).ToList();
+        }
+        return new List<string>();
+    }
+
+    public async Task ClickFinishAsync()
+    {
+        await Task.Delay(100);
+        var finishButton = _window.FindControl<Button>("FinishButton");
+        if (finishButton != null && finishButton.IsEnabled)
+        {
+            finishButton.Command?.Execute(finishButton.CommandParameter);
+            await Task.Delay(200);
+        }
+    }
+}

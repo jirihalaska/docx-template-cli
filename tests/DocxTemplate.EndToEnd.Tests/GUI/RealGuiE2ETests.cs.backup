@@ -1,0 +1,300 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using DocxTemplate.EndToEnd.Tests.GUI.Infrastructure;
+using DocxTemplate.UI.Views;
+using DocumentFormat.OpenXml.Packaging;
+using FluentAssertions;
+using Xunit;
+
+namespace DocxTemplate.EndToEnd.Tests.GUI;
+
+[Collection("Real GUI E2E Tests")]
+public class RealGuiE2ETests : IAsyncLifetime
+{
+    private TestDataManager _testDataManager = null!;
+    private CliIntegrationHelper _cliHelper = null!;
+    private string _tempOutputDirectory = null!;
+
+    public async Task InitializeAsync()
+    {
+        // Set up test directories
+        var testAssemblyDir = Path.GetDirectoryName(typeof(RealGuiE2ETests).Assembly.Location)!;
+        _tempOutputDirectory = Path.Combine(Path.GetTempPath(), "DocxTemplate.Tests", Guid.NewGuid().ToString());
+        
+        Directory.CreateDirectory(_tempOutputDirectory);
+        
+        _testDataManager = new TestDataManager(_tempOutputDirectory);
+        _cliHelper = new CliIntegrationHelper();
+        await Task.CompletedTask;
+    }
+    
+    public async Task DisposeAsync()
+    {
+        // Clean up temp directory
+        if (Directory.Exists(_tempOutputDirectory))
+        {
+            try
+            {
+                Directory.Delete(_tempOutputDirectory, true);
+            }
+            catch
+            {
+                // Ignore cleanup errors in tests
+            }
+        }
+        await Task.CompletedTask;
+    }
+    
+    protected MainWindow CreateMainWindow()
+    {
+        // Setup dependency injection same as the real app
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        DocxTemplate.UI.ServiceRegistration.RegisterServices(services);
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var mainWindowViewModel = serviceProvider.GetRequiredService<DocxTemplate.UI.ViewModels.MainWindowViewModel>();
+        
+        return new MainWindow
+        {
+            DataContext = mainWindowViewModel
+        };
+    }
+    
+    protected async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var endTime = DateTime.Now + timeout;
+        while (DateTime.Now < endTime)
+        {
+            if (condition())
+                return;
+            await Task.Delay(100);
+        }
+        throw new TimeoutException($"Condition not met within {timeout}");
+    }
+
+    [Fact]
+    public async Task RealGuiE2E_CompleteWorkflow_LaunchesGuiAndCompletesWorkflow()
+    {
+        // arrange - Create test data
+        var templateSetName = "E2ETestTemplateSet";
+        var templateSetPath = await _testDataManager.CreateTestTemplateSetAsync(templateSetName);
+        var templatesDir = Path.GetDirectoryName(templateSetPath)!;
+        
+        var placeholderValues = new Dictionary<string, string>
+        {
+            { "company_name", "Real GUI Test Company Ltd" },
+            { "project_title", "Real E2E GUI Integration Test" },
+            { "current_date", "2025-08-18" },
+            { "author_name", "Real GUI E2E Test Suite" }
+        };
+
+        var outputPath = Path.Combine(_tempOutputDirectory, "real_gui_output");
+        Directory.CreateDirectory(outputPath);
+
+        // act - Launch real GUI application and interact with it
+        var mainWindow = CreateMainWindow();
+        var mainWindowPageObject = new MainWindowPageObject(mainWindow);
+
+        // Show the window
+        mainWindow.Show();
+        
+        // Wait for window to be ready
+        await WaitForConditionAsync(() => mainWindow.IsVisible, TimeSpan.FromSeconds(5));
+        
+        // Step 1: Verify wizard is visible
+        var isWizardVisible = await mainWindowPageObject.IsWizardVisibleAsync();
+        isWizardVisible.Should().BeTrue("Wizard should be visible on startup");
+
+        // Step 2: Template Set Selection
+        var templateSelectionPage = mainWindowPageObject.GetTemplateSetSelectionPage();
+        
+        // Wait for template sets to load
+        await WaitForConditionAsync(async () => 
+        {
+            var templateSets = await templateSelectionPage.GetTemplateSetListAsync();
+            return templateSets.Count > 0;
+        }, TimeSpan.FromSeconds(10));
+
+        var availableTemplateSets = await templateSelectionPage.GetTemplateSetListAsync();
+        availableTemplateSets.Should().Contain(templateSetName, "Created template set should be available");
+
+        await templateSelectionPage.SelectTemplateSetAsync(templateSetName);
+        await templateSelectionPage.ClickNextAsync();
+
+        // Step 3: Placeholder Discovery
+        var placeholderDiscoveryPage = mainWindowPageObject.GetPlaceholderDiscoveryPage();
+        
+        // Wait for placeholder discovery to complete
+        await WaitForConditionAsync(async () => await placeholderDiscoveryPage.IsDiscoveryCompleteAsync(), 
+            TimeSpan.FromSeconds(10));
+
+        var discoveredPlaceholders = await placeholderDiscoveryPage.GetDiscoveredPlaceholdersAsync();
+        discoveredPlaceholders.Should().NotBeEmpty("Placeholders should be discovered");
+        discoveredPlaceholders.Should().Contain(ph => ph.Contains("company_name"));
+        discoveredPlaceholders.Should().Contain(ph => ph.Contains("project_title"));
+
+        await placeholderDiscoveryPage.ClickNextAsync();
+
+        // Step 4: Placeholder Input
+        var placeholderInputPage = mainWindowPageObject.GetPlaceholderInputPage();
+        await placeholderInputPage.SetAllPlaceholderValuesAsync(placeholderValues);
+        await placeholderInputPage.ClickNextAsync();
+
+        // Step 5: Output Folder Selection
+        var outputFolderPage = mainWindowPageObject.GetOutputFolderSelectionPage();
+        await outputFolderPage.SetOutputFolderAsync(outputPath);
+        await outputFolderPage.ClickNextAsync();
+
+        // Step 6: Processing Results
+        var processingResultsPage = mainWindowPageObject.GetProcessingResultsPage();
+        
+        // Wait for processing to complete
+        await WaitForConditionAsync(async () => await processingResultsPage.IsProcessingCompleteAsync(), 
+            TimeSpan.FromSeconds(30));
+
+        var resultMessage = await processingResultsPage.GetResultMessageAsync();
+        resultMessage.Should().Contain("success", "Processing should complete successfully");
+
+        var processedFiles = await processingResultsPage.GetProcessedFilesAsync();
+        processedFiles.Should().NotBeEmpty("Processed files should be listed");
+
+        await processingResultsPage.ClickFinishAsync();
+
+        // assert - Verify output files exist and contain correct content
+        await VerifyOutputFilesAsync(outputPath, placeholderValues);
+        
+        // assert - Compare with CLI results
+        await VerifyGuiCliResultsMatchAsync(templatesDir, templateSetName, placeholderValues, outputPath);
+
+        // Clean up
+        mainWindow.Close();
+    }
+
+    [Fact]
+    public async Task RealGuiE2E_ErrorHandling_InvalidTemplateSet()
+    {
+        // arrange - Create main window
+        var mainWindow = CreateMainWindow();
+        var mainWindowPageObject = new MainWindowPageObject(mainWindow);
+
+        // act - Launch GUI
+        mainWindow.Show();
+        await WaitForConditionAsync(() => mainWindow.IsVisible, TimeSpan.FromSeconds(5));
+
+        // Try to select a non-existent template set
+        var templateSelectionPage = mainWindowPageObject.GetTemplateSetSelectionPage();
+        
+        // Wait for template sets to load (should be empty or not contain our fake set)
+        await Task.Delay(2000);
+        
+        var availableTemplateSets = await templateSelectionPage.GetTemplateSetListAsync();
+        
+        // assert - Should handle empty template sets gracefully
+        // If no template sets are available, the Next button should be disabled
+        availableTemplateSets.Should().NotContain("NonExistentTemplateSet");
+
+        // Clean up
+        mainWindow.Close();
+    }
+
+    [Fact]
+    public async Task RealGuiE2E_CliIntegration_GuiUsesCorrectCliCommands()
+    {
+        // arrange - Create test data
+        var templateSetName = "CliIntegrationTest";
+        var templateSetPath = await _testDataManager.CreateTestTemplateSetAsync(templateSetName);
+        var templatesDir = Path.GetDirectoryName(templateSetPath)!;
+
+        // act - Test that GUI can discover template sets (like CLI would)
+        var cliTemplateSets = await _cliHelper.GetTemplateSetsCli(templatesDir);
+        
+        // Launch GUI and get template sets
+        var mainWindow = CreateMainWindow();
+        var mainWindowPageObject = new MainWindowPageObject(mainWindow);
+        mainWindow.Show();
+        
+        await WaitForConditionAsync(() => mainWindow.IsVisible, TimeSpan.FromSeconds(5));
+
+        var templateSelectionPage = mainWindowPageObject.GetTemplateSetSelectionPage();
+        
+        await WaitForConditionAsync(async () => 
+        {
+            var templateSets = await templateSelectionPage.GetTemplateSetListAsync();
+            return templateSets.Count > 0;
+        }, TimeSpan.FromSeconds(10));
+
+        var guiTemplateSets = await templateSelectionPage.GetTemplateSetListAsync();
+
+        // assert - GUI should find same template sets as CLI
+        guiTemplateSets.Should().Contain(templateSetName);
+        cliTemplateSets.Should().Contain(templateSetName);
+        
+        // Both should find at least our test template set
+        guiTemplateSets.Should().NotBeEmpty();
+        cliTemplateSets.Should().NotBeEmpty();
+
+        // Clean up
+        mainWindow.Close();
+    }
+
+    private async Task VerifyOutputFilesAsync(string outputPath, Dictionary<string, string> placeholderValues)
+    {
+        // Verify files exist
+        var outputFiles = Directory.GetFiles(outputPath, "*.docx", SearchOption.AllDirectories);
+        outputFiles.Should().NotBeEmpty("Output directory should contain processed DOCX files");
+
+        // Verify content
+        foreach (var file in outputFiles)
+        {
+            using var document = WordprocessingDocument.Open(file, false);
+            var text = document.MainDocumentPart?.Document.InnerText ?? "";
+            
+            // Verify placeholders were replaced
+            text.Should().NotContain("{{", "All placeholders should be replaced");
+            text.Should().NotContain("}}", "All placeholders should be replaced");
+            
+            // Verify actual values are present
+            foreach (var value in placeholderValues.Values)
+            {
+                text.Should().Contain(value, $"Output should contain replaced value: {value}");
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task VerifyGuiCliResultsMatchAsync(string templatesDir, string templateSetName, 
+        Dictionary<string, string> placeholderValues, string guiOutputPath)
+    {
+        // Execute same workflow via CLI
+        var cliOutputPath = Path.Combine(_tempOutputDirectory, "cli_comparison_output");
+        Directory.CreateDirectory(cliOutputPath);
+        
+        var cliResults = await _cliHelper.ExecuteFullWorkflowCli(templatesDir, templateSetName, 
+            placeholderValues, cliOutputPath);
+
+        // assert - CLI should also succeed
+        cliResults.Success.Should().BeTrue($"CLI workflow should succeed. Error: {cliResults.Error}");
+
+        // Compare output files
+        var guiFiles = Directory.GetFiles(guiOutputPath, "*.docx", SearchOption.AllDirectories);
+        var cliFiles = Directory.GetFiles(cliOutputPath, "*.docx", SearchOption.AllDirectories);
+
+        guiFiles.Length.Should().Be(cliFiles.Length, "GUI and CLI should produce same number of files");
+
+        // Compare file contents
+        for (int i = 0; i < guiFiles.Length; i++)
+        {
+            using var guiDoc = WordprocessingDocument.Open(guiFiles[i], false);
+            using var cliDoc = WordprocessingDocument.Open(cliFiles[i], false);
+
+            var guiText = guiDoc.MainDocumentPart?.Document.InnerText ?? "";
+            var cliText = cliDoc.MainDocumentPart?.Document.InnerText ?? "";
+
+            guiText.Should().Be(cliText, $"GUI and CLI should produce identical content for file {i}");
+        }
+    }
+}

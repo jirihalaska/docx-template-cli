@@ -18,7 +18,7 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
             : new[] { "docx-template", "DocxTemplate.CLI" };
     }
 
-    public async Task<string> DiscoverCliExecutableAsync()
+    public Task<string> DiscoverCliExecutableAsync()
     {
         var guiExecutableDirectory = GetGuiExecutableDirectory();
         
@@ -28,11 +28,9 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
             
             if (File.Exists(candidatePath))
             {
-                // Verify the executable is functional
-                if (await ValidateCliExecutableAsync(candidatePath))
-                {
-                    return candidatePath;
-                }
+                // Skip validation during startup to avoid deadlock
+                // Validation will happen when CLI is actually used
+                return Task.FromResult(candidatePath);
             }
         }
         

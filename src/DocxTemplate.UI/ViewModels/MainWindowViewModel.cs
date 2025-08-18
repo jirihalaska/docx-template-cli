@@ -1,4 +1,5 @@
-﻿using ReactiveUI;
+﻿using System;
+using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -6,6 +7,11 @@ public class MainWindowViewModel : ViewModelBase
 {
     private string _title = "Procesor šablon DOCX";
     private string _statusText = "Připraveno";
+
+    public MainWindowViewModel(WizardViewModel wizardViewModel)
+    {
+        WizardViewModel = wizardViewModel ?? throw new ArgumentNullException(nameof(wizardViewModel));
+    }
 
     public string Title
     {
@@ -18,4 +24,6 @@ public class MainWindowViewModel : ViewModelBase
         get => _statusText;
         set => this.RaiseAndSetIfChanged(ref _statusText, value);
     }
+
+    public WizardViewModel WizardViewModel { get; }
 }

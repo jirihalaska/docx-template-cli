@@ -1,0 +1,18 @@
+# Simple Test Document
+
+This is a test template with placeholders:
+
+- Company Name: {{company_name}}
+- Project Title: {{project_title}} 
+- Date: {{current_date}}
+- Author: {{author_name}}
+
+The document should be processed correctly by the GUI-CLI integration.
+
+## Details
+
+Project: {{project_title}}
+Company: {{company_name}}
+Created by: {{author_name}} on {{current_date}}
+
+End of document.

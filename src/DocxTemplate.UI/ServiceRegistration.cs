@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using DocxTemplate.UI.Services;
 using DocxTemplate.UI.ViewModels;
@@ -16,21 +17,21 @@ public static class ServiceRegistration
     /// <returns>Configured service collection</returns>
     public static IServiceCollection RegisterServices(this IServiceCollection services)
     {
-        // Register CLI services
-        services.AddSingleton<ICliExecutableDiscoveryService, CliExecutableDiscoveryService>();
-        services.AddSingleton<CliCommandServiceFactory>();
-        services.AddSingleton<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
+        // Register CLI services as transient to avoid startup deadlock
+        services.AddTransient<ICliExecutableDiscoveryService, CliExecutableDiscoveryService>();
+        services.AddTransient<CliCommandServiceFactory>();
+        services.AddTransient<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
         
-        // Register ICliCommandService as a factory-created instance
-        services.AddSingleton<ICliCommandService>(provider => 
+        // Register ICliCommandService factory that won't block startup
+        services.AddTransient<ICliCommandService>(provider =>
         {
             var factory = provider.GetRequiredService<CliCommandServiceFactory>();
             return factory.CreateAsync().GetAwaiter().GetResult();
         });
         
         // Register ViewModels
-        services.AddTransient<MainWindowViewModel>();
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));
+        services.AddTransient<MainWindowViewModel>();
         services.AddTransient<TemplateSetSelectionViewModel>();
         services.AddTransient<PlaceholderDiscoveryViewModel>();
         services.AddTransient<PlaceholderInputViewModel>();

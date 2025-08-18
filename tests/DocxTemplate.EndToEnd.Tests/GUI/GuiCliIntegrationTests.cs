@@ -11,16 +11,42 @@ using Xunit;
 namespace DocxTemplate.EndToEnd.Tests.GUI;
 
 [Collection("GUI Integration Tests")]
-public class GuiCliIntegrationTests : GuiTestBase
+public class GuiCliIntegrationTests : IAsyncLifetime
 {
     private TestDataManager _testDataManager = null!;
     private CliIntegrationHelper _cliHelper = null!;
+    private string _testDataDirectory = null!;
+    private string _tempOutputDirectory = null!;
 
-    public override async Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        await base.InitializeAsync();
-        _testDataManager = new TestDataManager(TempOutputDirectory);
+        // Set up test directories
+        var testAssemblyDir = Path.GetDirectoryName(typeof(GuiCliIntegrationTests).Assembly.Location)!;
+        _testDataDirectory = Path.Combine(testAssemblyDir, "..", "..", "..", "..", "data", "e2e-documents");
+        _tempOutputDirectory = Path.Combine(Path.GetTempPath(), "DocxTemplate.Tests", Guid.NewGuid().ToString());
+        
+        Directory.CreateDirectory(_tempOutputDirectory);
+        
+        _testDataManager = new TestDataManager(_tempOutputDirectory);
         _cliHelper = new CliIntegrationHelper();
+        await Task.CompletedTask;
+    }
+    
+    public async Task DisposeAsync()
+    {
+        // Clean up temp directory
+        if (Directory.Exists(_tempOutputDirectory))
+        {
+            try
+            {
+                Directory.Delete(_tempOutputDirectory, true);
+            }
+            catch
+            {
+                // Ignore cleanup errors in tests
+            }
+        }
+        await Task.CompletedTask;
     }
 
     [Fact]
@@ -37,8 +63,8 @@ public class GuiCliIntegrationTests : GuiTestBase
             { "author_name", "E2E Test Suite" }
         };
 
-        var guiOutputPath = Path.Combine(TempOutputDirectory, "gui_output");
-        var cliOutputPath = Path.Combine(TempOutputDirectory, "cli_output");
+        var guiOutputPath = Path.Combine(_tempOutputDirectory, "gui_output");
+        var cliOutputPath = Path.Combine(_tempOutputDirectory, "cli_output");
 
         Directory.CreateDirectory(guiOutputPath);
         Directory.CreateDirectory(cliOutputPath);

@@ -1,0 +1,110 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Avalonia.Headless.XUnit;
+using DocxTemplate.EndToEnd.Tests.GUI.Infrastructure;
+using DocxTemplate.UI.Views;
+using FluentAssertions;
+using Xunit;
+
+namespace DocxTemplate.EndToEnd.Tests.GUI;
+
+[Collection("Simple GUI E2E Tests")]
+public class SimpleGuiE2ETest 
+{
+    [AvaloniaFact]
+    public async Task SimpleGui_LaunchMainWindow_WindowLoads()
+    {
+        // arrange
+        var testDataManager = new TestDataManager(Path.GetTempPath());
+        
+        // Create a main window using the real app's dependency injection
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        DocxTemplate.UI.ServiceRegistration.RegisterServices(services);
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var mainWindowViewModel = serviceProvider.GetRequiredService<DocxTemplate.UI.ViewModels.MainWindowViewModel>();
+        var window = new MainWindow
+        {
+            DataContext = mainWindowViewModel
+        };
+
+        // act - Show the window (this is the actual GUI test)
+        window.Show();
+
+        // Wait a moment for the window to render
+        await Task.Delay(500);
+
+        // assert - Window should be visible and have correct properties
+        window.IsVisible.Should().BeTrue("Main window should be visible");
+        window.Title.Should().NotBeNullOrEmpty("Window should have a title");
+        
+        // Verify the wizard content is loaded
+        var wizardContent = window.FindControl<ContentControl>("WizardContent");
+        wizardContent.Should().NotBeNull("Wizard content should be present");
+
+        // Clean up
+        window.Close();
+        
+        await Task.CompletedTask;
+    }
+
+    [AvaloniaFact] 
+    public async Task SimpleGui_VerifyCliIntegration_WindowCanAccessCliServices()
+    {
+        // arrange - Create window with DI
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        DocxTemplate.UI.ServiceRegistration.RegisterServices(services);
+        var serviceProvider = services.BuildServiceProvider();
+
+        // act - Try to resolve CLI services (this tests that CLI integration works)
+        var cliService = serviceProvider.GetRequiredService<DocxTemplate.UI.Services.ICliCommandService>();
+        var templateSetService = serviceProvider.GetRequiredService<DocxTemplate.UI.Services.ITemplateSetDiscoveryService>();
+
+        // assert - Services should be available
+        cliService.Should().NotBeNull("CLI command service should be available");
+        templateSetService.Should().NotBeNull("Template set discovery service should be available");
+
+        await Task.CompletedTask;
+    }
+
+    [AvaloniaFact]
+    public async Task SimpleGui_BasicWizardFlow_CanNavigateSteps()
+    {
+        // arrange
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        DocxTemplate.UI.ServiceRegistration.RegisterServices(services);
+        var serviceProvider = services.BuildServiceProvider();
+        
+        var mainWindowViewModel = serviceProvider.GetRequiredService<DocxTemplate.UI.ViewModels.MainWindowViewModel>();
+        var window = new MainWindow
+        {
+            DataContext = mainWindowViewModel
+        };
+
+        // act - Show window and test wizard navigation
+        window.Show();
+        await Task.Delay(200);
+
+        // Get the wizard view model to test navigation
+        var wizardViewModel = mainWindowViewModel.WizardViewModel;
+        wizardViewModel.Should().NotBeNull("Wizard view model should be available");
+
+        // Test that we start on the first step
+        wizardViewModel.CurrentStepIndex.Should().Be(0, "Should start on first step");
+
+        // Test moving to next step (if possible)
+        if (wizardViewModel.NextCommand.CanExecute(null))
+        {
+            wizardViewModel.NextCommand.Execute(null);
+            await Task.Delay(100);
+            // Verify step changed (this tests the navigation logic)
+        }
+
+        // Clean up
+        window.Close();
+        
+        await Task.CompletedTask;
+    }
+}

@@ -1,13 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DocxTemplate.UI.ViewModels"
+        xmlns:views="using:DocxTemplate.UI.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="DocxTemplate.UI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="{Binding Title}">
+        Title="{Binding Title}"
+        MinWidth="800" MinHeight="600">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -16,12 +18,9 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="*,Auto">
-        <!-- Main content area -->
-        <TextBlock Grid.Row="0"
-                   Text="Procesor šablon DOCX - GUI připraveno!" 
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Center"
-                   FontSize="18"/>
+        <!-- Main content area - Wizard Control -->
+        <views:WizardControl Grid.Row="0" 
+                           DataContext="{Binding WizardViewModel}" />
         
         <!-- Status bar -->
         <Border Grid.Row="1" 

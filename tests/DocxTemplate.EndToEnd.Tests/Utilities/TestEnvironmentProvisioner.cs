@@ -32,26 +32,26 @@ public class TestEnvironmentProvisioner : IDisposable
             environment.TemplatesDirectory = Path.Combine(environment.RootDirectory, "templates");
             environment.OutputDirectory = Path.Combine(environment.RootDirectory, "output");
             environment.DataDirectory = Path.Combine(environment.RootDirectory, "data");
-            
+
             Directory.CreateDirectory(environment.TemplatesDirectory);
             Directory.CreateDirectory(environment.OutputDirectory);
             Directory.CreateDirectory(environment.DataDirectory);
 
             // Copy template sets
             await CopyTemplateSetsAsync(spec.TemplateSets, environment.TemplatesDirectory);
-            
+
             // Create test documents if specified
             if (spec.GenerateTestDocuments)
             {
                 await GenerateTestDocumentsAsync(environment.TemplatesDirectory, spec.DocumentComplexity);
             }
-            
+
             // Create replacement mapping files
             if (spec.ReplacementMappings.Any())
             {
                 await CreateReplacementMappingFilesAsync(spec.ReplacementMappings, environment.DataDirectory);
             }
-            
+
             // Create any additional test data
             if (spec.AdditionalTestFiles.Any())
             {
@@ -114,12 +114,12 @@ public class TestEnvironmentProvisioner : IDisposable
     private async Task GenerateTemplateSetAsync(TemplateSetSpec spec, string targetDirectory)
     {
         var testDataManager = new TestDataManager();
-        
+
         for (int i = 0; i < spec.DocumentCount; i++)
         {
             var fileName = $"{spec.Name}_Document_{i + 1:D2}.docx";
             var filePath = Path.Combine(targetDirectory, fileName);
-            
+
             // Create a Word document with specified placeholders
             await testDataManager.CreateTestDocumentAsync(filePath, spec.Placeholders, spec.IncludeCzechCharacters);
         }
@@ -129,59 +129,61 @@ public class TestEnvironmentProvisioner : IDisposable
     {
         var testDataManager = new TestDataManager();
         var complexitySpecs = GetComplexitySpecs(complexity);
-        
+
         foreach (var complexitySpec in complexitySpecs)
         {
             var fileName = $"TestDoc_{complexitySpec.Name}.docx";
             var filePath = Path.Combine(templatesDirectory, "TestDocuments", fileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-            
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException());
+
             await testDataManager.CreateComplexTestDocumentAsync(filePath, complexitySpec);
         }
     }
 
     private async Task CreateReplacementMappingFilesAsync(
-        List<ReplacementMappingSpec> mappings, 
+        List<ReplacementMappingSpec> mappings,
         string dataDirectory)
     {
         foreach (var mapping in mappings)
         {
             var fileName = $"{mapping.Name}.json";
             var filePath = Path.Combine(dataDirectory, fileName);
-            
+
             var jsonContent = JsonSerializer.Serialize(mapping.Values, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
-            
+
             await File.WriteAllTextAsync(filePath, jsonContent);
         }
     }
 
     private async Task CreateAdditionalTestFilesAsync(
-        List<AdditionalTestFileSpec> files, 
+        List<AdditionalTestFileSpec> files,
         string dataDirectory)
     {
         foreach (var file in files)
         {
             var filePath = Path.Combine(dataDirectory, file.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-            
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException());
+
             await File.WriteAllTextAsync(filePath, file.Content);
         }
     }
 
-    private async Task CopyDirectoryAsync(string sourceDir, string destDir)
+    private Task CopyDirectoryAsync(string sourceDir, string destDir)
     {
         Directory.CreateDirectory(destDir);
-        
+
         foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
         {
             var relativePath = Path.GetRelativePath(sourceDir, file);
             var destFile = Path.Combine(destDir, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile) ?? throw new InvalidOperationException());
             File.Copy(file, destFile, true);
         }
+
+        return Task.CompletedTask;
     }
 
     private List<DocumentComplexitySpec> GetComplexitySpecs(DocumentComplexity complexity)
@@ -230,7 +232,7 @@ public class TestEnvironmentProvisioner : IDisposable
             {
                 CleanupDirectory(dir);
             }
-            
+
             // Clean up temporary files
             foreach (var file in _temporaryFiles)
             {
@@ -246,7 +248,7 @@ public class TestEnvironmentProvisioner : IDisposable
                     System.Diagnostics.Debug.WriteLine($"Failed to cleanup file {file}: {ex.Message}");
                 }
             }
-            
+
             _disposed = true;
         }
     }

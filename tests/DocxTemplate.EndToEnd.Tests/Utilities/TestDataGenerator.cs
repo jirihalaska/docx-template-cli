@@ -22,13 +22,13 @@ public class TestDataGenerator
     {
         // Simple documents
         await GenerateSimpleDocumentsAsync(Path.Combine(baseDirectory, "simple"));
-        
+
         // Medium complexity documents
         await GenerateMediumDocumentsAsync(Path.Combine(baseDirectory, "medium"));
-        
+
         // Complex documents
         await GenerateComplexDocumentsAsync(Path.Combine(baseDirectory, "complex"));
-        
+
         // Create corresponding replacement mappings
         await GenerateReplacementMappingsAsync(baseDirectory);
     }
@@ -43,19 +43,19 @@ public class TestDataGenerator
         // Simple contract template
         var contractPlaceholders = new List<string> { "client_name", "date", "amount" };
         await _testDataManager.CreateTestDocumentAsync(
-            Path.Combine(directory, "SimpleContract.docx"), 
+            Path.Combine(directory, "SimpleContract.docx"),
             contractPlaceholders);
 
         // Simple letter template
         var letterPlaceholders = new List<string> { "recipient", "sender", "subject" };
         await _testDataManager.CreateTestDocumentAsync(
-            Path.Combine(directory, "SimpleLetter.docx"), 
+            Path.Combine(directory, "SimpleLetter.docx"),
             letterPlaceholders);
 
         // Simple invoice template
         var invoicePlaceholders = new List<string> { "invoice_number", "total", "due_date" };
         await _testDataManager.CreateTestDocumentAsync(
-            Path.Combine(directory, "SimpleInvoice.docx"), 
+            Path.Combine(directory, "SimpleInvoice.docx"),
             invoicePlaceholders);
     }
 
@@ -67,7 +67,7 @@ public class TestDataGenerator
         Directory.CreateDirectory(directory);
 
         // Contract with table
-        var contractSpec = new 
+        var contractSpec = new
         {
             Name = "MediumContract",
             HasTables = true,
@@ -77,11 +77,11 @@ public class TestDataGenerator
             HasCzechCharacters = false
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "ContractWithTable.docx"), 
+            Path.Combine(directory, "ContractWithTable.docx"),
             contractSpec);
 
         // Report with formatting
-        var reportSpec = new 
+        var reportSpec = new
         {
             Name = "FormattedReport",
             HasTables = true,
@@ -91,11 +91,11 @@ public class TestDataGenerator
             HasCzechCharacters = false
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "FormattedReport.docx"), 
+            Path.Combine(directory, "FormattedReport.docx"),
             reportSpec);
 
         // Czech document with basic formatting
-        var czechSpec = new 
+        var czechSpec = new
         {
             Name = "CzechBasic",
             HasTables = false,
@@ -105,7 +105,7 @@ public class TestDataGenerator
             HasCzechCharacters = true
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "CzechDocument.docx"), 
+            Path.Combine(directory, "CzechDocument.docx"),
             czechSpec);
     }
 
@@ -117,7 +117,7 @@ public class TestDataGenerator
         Directory.CreateDirectory(directory);
 
         // Full complex contract
-        var fullContractSpec = new 
+        var fullContractSpec = new
         {
             Name = "FullContract",
             HasTables = true,
@@ -127,11 +127,11 @@ public class TestDataGenerator
             HasCzechCharacters = false
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "FullComplexContract.docx"), 
+            Path.Combine(directory, "FullComplexContract.docx"),
             fullContractSpec);
 
         // Czech heavy document
-        var czechHeavySpec = new 
+        var czechHeavySpec = new
         {
             Name = "CzechHeavy",
             HasTables = true,
@@ -141,11 +141,11 @@ public class TestDataGenerator
             HasCzechCharacters = true
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "CzechHeavyDocument.docx"), 
+            Path.Combine(directory, "CzechHeavyDocument.docx"),
             czechHeavySpec);
 
         // Multi-section report
-        var multiSectionSpec = new 
+        var multiSectionSpec = new
         {
             Name = "MultiSection",
             HasTables = true,
@@ -155,7 +155,7 @@ public class TestDataGenerator
             HasCzechCharacters = false
         };
         await _testDataManager.CreateComplexTestDocumentAsync(
-            Path.Combine(directory, "MultiSectionReport.docx"), 
+            Path.Combine(directory, "MultiSectionReport.docx"),
             multiSectionSpec);
     }
 
@@ -218,7 +218,7 @@ public class TestDataGenerator
         {
             complexMappings[$"placeholder_{i}"] = $"Complex Value {i}";
         }
-        
+
         // Add table data
         for (int i = 1; i <= 3; i++)
         {
@@ -274,7 +274,7 @@ public class TestDataGenerator
         {
             var setName = Path.GetFileName(realSet);
             var targetSetPath = Path.Combine(baseDirectory, "real-templates", setName);
-            
+
             await CopyDirectoryAsync(realSet, targetSetPath);
         }
     }
@@ -291,7 +291,7 @@ public class TestDataGenerator
 
         // Generate multiple subdirectories with documents
         var categories = new[] { "Contracts", "Letters", "Reports", "Invoices", "Agreements" };
-        
+
         foreach (var category in categories)
         {
             var categoryPath = Path.Combine(largeSetPath, category);
@@ -300,10 +300,10 @@ public class TestDataGenerator
             // Generate documents in each category
             for (int i = 1; i <= documentCount / categories.Length; i++)
             {
-                var placeholders = new List<string> 
-                { 
-                    $"{category.ToLower()}_field_1", 
-                    $"{category.ToLower()}_field_2", 
+                var placeholders = new List<string>
+                {
+                    $"{category.ToLower()}_field_1",
+                    $"{category.ToLower()}_field_2",
                     $"{category.ToLower()}_field_3",
                     "common_field_1",
                     "common_field_2"
@@ -319,12 +319,12 @@ public class TestDataGenerator
     private async Task CopyDirectoryAsync(string sourceDir, string destDir)
     {
         Directory.CreateDirectory(destDir);
-        
+
         foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
         {
             var relativePath = Path.GetRelativePath(sourceDir, file);
             var destFile = Path.Combine(destDir, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile) ?? throw new InvalidOperationException());
             File.Copy(file, destFile, true);
         }
     }

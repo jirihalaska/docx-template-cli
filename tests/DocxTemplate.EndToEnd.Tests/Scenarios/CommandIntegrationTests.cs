@@ -33,7 +33,7 @@ public class CommandIntegrationTests : IDisposable
         var replacementMapping = CreateStandardReplacementMapping();
         var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
         await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = replacementMapping }, new JsonSerializerOptions { WriteIndented = true }));
-        
+
         // Copy templates first for replace command to have files to work with
         await _cliExecutor.ExecuteAsync($"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\"", environment.RootDirectory);
 
@@ -48,7 +48,7 @@ public class CommandIntegrationTests : IDisposable
             new { Command = $"scan --path \"{environment.TemplatesDirectory}\" --pattern \"{{{{.*?}}}}\"", ExpectedSuccess = true },
             // Note: copy was already executed in arrange section, replace command can now work on copied files
             new { Command = $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\"", ExpectedSuccess = true },
-            
+
             // Error conditions - CLI commands properly return non-zero exit codes for errors
             new { Command = "list-sets --templates \"/nonexistent/path\"", ExpectedSuccess = false },
             new { Command = "discover --path \"/nonexistent/path\"", ExpectedSuccess = false },
@@ -61,7 +61,7 @@ public class CommandIntegrationTests : IDisposable
         foreach (var testCase in testCombinations)
         {
             var result = await _cliExecutor.ExecuteAsync(testCase.Command, environment.RootDirectory);
-            
+
             if (testCase.ExpectedSuccess)
             {
                 result.IsSuccess.Should().BeTrue($"Command '{testCase.Command}' should succeed. Error: {result.StandardError}");
@@ -98,17 +98,17 @@ public class CommandIntegrationTests : IDisposable
         foreach (var command in jsonCommands)
         {
             var result = await _cliExecutor.ExecuteAsync(command, environment.RootDirectory);
-            
+
             result.IsSuccess.Should().BeTrue($"JSON command '{command}' should succeed. Error: {result.StandardError}");
             result.HasOutput.Should().BeTrue($"JSON command '{command}' should produce output");
-            
+
             // Validate JSON format
             var jsonContent = CliProcessExecutor.ExtractJsonFromOutput(result.StandardOutput);
             var jsonValidation = () => JsonSerializer.Deserialize<JsonElement>(jsonContent);
             jsonValidation.Should().NotThrow($"Command '{command}' should produce valid JSON. Output: {result.StandardOutput}");
-            
+
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
-            
+
             // Common JSON structure validations
             ValidateCommonJsonStructure(jsonElement, command);
         }
@@ -130,14 +130,14 @@ public class CommandIntegrationTests : IDisposable
             new { Command = "discover", ExpectedError = "path" },
             new { Command = "scan", ExpectedError = "path" },
             new { Command = "copy", ExpectedError = "source" },
-            
+
             // Invalid parameter values
             new { Command = "list-sets --templates \"\"", ExpectedError = "templates" },
             new { Command = "discover --path \"\"", ExpectedError = "path" },
             new { Command = "scan --path \"\"", ExpectedError = "path" },
             new { Command = $"copy --source \"{environment.TemplatesDirectory}\" --target \"\"", ExpectedError = "target" },
             new { Command = "replace", ExpectedError = "folder" },
-            
+
             // Invalid file paths
             new { Command = "replace --folder \"/nonexistent\" --map \"/nonexistent.json\"", ExpectedError = "path" }
         };
@@ -146,11 +146,11 @@ public class CommandIntegrationTests : IDisposable
         foreach (var scenario in errorScenarios)
         {
             var result = await _cliExecutor.ExecuteAsync(scenario.Command, environment.RootDirectory);
-            
+
             // Commands should fail with parameter validation errors
             result.IsSuccess.Should().BeFalse($"Command '{scenario.Command}' should fail due to invalid parameters");
             result.HasError.Should().BeTrue($"Failed command '{scenario.Command}' should provide error message");
-            
+
             // Check that error message contains relevant information
             var hasRelevantError = result.StandardError.ToLower().Contains(scenario.ExpectedError.ToLower()) ||
                                  result.StandardOutput.ToLower().Contains(scenario.ExpectedError.ToLower());
@@ -171,22 +171,22 @@ public class CommandIntegrationTests : IDisposable
 
         // act - Execute command chain
         var listResult = await _cliExecutor.ExecuteAsync(
-            $"list-sets --templates \"{environment.TemplatesDirectory}\" --format json", 
+            $"list-sets --templates \"{environment.TemplatesDirectory}\" --format json",
             environment.RootDirectory);
         commands.Add(listResult);
 
         var discoverResult = await _cliExecutor.ExecuteAsync(
-            $"discover --path \"{environment.TemplatesDirectory}\" --format json", 
+            $"discover --path \"{environment.TemplatesDirectory}\" --format json",
             environment.RootDirectory);
         commands.Add(discoverResult);
 
         var scanResult = await _cliExecutor.ExecuteAsync(
-            $"scan --path \"{environment.TemplatesDirectory}\" --format json", 
+            $"scan --path \"{environment.TemplatesDirectory}\" --format json",
             environment.RootDirectory);
         commands.Add(scanResult);
 
         var copyResult = await _cliExecutor.ExecuteAsync(
-            $"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\" --format json", 
+            $"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\" --format json",
             environment.RootDirectory);
         commands.Add(copyResult);
 
@@ -195,7 +195,7 @@ public class CommandIntegrationTests : IDisposable
         await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = CreateStandardReplacementMapping() }, new JsonSerializerOptions { WriteIndented = true }));
 
         var replaceResult = await _cliExecutor.ExecuteAsync(
-            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json", 
+            $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json",
             environment.RootDirectory);
         commands.Add(replaceResult);
 
@@ -209,9 +209,9 @@ public class CommandIntegrationTests : IDisposable
         };
 
         var validationResult = await _workflowValidator.ValidateWorkflowStateAsync(commands, workflowExpectation);
-        
+
         validationResult.IsValid.Should().BeTrue($"Command chaining should maintain valid workflow state. Errors: {string.Join(", ", validationResult.ValidationErrors)}");
-        
+
         // Validate data consistency between commands
         await ValidateDataConsistencyBetweenCommands(commands);
     }
@@ -226,34 +226,34 @@ public class CommandIntegrationTests : IDisposable
         var environment = await CreateStandardTestEnvironmentAsync("OutputConsistency");
         var mappingFile = Path.Combine(environment.DataDirectory, "replacements.json");
         await File.WriteAllTextAsync(mappingFile, JsonSerializer.Serialize(new { placeholders = CreateStandardReplacementMapping() }, new JsonSerializerOptions { WriteIndented = true }));
-        
+
         // Copy templates first for replace command
         await _cliExecutor.ExecuteAsync($"copy --source \"{environment.TemplatesDirectory}\" --target \"{environment.OutputDirectory}\"", environment.RootDirectory);
 
         var commandOutputTests = new[]
         {
-            new { 
-                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\"", 
+            new {
+                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\"",
                 ExpectedFormat = "text",
                 RequiredElements = new[] { "Template Sets", "template set(s)" }
             },
-            new { 
-                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\" --format json", 
+            new {
+                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\" --format json",
                 ExpectedFormat = "json",
                 RequiredElements = new[] { "templateSets" }
             },
-            new { 
-                Command = $"discover --path \"{environment.TemplatesDirectory}\"", 
+            new {
+                Command = $"discover --path \"{environment.TemplatesDirectory}\"",
                 ExpectedFormat = "text",
                 RequiredElements = new[] { "template(s)", "Total" }
             },
-            new { 
-                Command = $"discover --path \"{environment.TemplatesDirectory}\" --format json", 
+            new {
+                Command = $"discover --path \"{environment.TemplatesDirectory}\" --format json",
                 ExpectedFormat = "json",
                 RequiredElements = new[] { "templates" }
             },
-            new { 
-                Command = $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json", 
+            new {
+                Command = $"replace --folder \"{environment.OutputDirectory}\" --map \"{mappingFile}\" --format json",
                 ExpectedFormat = "json",
                 RequiredElements = new[] { "summary" }
             }
@@ -263,17 +263,17 @@ public class CommandIntegrationTests : IDisposable
         foreach (var test in commandOutputTests)
         {
             var result = await _cliExecutor.ExecuteAsync(test.Command, environment.RootDirectory);
-            
+
             result.IsSuccess.Should().BeTrue($"Command '{test.Command}' should succeed. Error: {result.StandardError}");
             result.HasOutput.Should().BeTrue($"Command '{test.Command}' should produce output");
-            
+
             if (test.ExpectedFormat == "json")
             {
                 // Validate JSON format
                 var jsonContent = CliProcessExecutor.ExtractJsonFromOutput(result.StandardOutput);
                 var jsonValidation = () => JsonSerializer.Deserialize<JsonElement>(jsonContent);
                 jsonValidation.Should().NotThrow($"Command '{test.Command}' should produce valid JSON");
-                
+
                 var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
                 foreach (var requiredElement in test.RequiredElements)
                 {
@@ -308,7 +308,7 @@ public class CommandIntegrationTests : IDisposable
                 // Validate text format
                 foreach (var requiredElement in test.RequiredElements)
                 {
-                    result.StandardOutput.Should().Contain(requiredElement, 
+                    result.StandardOutput.Should().Contain(requiredElement,
                         $"Text output from '{test.Command}' should contain '{requiredElement}'. Actual output: {result.StandardOutput}");
                 }
             }
@@ -326,16 +326,16 @@ public class CommandIntegrationTests : IDisposable
 
         var globalOptionTests = new[]
         {
-            new { 
-                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\" --help", 
+            new {
+                Command = $"list-sets --templates \"{environment.TemplatesDirectory}\" --help",
                 ExpectedBehavior = "help output"
             },
-            new { 
-                Command = $"discover --path \"{environment.TemplatesDirectory}\" --help", 
+            new {
+                Command = $"discover --path \"{environment.TemplatesDirectory}\" --help",
                 ExpectedBehavior = "help output"
             },
-            new { 
-                Command = $"scan --path \"{environment.TemplatesDirectory}\" --format json", 
+            new {
+                Command = $"scan --path \"{environment.TemplatesDirectory}\" --format json",
                 ExpectedBehavior = "json format"
             }
         };
@@ -344,9 +344,9 @@ public class CommandIntegrationTests : IDisposable
         foreach (var test in globalOptionTests)
         {
             var result = await _cliExecutor.ExecuteAsync(test.Command, environment.RootDirectory);
-            
+
             result.IsSuccess.Should().BeTrue($"Command with global options '{test.Command}' should succeed. Error: {result.StandardError}");
-            
+
             // Validate specific global option behaviors
             if (test.ExpectedBehavior == "help output")
             {
@@ -410,7 +410,7 @@ public class CommandIntegrationTests : IDisposable
         jsonElement.TryGetProperty("timestamp", out _).Should().BeTrue("JSON should have timestamp property");
         jsonElement.TryGetProperty("success", out _).Should().BeTrue("JSON should have success property");
         jsonElement.TryGetProperty("data", out var data).Should().BeTrue("JSON should have data property");
-        
+
         // Validate command-specific data structure
         if (command.Contains("list-sets"))
         {
@@ -435,7 +435,7 @@ public class CommandIntegrationTests : IDisposable
         }
     }
 
-    private async Task ValidateDataConsistencyBetweenCommands(List<CliExecutionResult> commands)
+    private Task ValidateDataConsistencyBetweenCommands(List<CliExecutionResult> commands)
     {
         // Basic validation that JSON outputs are valid
         foreach (var command in commands.Where(c => c.IsSuccess))
@@ -448,13 +448,14 @@ public class CommandIntegrationTests : IDisposable
         // Additional consistency checks can be added as commands are implemented
         // For now, just validate that all commands succeeded
         commands.All(c => c.IsSuccess).Should().BeTrue("All commands in the chain should succeed");
+        return Task.CompletedTask;
     }
 
     public void Dispose()
     {
         _cliExecutor?.Dispose();
         _environmentProvisioner?.Dispose();
-        
+
         foreach (var environment in _testEnvironments)
         {
             try

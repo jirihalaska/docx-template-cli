@@ -54,8 +54,11 @@ public class TemplateSetDiscoveryService : ITemplateSetDiscoveryService
                 .Select(ts => new TemplateSetInfo
                 {
                     Name = ts.Name ?? string.Empty,
+                    Path = System.IO.Path.Combine(templatesPath, ts.Name ?? string.Empty),
                     FileCount = ts.FileCount,
-                    TotalSizeFormatted = ts.TotalSizeFormatted ?? "0 B"
+                    TotalSize = ts.TotalSize,
+                    TotalSizeFormatted = ts.TotalSizeFormatted ?? "0 B",
+                    LastModified = ts.LastModified ?? DateTime.UtcNow
                 })
                 .ToArray() ?? Array.Empty<TemplateSetInfo>();
         }
@@ -98,5 +101,7 @@ internal record TemplateSetResponse
 {
     public string? Name { get; init; }
     public int FileCount { get; init; }
+    public long TotalSize { get; init; }
     public string? TotalSizeFormatted { get; init; }
+    public DateTime? LastModified { get; init; }
 }

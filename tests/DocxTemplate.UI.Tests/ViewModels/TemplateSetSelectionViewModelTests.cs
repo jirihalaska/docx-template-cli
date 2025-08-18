@@ -70,8 +70,11 @@ public class TemplateSetSelectionViewModelTests
         var templateSet = new TemplateSetItemViewModel(new TemplateSetInfo
         {
             Name = "Test Set",
+            Path = "/path/to/test-set",
             FileCount = 5,
-            TotalSizeFormatted = "1.2 MB"
+            TotalSize = 1200000,
+            TotalSizeFormatted = "1.2 MB",
+            LastModified = DateTime.UtcNow
         });
         _viewModel.SelectedTemplateSet = templateSet;
 
@@ -90,8 +93,8 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         var templateSetInfos = new List<TemplateSetInfo>
         {
-            new() { Name = "Contracts", FileCount = 15, TotalSizeFormatted = "2.3 MB" },
-            new() { Name = "Reports", FileCount = 8, TotalSizeFormatted = "1.1 MB" }
+            new() { Name = "Contracts", Path = "/path/to/contracts", FileCount = 15, TotalSize = 2300000, TotalSizeFormatted = "2.3 MB", LastModified = DateTime.UtcNow },
+            new() { Name = "Reports", Path = "/path/to/reports", FileCount = 8, TotalSize = 1100000, TotalSizeFormatted = "1.1 MB", LastModified = DateTime.UtcNow }
         };
 
         _mockDiscoveryService
@@ -156,11 +159,21 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         var templateSet1 = new TemplateSetItemViewModel(new TemplateSetInfo
         {
-            Name = "Set 1", FileCount = 5, TotalSizeFormatted = "1.0 MB"
+            Name = "Set 1",
+            Path = "/path/to/set-1",
+            FileCount = 5,
+            TotalSize = 1000000,
+            TotalSizeFormatted = "1.0 MB",
+            LastModified = DateTime.UtcNow
         });
         var templateSet2 = new TemplateSetItemViewModel(new TemplateSetInfo
         {
-            Name = "Set 2", FileCount = 3, TotalSizeFormatted = "0.5 MB"
+            Name = "Set 2",
+            Path = "/path/to/set-2",
+            FileCount = 3,
+            TotalSize = 500000,
+            TotalSizeFormatted = "0.5 MB",
+            LastModified = DateTime.UtcNow
         });
 
         _viewModel.TemplateSets.Add(templateSet1);
@@ -184,7 +197,7 @@ public class TemplateSetSelectionViewModelTests
         // arrange
         var templateSetInfos = new List<TemplateSetInfo>
         {
-            new() { Name = "Test Set", FileCount = 5, TotalSizeFormatted = "1.0 MB" }
+            new() { Name = "Test Set", Path = "/path/to/test-set", FileCount = 5, TotalSize = 1000000, TotalSizeFormatted = "1.0 MB", LastModified = DateTime.UtcNow }
         };
 
         _mockDiscoveryService
@@ -218,8 +231,11 @@ public class TemplateSetItemViewModelTests
         var templateSetInfo = new TemplateSetInfo
         {
             Name = "Test Set",
+            Path = "/path/to/test-set",
             FileCount = 10,
-            TotalSizeFormatted = "2.5 MB"
+            TotalSize = 2500000,
+            TotalSizeFormatted = "2.5 MB",
+            LastModified = DateTime.UtcNow
         };
 
         // act
@@ -240,8 +256,11 @@ public class TemplateSetItemViewModelTests
         var templateSetInfo = new TemplateSetInfo
         {
             Name = "Test Set",
+            Path = "/path/to/test-set",
             FileCount = 5,
-            TotalSizeFormatted = "1.0 MB"
+            TotalSize = 1000000,
+            TotalSizeFormatted = "1.0 MB",
+            LastModified = DateTime.UtcNow
         };
         var viewModel = new TemplateSetItemViewModel(templateSetInfo);
         var propertyChanged = false;

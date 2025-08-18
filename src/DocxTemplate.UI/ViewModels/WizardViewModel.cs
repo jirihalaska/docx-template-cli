@@ -37,7 +37,7 @@ public class WizardViewModel : ViewModelBase
         _stepViewModels = new List<StepViewModelBase>
         {
             _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
-            null!, // Placeholder for Step 2
+            _serviceProvider.GetRequiredService<PlaceholderDiscoveryViewModel>(),
             null!, // Placeholder for Step 3  
             null!, // Placeholder for Step 4
             null!  // Placeholder for Step 5
@@ -49,10 +49,15 @@ public class WizardViewModel : ViewModelBase
             DataContext = _stepViewModels[0]
         };
         
+        var step2View = new Step2PlaceholderDiscoveryView
+        {
+            DataContext = _stepViewModels[1]
+        };
+        
         _stepViews = new List<UserControl>
         {
             step1View,
-            new Step2PlaceholderDiscoveryView(),
+            step2View,
             new Step3PlaceholderInputView(),
             new Step4OutputSelectionView(),
             new Step5ProcessingResultsView()
@@ -102,6 +107,9 @@ public class WizardViewModel : ViewModelBase
             var currentStepViewModel = _stepViewModels[CurrentStep - 1];
             currentStepViewModel?.OnStepDeactivated();
             
+            // Pass data between steps if needed
+            TransferDataBetweenSteps(CurrentStep, CurrentStep + 1);
+            
             Steps[CurrentStep - 1].IsCompleted = true;
             CurrentStep++;
             
@@ -148,5 +156,29 @@ public class WizardViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(CurrentStepTitle));
         this.RaisePropertyChanged(nameof(StepIndicatorText));
         this.RaisePropertyChanged(nameof(CurrentStepContent));
+    }
+
+    /// <summary>
+    /// Transfers data between wizard steps as user navigates
+    /// </summary>
+    /// <param name="fromStep">Source step number (1-based)</param>
+    /// <param name="toStep">Target step number (1-based)</param>
+    private void TransferDataBetweenSteps(int fromStep, int toStep)
+    {
+        // Step 1 to Step 2: Pass selected template set for placeholder scanning
+        if (fromStep == 1 && toStep == 2)
+        {
+            var step1ViewModel = _stepViewModels[0] as TemplateSetSelectionViewModel;
+            var step2ViewModel = _stepViewModels[1] as PlaceholderDiscoveryViewModel;
+            
+            if (step1ViewModel?.SelectedTemplateSet != null && step2ViewModel != null)
+            {
+                step2ViewModel.SetSelectedTemplateSet(step1ViewModel.SelectedTemplateSet);
+            }
+        }
+        
+        // Add more step-to-step data transfers here as needed
+        // Example: Step 2 to Step 3: Pass discovered placeholders for input
+        // if (fromStep == 2 && toStep == 3) { ... }
     }
 }

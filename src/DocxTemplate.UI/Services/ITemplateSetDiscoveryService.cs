@@ -31,12 +31,27 @@ public record TemplateSetInfo
     public required string Name { get; init; }
     
     /// <summary>
+    /// Full path to the template set directory
+    /// </summary>
+    public required string Path { get; init; }
+    
+    /// <summary>
     /// Number of templates in the set
     /// </summary>
     public required int FileCount { get; init; }
     
     /// <summary>
+    /// Total size of all templates in bytes
+    /// </summary>
+    public required long TotalSize { get; init; }
+    
+    /// <summary>
     /// Formatted total size of the template set
     /// </summary>
     public required string TotalSizeFormatted { get; init; }
+    
+    /// <summary>
+    /// Last modified date of the template set
+    /// </summary>
+    public required DateTime LastModified { get; init; }
 }

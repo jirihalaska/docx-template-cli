@@ -2,38 +2,199 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:DocxTemplate.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DocxTemplate.UI.Views.Steps.Step2PlaceholderDiscoveryView">
+             x:Class="DocxTemplate.UI.Views.Steps.Step2PlaceholderDiscoveryView"
+             x:DataType="vm:PlaceholderDiscoveryViewModel">
 
   <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
           CornerRadius="8"
           Padding="20">
-    <StackPanel Spacing="15">
-      
-      <TextBlock Text="Nalezení zástupných symbolů"
-                 FontSize="24"
-                 FontWeight="Bold"
-                 HorizontalAlignment="Center" />
-      
-      <TextBlock Text="Systém vyhledá všechny zástupné symboly v šablonách."
-                 FontSize="14"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                 HorizontalAlignment="Center"
-                 TextWrapping="Wrap" />
-      
-      <Rectangle Height="200" 
-                 Fill="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                 Stroke="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                 StrokeDashArray="5,5"
-                 RadiusX="4"
-                 RadiusY="4" />
-      
-      <TextBlock Text="[Obsah kroku bude implementován v budoucích story]"
-                 FontStyle="Italic"
-                 HorizontalAlignment="Center"
-                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="20">
+        
+        <!-- Header -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding StepTitle}"
+                     FontSize="24"
+                     FontWeight="Bold"
+                     HorizontalAlignment="Center" />
+          
+          <TextBlock Text="{Binding StepDescription}"
+                     FontSize="14"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                     HorizontalAlignment="Center"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+        
+        <!-- Scanning Status -->
+        <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                CornerRadius="6"
+                Padding="15"
+                IsVisible="{Binding IsScanning}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Background="{DynamicResource AccentButtonBackground}"
+                    CornerRadius="50"
+                    Width="16" Height="16">
+              <Border.Styles>
+                <Style Selector="Border">
+                  <Style.Animations>
+                    <Animation Duration="0:0:1.5" IterationCount="INFINITE">
+                      <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0.3"/>
+                      </KeyFrame>
+                      <KeyFrame Cue="50%">
+                        <Setter Property="Opacity" Value="1.0"/>
+                      </KeyFrame>
+                      <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.3"/>
+                      </KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </Border.Styles>
+            </Border>
+            <TextBlock Text="{Binding ScanStatusMessage}"
+                       FontSize="14"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Error Display -->
+        <Border Background="#FFFFE6E6"
+                BorderBrush="#FFFF6B6B"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="15"
+                IsVisible="{Binding HasScanError}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="⚠ Chyba při prohledávání"
+                       FontWeight="Bold"
+                       Foreground="#FFCC0000"
+                       FontSize="14" />
+            <TextBlock Text="{Binding ScanErrorMessage}"
+                       TextWrapping="Wrap"
+                       Foreground="#FFCC0000"
+                       FontSize="13" />
+            <Button Content="Opakovat prohledávání"
+                    Command="{Binding RescanCommand}"
+                    HorizontalAlignment="Left"
+                    Classes="accent"
+                    Margin="0,10,0,0" />
+          </StackPanel>
+        </Border>
+
+        <!-- Success Summary -->
+        <Border Background="#FFE8F5E8"
+                BorderBrush="#FF4CAF50"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="15"
+                IsVisible="{Binding HasScanCompleted}">
+          <StackPanel Spacing="5">
+            <TextBlock FontWeight="Bold"
+                       Foreground="#FF2E7D32"
+                       FontSize="14">
+              <Run Text="✓ Prohledávání dokončeno"/>
+            </TextBlock>
+            <TextBlock Text="{Binding ScanStatusMessage}"
+                       Foreground="#FF2E7D32"
+                       FontSize="13" />
+            <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,5,0,0">
+              <TextBlock Foreground="#FF2E7D32" FontSize="12">
+                <Run Text="Nalezeno:" FontWeight="Bold"/>
+                <Run Text="{Binding TotalPlaceholdersFound}"/>
+                <Run Text="zástupných symbolů"/>
+              </TextBlock>
+              <TextBlock Foreground="#FF2E7D32" FontSize="12">
+                <Run Text="Celkem výskytů:" FontWeight="Bold"/>
+                <Run Text="{Binding TotalOccurrences}"/>
+              </TextBlock>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Placeholders List -->
+        <StackPanel Spacing="10" IsVisible="{Binding HasScanCompleted}">
+          <TextBlock Text="Nalezené zástupné symboly:"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Margin="0,10,0,0" />
+          
+          <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                  CornerRadius="6"
+                  Padding="1"
+                  IsVisible="{Binding DiscoveredPlaceholders.Count}">
+            <ListBox ItemsSource="{Binding DiscoveredPlaceholders}"
+                     Background="Transparent"
+                     SelectionMode="Single"
+                     MaxHeight="300">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:PlaceholderItemViewModel">
+                  <Border Background="Transparent"
+                          Padding="12,8"
+                          CornerRadius="4"
+                          Margin="2">
+                    <Border.Styles>
+                      <Style Selector="Border:pointerover">
+                        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                      </Style>
+                    </Border.Styles>
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{Binding DisplayText}"
+                                 FontWeight="SemiBold"
+                                 FontSize="13" />
+                      <TextBlock FontSize="11"
+                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
+                        <Run Text="Soubory:"/>
+                        <Run Text="{Binding FilesListText}"/>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <!-- No Placeholders Found -->
+          <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                  CornerRadius="6"
+                  Padding="20"
+                  IsVisible="{Binding !DiscoveredPlaceholders.Count}">
+            <StackPanel Spacing="8" HorizontalAlignment="Center">
+              <TextBlock Text="🔍"
+                         FontSize="32"
+                         HorizontalAlignment="Center" />
+              <TextBlock Text="V šablonách nebyly nalezeny žádné zástupné symboly"
+                         FontSize="14"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+              <TextBlock Text="Zkontrolujte, že šablony obsahují zástupné symboly ve formátu {{NÁZEV}}"
+                         FontSize="12"
+                         HorizontalAlignment="Center"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- Manual Rescan Option -->
+        <StackPanel Spacing="8" 
+                    IsVisible="{Binding HasScanCompleted}"
+                    HorizontalAlignment="Center"
+                    Margin="0,10,0,0">
+          <Button Content="Prohledat znovu"
+                  Command="{Binding RescanCommand}"
+                  Classes="accent" />
+          <TextBlock Text="Klikněte pro nové prohledání šablon"
+                     FontSize="11"
+                     HorizontalAlignment="Center"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+        </StackPanel>
                  
-    </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
   </Border>
 
 </UserControl>

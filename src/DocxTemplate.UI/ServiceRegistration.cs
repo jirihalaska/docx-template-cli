@@ -24,6 +24,7 @@ public static class ServiceRegistration
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));
         services.AddTransient<TemplateSetSelectionViewModel>();
+        services.AddTransient<PlaceholderDiscoveryViewModel>();
         
         return services;
     }

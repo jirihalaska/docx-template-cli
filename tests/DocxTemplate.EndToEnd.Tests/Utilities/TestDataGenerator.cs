@@ -1,3 +1,4 @@
+using System.Globalization;
 using DocxTemplate.TestUtilities;
 using System.Text.Json;
 
@@ -302,9 +303,9 @@ public class TestDataGenerator
             {
                 var placeholders = new List<string>
                 {
-                    $"{category.ToLower()}_field_1",
-                    $"{category.ToLower()}_field_2",
-                    $"{category.ToLower()}_field_3",
+                    $"{category.ToLower(CultureInfo.InvariantCulture)}_field_1",
+                    $"{category.ToLower(CultureInfo.InvariantCulture)}_field_2",
+                    $"{category.ToLower(CultureInfo.InvariantCulture)}_field_3",
                     "common_field_1",
                     "common_field_2"
                 };

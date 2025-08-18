@@ -1,3 +1,4 @@
+using System.Globalization;
 using DocxTemplate.EndToEnd.Tests.Utilities;
 using FluentAssertions;
 using System.Text.Json;
@@ -152,8 +153,8 @@ public class CommandIntegrationTests : IDisposable
             result.HasError.Should().BeTrue($"Failed command '{scenario.Command}' should provide error message");
 
             // Check that error message contains relevant information
-            var hasRelevantError = result.StandardError.ToLower().Contains(scenario.ExpectedError.ToLower()) ||
-                                 result.StandardOutput.ToLower().Contains(scenario.ExpectedError.ToLower());
+            var hasRelevantError = result.StandardError.ToLower(CultureInfo.InvariantCulture).Contains(scenario.ExpectedError.ToLower(CultureInfo.InvariantCulture)) ||
+                                 result.StandardOutput.ToLower(CultureInfo.InvariantCulture).Contains(scenario.ExpectedError.ToLower(CultureInfo.InvariantCulture));
             hasRelevantError.Should().BeTrue(
                 $"Error output for '{scenario.Command}' should mention '{scenario.ExpectedError}'. Actual error: {result.StandardError}. Actual output: {result.StandardOutput}");
         }

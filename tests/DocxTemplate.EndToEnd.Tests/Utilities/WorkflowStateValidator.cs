@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace DocxTemplate.EndToEnd.Tests.Utilities;
@@ -24,13 +25,13 @@ public class WorkflowStateValidator
         {
             // Validate command sequence
             await ValidateCommandSequenceAsync(commandResults, expectations, result);
-            
+
             // Validate data flow between commands
             await ValidateDataFlowAsync(commandResults, expectations, result);
-            
+
             // Validate state consistency
             await ValidateStateConsistencyAsync(commandResults, expectations, result);
-            
+
             // Validate error handling
             await ValidateErrorHandlingAsync(commandResults, expectations, result);
         }
@@ -47,7 +48,7 @@ public class WorkflowStateValidator
     /// Validates that commands execute in the correct sequence
     /// </summary>
     private async Task ValidateCommandSequenceAsync(
-        List<CliExecutionResult> commandResults, 
+        List<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -76,7 +77,7 @@ public class WorkflowStateValidator
                 result.IsValid = false;
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -84,7 +85,7 @@ public class WorkflowStateValidator
     /// Validates data flow and JSON output consistency between commands
     /// </summary>
     private async Task ValidateDataFlowAsync(
-        List<CliExecutionResult> commandResults, 
+        List<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -123,7 +124,7 @@ public class WorkflowStateValidator
     /// Validates state consistency throughout the workflow
     /// </summary>
     private async Task ValidateStateConsistencyAsync(
-        List<CliExecutionResult> commandResults, 
+        List<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -135,7 +136,7 @@ public class WorkflowStateValidator
         foreach (var commandResult in commandResults)
         {
             var command = commandResult.Command;
-            
+
             // Extract template set from command if present
             if (command.Contains("--set"))
             {
@@ -182,7 +183,7 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("Template set context not maintained throughout workflow");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -190,14 +191,14 @@ public class WorkflowStateValidator
     /// Validates error handling and recovery mechanisms
     /// </summary>
     private async Task ValidateErrorHandlingAsync(
-        List<CliExecutionResult> commandResults, 
+        List<CliExecutionResult> commandResults,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
         for (int i = 0; i < commandResults.Count; i++)
         {
             var commandResult = commandResults[i];
-            
+
             if (!commandResult.IsSuccess)
             {
                 // Check if this failure was expected
@@ -217,13 +218,13 @@ public class WorkflowStateValidator
                 }
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
     private async Task ValidateCommandJsonSchema(string commandName, JsonElement jsonOutput, WorkflowValidationResult result)
     {
-        switch (commandName.ToLower())
+        switch (commandName.ToLower(CultureInfo.InvariantCulture))
         {
             case "list-sets":
                 await ValidateListSetsOutput(jsonOutput, result);
@@ -241,7 +242,7 @@ public class WorkflowStateValidator
                 await ValidateReplaceOutput(jsonOutput, result);
                 break;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -266,7 +267,7 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("list-sets 'template_sets' property should be an array");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -291,7 +292,7 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("discover 'templates' property should be an array");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -316,7 +317,7 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("scan 'placeholders' property should be an array");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -341,7 +342,7 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("copy 'copied_files' property should be an array");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -373,12 +374,12 @@ public class WorkflowStateValidator
             result.ValidationErrors.Add("replace 'file_results' property should be an array");
             result.IsValid = false;
         }
-        
+
         await Task.CompletedTask;
     }
 
     private async Task ValidateDataConsistencyAcrossCommands(
-        Dictionary<string, JsonElement> commandOutputs, 
+        Dictionary<string, JsonElement> commandOutputs,
         WorkflowExpectation expectations,
         WorkflowValidationResult result)
     {
@@ -392,20 +393,20 @@ public class WorkflowStateValidator
                 result.ValidationErrors.Add($"Command '{commandName}' output missing 'command' property");
                 result.IsValid = false;
             }
-            
+
             if (!output.TryGetProperty("success", out _))
             {
                 result.ValidationErrors.Add($"Command '{commandName}' output missing 'success' property");
                 result.IsValid = false;
             }
-            
+
             if (!output.TryGetProperty("data", out _))
             {
                 result.ValidationErrors.Add($"Command '{commandName}' output missing 'data' property");
                 result.IsValid = false;
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -421,11 +422,11 @@ public class WorkflowStateValidator
 /// </summary>
 public class WorkflowExpectation
 {
-    public List<string> ExpectedCommandSequence { get; set; } = new();
-    public List<int> ExpectedFailures { get; set; } = new();
-    public List<string> RequireJsonOutput { get; set; } = new();
+    public List<string> ExpectedCommandSequence { get; set; } = [];
+    public List<int> ExpectedFailures { get; set; } = [];
+    public List<string> RequireJsonOutput { get; set; } = [];
     public bool AllowTemplateSetChanges { get; set; } = false;
-    public bool RequireTemplateSetConsistency { get; set; } = true;
+    public bool RequireTemplateSetConsistency { get; init; } = true;
 }
 
 /// <summary>
@@ -434,6 +435,6 @@ public class WorkflowExpectation
 public class WorkflowValidationResult
 {
     public bool IsValid { get; set; }
-    public List<string> ValidationErrors { get; set; } = new();
-    public List<CliExecutionResult> CommandResults { get; set; } = new();
+    public List<string> ValidationErrors { get; set; } = [];
+    public List<CliExecutionResult> CommandResults { get; set; } = [];
 }

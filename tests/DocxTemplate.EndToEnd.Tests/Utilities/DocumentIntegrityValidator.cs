@@ -208,19 +208,19 @@ public class DocumentValidationResult
     public bool IsValidDocxFormat { get; set; }
     public bool StructurePreserved { get; set; }
     public bool CharactersPreserved { get; set; }
-    public List<string> StructureIssues { get; set; } = new();
-    public List<string> CharacterIssues { get; set; } = new();
+    public List<string> StructureIssues { get; set; } = [];
+    public List<string> CharacterIssues { get; set; } = [];
     public string ValidationError { get; set; } = string.Empty;
 }
 
 public class CharacterPreservationResult
 {
     public bool IsCharactersPreserved { get; set; }
-    public List<string> Issues { get; set; } = new();
+    public List<string> Issues { get; set; } = [];
 }
 
 public class DocumentStructureResult
 {
     public bool IsStructurePreserved { get; set; }
-    public List<string> Issues { get; set; } = new();
+    public List<string> Issues { get; set; } = [];
 }

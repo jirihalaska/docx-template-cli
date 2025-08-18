@@ -1,3 +1,4 @@
+using System.Globalization;
 using DocxTemplate.EndToEnd.Tests.Utilities;
 using FluentAssertions;
 using System.Text.Json;
@@ -236,7 +237,7 @@ public class CliDocumentationValidationTests : IDisposable
             result.ExitCode.Should().Be(test.ExpectedExitCode, $"Exit code should match documented exit code for: {test.Command}");
 
             var errorOutput = result.StandardError + " " + result.StandardOutput;
-            errorOutput.ToLower().Should().Contain(test.ShouldContainError.ToLower(),
+            errorOutput.ToLower(CultureInfo.InvariantCulture).Should().Contain(test.ShouldContainError.ToLower(CultureInfo.InvariantCulture),
                 $"Error output should contain '{test.ShouldContainError}' for command: {test.Command}. Actual output: {errorOutput}");
         }
     }

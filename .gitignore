@@ -93,3 +93,11 @@ artifacts/
 output/
 test-output/
 temp/
+publish/
+
+# GUI-specific artifacts
+*.app/
+*.dmg
+*.pkg
+*.exe
+*.msi

@@ -49,6 +49,13 @@ public class TemplateCopyService : ITemplateCopyService
         try
         {
             var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, recursive: true, cancellationToken);
+            
+            // When preserving structure, also copy empty directories
+            if (preserveStructure)
+            {
+                CopyEmptyDirectories(sourcePath, targetPath);
+            }
+            
             return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, sourcePath, cancellationToken);
         }
         catch (Exception ex) when (ex is not TemplateNotFoundException && ex is not FileAccessException)
@@ -541,6 +548,43 @@ public class TemplateCopyService : ITemplateCopyService
         {
             _logger.LogError(ex, "Failed to create directory structure for {TargetPath}", targetPath);
             throw new FileAccessException($"Failed to create directory structure: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Copies empty directories from source to target to preserve complete directory structure
+    /// </summary>
+    private void CopyEmptyDirectories(string sourcePath, string targetPath)
+    {
+        if (!_fileSystemService.DirectoryExists(sourcePath))
+            return;
+
+        try
+        {
+            // Include the source directory name to maintain top-level folder structure (same as file copying)
+            var sourceDirectoryName = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            var targetBasePath = Path.Combine(targetPath, sourceDirectoryName);
+            
+            // Get all directories in source recursively
+            var allDirectories = Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories);
+            
+            foreach (var sourceDir in allDirectories)
+            {
+                // Calculate relative path and create corresponding target directory
+                var relativePath = Path.GetRelativePath(sourcePath, sourceDir);
+                var targetDir = Path.Combine(targetBasePath, relativePath);
+                
+                if (!_fileSystemService.DirectoryExists(targetDir))
+                {
+                    _fileSystemService.CreateDirectory(targetDir);
+                    _logger.LogDebug("Created empty directory: {TargetDir}", targetDir);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy some empty directories from {SourcePath} to {TargetPath}", sourcePath, targetPath);
+            // Don't fail the entire operation for empty directory copying issues
         }
     }
 

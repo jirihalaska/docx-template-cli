@@ -70,6 +70,51 @@ public class TestEnvironmentProvisioner : IDisposable
     }
 
     /// <summary>
+    /// Creates a test environment using real templates from the specified source directory
+    /// </summary>
+    public async Task<TestEnvironment> CreateTestEnvironmentWithRealTemplatesAsync(
+        string testName,
+        string realTemplatesSourcePath,
+        CancellationToken cancellationToken = default)
+    {
+        var environment = new TestEnvironment
+        {
+            Name = testName,
+            RootDirectory = CreateTemporaryDirectory($"e2e-real-templates-{testName}-{Guid.NewGuid():N}")
+        };
+
+        try
+        {
+            // Create directory structure
+            environment.TemplatesDirectory = Path.Combine(environment.RootDirectory, "templates");
+            environment.OutputDirectory = Path.Combine(environment.RootDirectory, "output");
+            environment.DataDirectory = Path.Combine(environment.RootDirectory, "data");
+
+            Directory.CreateDirectory(environment.TemplatesDirectory);
+            Directory.CreateDirectory(environment.OutputDirectory);
+            Directory.CreateDirectory(environment.DataDirectory);
+
+            // Copy real templates from source directory
+            if (Directory.Exists(realTemplatesSourcePath))
+            {
+                await CopyDirectoryAsync(realTemplatesSourcePath, environment.TemplatesDirectory);
+            }
+            else
+            {
+                throw new DirectoryNotFoundException($"Real templates source directory not found: {realTemplatesSourcePath}");
+            }
+
+            return environment;
+        }
+        catch
+        {
+            // Clean up on failure
+            CleanupDirectory(environment.RootDirectory);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Creates a temporary directory for testing
     /// </summary>
     public string CreateTemporaryDirectory(string? name = null)

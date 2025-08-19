@@ -71,6 +71,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
+    - name: Restore dependencies for Windows runtime
+      run: |
+        dotnet restore src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --runtime win-x64
+        dotnet restore src/DocxTemplate.UI/DocxTemplate.UI.csproj --runtime win-x64
+      
     - name: Publish Windows GUI
       run: |
         dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj `
@@ -170,6 +175,11 @@ jobs:
         
     - name: Restore dependencies
       run: dotnet restore
+      
+    - name: Restore dependencies for macOS runtime
+      run: |
+        dotnet restore src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --runtime osx-x64
+        dotnet restore src/DocxTemplate.UI/DocxTemplate.UI.csproj --runtime osx-x64
       
     - name: Publish macOS GUI
       run: |

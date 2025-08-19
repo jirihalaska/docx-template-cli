@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using ReactiveUI;
 using DocxTemplate.UI.Models;
 using DocxTemplate.UI.Views.Steps;
@@ -35,12 +36,23 @@ public class WizardViewModel : ViewModelBase
         Steps = new ReadOnlyCollection<StepInfo>(stepList);
 
         // Initialize step ViewModels
+        var templateSelectionViewModel = _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>();
+        templateSelectionViewModel.TemplateSelected += () => {
+            // Auto-advance to placeholder step when template is selected
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                if (CurrentStep == 1 && templateSelectionViewModel.SelectedTemplateSet != null)
+                {
+                    GoToNextStep();
+                }
+            });
+        };
+        
         var processingResultsViewModel = _serviceProvider.GetRequiredService<ProcessingResultsViewModel>();
         processingResultsViewModel.RequestNavigationToStep += (step) => CurrentStep = step;
         
         _stepViewModels = new List<StepViewModelBase>
         {
-            _serviceProvider.GetRequiredService<TemplateSetSelectionViewModel>(),
+            templateSelectionViewModel,
             _serviceProvider.GetRequiredService<PlaceholderInputViewModel>(),
             _serviceProvider.GetRequiredService<OutputFolderSelectionViewModel>(),
             processingResultsViewModel
@@ -134,6 +146,11 @@ public class WizardViewModel : ViewModelBase
 
     public UserControl CurrentStepContent => _stepViews[CurrentStep - 1];
 
+    /// <summary>
+    /// Dynamic button text based on current step
+    /// </summary>
+    public string NextButtonText => CurrentStep == 3 ? "Generuj" : "Další";
+
     public ReactiveCommand<Unit, Unit> NextCommand { get; }
 
     public ReactiveCommand<Unit, Unit> BackCommand { get; }
@@ -172,6 +189,31 @@ public class WizardViewModel : ViewModelBase
             // Activate next step
             var nextStepViewModel = _stepViewModels[CurrentStep - 1];
             nextStepViewModel?.OnStepActivated();
+            
+            // Auto-start processing when entering the final step (step 4)
+            if (CurrentStep == 4)
+            {
+                var processingResultsViewModel = nextStepViewModel as ProcessingResultsViewModel;
+                if (processingResultsViewModel != null)
+                {
+                    // Start processing automatically
+                    _ = Task.Run(async () =>
+                    {
+                        // Small delay to let the UI update
+                        await Task.Delay(100);
+                        
+                        // Execute the processing command on UI thread
+                        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                        {
+                            var canExecute = await processingResultsViewModel.ProcessTemplatesCommand.CanExecute.FirstAsync();
+                            if (canExecute)
+                            {
+                                processingResultsViewModel.ProcessTemplatesCommand.Execute().Subscribe();
+                            }
+                        });
+                    });
+                }
+            }
         }
     }
 
@@ -223,6 +265,7 @@ public class WizardViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(CurrentStepTitle));
         this.RaisePropertyChanged(nameof(StepIndicatorText));
         this.RaisePropertyChanged(nameof(CurrentStepContent));
+        this.RaisePropertyChanged(nameof(NextButtonText));
         this.RaisePropertyChanged(nameof(IsBackButtonVisible));
         this.RaisePropertyChanged(nameof(IsNextButtonVisible));
         this.RaisePropertyChanged(nameof(IsFinishButtonVisible));

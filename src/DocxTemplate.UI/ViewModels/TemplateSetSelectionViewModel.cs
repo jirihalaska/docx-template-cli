@@ -191,6 +191,11 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
     }
 
     /// <summary>
+    /// Event raised when a template set is selected to trigger auto-advance
+    /// </summary>
+    public event Action? TemplateSelected;
+
+    /// <summary>
     /// Handles template set selection
     /// </summary>
     /// <param name="templateSet">Selected template set</param>
@@ -208,6 +213,9 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
             // Select the chosen template set
             templateSet.IsSelected = true;
             SelectedTemplateSet = templateSet;
+            
+            // Trigger auto-advance to next step
+            TemplateSelected?.Invoke();
         }
         else
         {

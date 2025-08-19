@@ -31,21 +31,29 @@
                 CornerRadius="4"
                 Padding="15"
                 IsVisible="{Binding !IsProcessingComplete}">
-          <StackPanel Spacing="10">
-            <SelectableTextBlock Text="Shrnutí zpracování"
+          <Grid RowDefinitions="Auto,Auto,*">
+            <SelectableTextBlock Grid.Row="0"
+                       Text="Shrnutí zpracování"
                        FontSize="16"
-                       FontWeight="SemiBold" />
-            <SelectableTextBlock Text="{Binding ProcessingSummary}"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10" />
+            <SelectableTextBlock Grid.Row="1"
+                       Text="{Binding ProcessingSummary}"
                        FontSize="12"
                        TextWrapping="Wrap"
-                       LineHeight="18" />
-            <Button Content="Zpracovat šablony"
+                       LineHeight="18"
+                       Margin="0,0,0,15" />
+            <!-- Process button in lower right corner -->
+            <Button Grid.Row="2"
+                    Content="Zpracovat šablony"
                     Command="{Binding ProcessTemplatesCommand}"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
                     Padding="20,8"
                     FontWeight="SemiBold"
+                    Classes="accent"
                     IsEnabled="{Binding !IsProcessing}" />
-          </StackPanel>
+          </Grid>
         </Border>
 
         <!-- Processing Progress Section -->
@@ -128,11 +136,6 @@
               <Button Content="Otevřít log"
                       Command="{Binding OpenLogCommand}"
                       Padding="15,8" />
-              
-              <Button Content="Začít znovu"
-                      Command="{Binding StartOverCommand}"
-                      Padding="15,8"
-                      Classes="accent" />
               
             </StackPanel>
           </StackPanel>

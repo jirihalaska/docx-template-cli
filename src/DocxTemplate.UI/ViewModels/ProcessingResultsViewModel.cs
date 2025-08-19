@@ -40,10 +40,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
             x => x.IsProcessingComplete,
             x => x.TemplateSetName,
             x => x.OutputFolderPath,
-            x => x.PlaceholderCount,
-            (isProcessing, isComplete, templateName, outputPath, placeholderCount) => 
+            (isProcessing, isComplete, templateName, outputPath) => 
                 !isProcessing && !isComplete && !string.IsNullOrEmpty(templateName) && 
-                !string.IsNullOrEmpty(outputPath) && placeholderCount > 0);
+                !string.IsNullOrEmpty(outputPath));
 
         var canOpenFolder = this.WhenAnyValue(
             x => x.IsProcessingComplete,
@@ -366,7 +365,6 @@ public class ProcessingResultsViewModel : StepViewModelBase
     public override bool ValidateStep()
     {
         return !string.IsNullOrEmpty(TemplateSetName) && 
-               !string.IsNullOrEmpty(OutputFolderPath) && 
-               PlaceholderCount > 0;
+               !string.IsNullOrEmpty(OutputFolderPath);
     }
 }

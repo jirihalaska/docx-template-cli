@@ -15,7 +15,7 @@
   <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
           CornerRadius="8"
           Padding="20">
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
       
       <!-- Step Title -->
       <SelectableTextBlock Grid.Row="0"
@@ -54,63 +54,92 @@
         </Grid>
       </Border>
       
-      <!-- Scrollable Placeholder Input Form -->
-      <ScrollViewer Grid.Row="3"
+      <!-- Table Header -->
+      <Border Grid.Row="3"
+              Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+              CornerRadius="4,4,0,0"
+              Padding="12,8"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1,1,1,0">
+        <Grid ColumnDefinitions="2*,3*,Auto">
+          <SelectableTextBlock Grid.Column="0" 
+                     Text="Zástupný symbol"
+                     FontWeight="SemiBold"
+                     FontSize="13" />
+          <SelectableTextBlock Grid.Column="1" 
+                     Text="Hodnota"
+                     FontWeight="SemiBold"
+                     FontSize="13"
+                     Margin="12,0,0,0" />
+          <SelectableTextBlock Grid.Column="2" 
+                     Text="Výskyty"
+                     FontWeight="SemiBold"
+                     FontSize="13"
+                     Margin="12,0,0,0" />
+        </Grid>
+      </Border>
+
+      <!-- Scrollable Placeholder Input Table -->
+      <ScrollViewer Grid.Row="4"
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled"
-                    Padding="0,0,10,0">
+                    Padding="0"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1,0,1,1"
+                    CornerRadius="0,0,4,4">
         <ItemsControl ItemsSource="{Binding PlaceholderInputs}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PlaceholderInputItemViewModel">
-              <Border Margin="0,0,0,12"
-                      Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                      CornerRadius="6"
-                      Padding="16,12"
-                      BorderThickness="{Binding IsFilled, Converter={StaticResource BooleanToThicknessConverter}}"
-                      BorderBrush="{Binding IsFilled, Converter={x:Static converters:BooleanToBrushConverter.Instance}, 
-                                   ConverterParameter='Transparent|Orange'}">
-                <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,Auto">
+              <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                      BorderThickness="0,0,0,1"
+                      Padding="12,8"
+                      Background="{Binding IsFilled, Converter={x:Static converters:BooleanToBrushConverter.Instance}, 
+                                   ConverterParameter='Transparent|#FFF3CD'}">
+                <Grid ColumnDefinitions="2*,3*,Auto" MinHeight="32">
                   
-                  <!-- Placeholder Label -->
-                  <SelectableTextBlock Grid.Row="0" Grid.Column="0"
-                             Text="{Binding DisplayLabel}"
-                             FontWeight="SemiBold"
-                             FontSize="14"
-                             Margin="0,0,0,6" />
-                  
-                  <!-- Warning Icon for Unfilled (shown when NOT filled) -->
-                  <Border Grid.Row="0" Grid.Column="1"
-                          IsVisible="{Binding !IsFilled}"
-                          Background="Orange"
-                          CornerRadius="10"
-                          Width="20"
-                          Height="20"
-                          VerticalAlignment="Top">
-                    <SelectableTextBlock Text="!"
-                               Foreground="White"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                  </Border>
-                  
-                  <!-- Placeholder Info -->
-                  <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                             Text="{Binding OccurrenceCount, StringFormat='{}{0} výskytů'}"
-                             FontSize="11"
-                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                             Margin="0,0,0,8" />
+                  <!-- Placeholder Name with Warning Icon -->
+                  <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border IsVisible="{Binding !IsFilled}"
+                            Background="Orange"
+                            CornerRadius="8"
+                            Width="16"
+                            Height="16"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0">
+                      <SelectableTextBlock Text="!"
+                                 Foreground="White"
+                                 FontSize="10"
+                                 FontWeight="Bold"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </Border>
+                    <SelectableTextBlock Text="{Binding DisplayLabel}"
+                               FontSize="13"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
                   
                   <!-- Input TextBox -->
-                  <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                  <TextBox Grid.Column="1"
                            Text="{Binding InputValue}"
-                           Watermark="Zadejte hodnotu pro tento zástupný symbol..."
-                           TextWrapping="Wrap"
-                           MinHeight="34"
-                           MaxHeight="80"
-                           AcceptsReturn="False"
-                           VerticalAlignment="Stretch"
+                           Watermark="Zadejte hodnotu..."
+                           FontSize="13"
+                           MinHeight="28"
+                           Padding="8,4"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           VerticalContentAlignment="Center"
                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                  
+                  <!-- Occurrence Count -->
+                  <SelectableTextBlock Grid.Column="2"
+                             Text="{Binding OccurrenceCount}"
+                             FontSize="12"
+                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Center"
+                             Margin="12,0,0,0" />
                   
                 </Grid>
               </Border>
@@ -120,7 +149,7 @@
       </ScrollViewer>
       
       <!-- Warning Message -->
-      <Border Grid.Row="4"
+      <Border Grid.Row="5"
               Background="#FFF3CD"
               BorderBrush="#FFEAA7"
               BorderThickness="1"
@@ -151,7 +180,7 @@
       </Border>
       
       <!-- Instructions -->
-      <SelectableTextBlock Grid.Row="5"
+      <SelectableTextBlock Grid.Row="6"
                  Text="Můžete pokračovat i s nevyplněnými zástupnými symboly. Použijte tlačítko 'Zpět' pro návrat k předchozímu kroku."
                  FontSize="12"
                  FontStyle="Italic"

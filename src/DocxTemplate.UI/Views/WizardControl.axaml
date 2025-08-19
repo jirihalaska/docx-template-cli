@@ -81,7 +81,7 @@
               TabIndex="100"
               IsVisible="{Binding IsBackButtonVisible}" />
               
-      <Button Content="Další"
+      <Button Content="{Binding NextButtonText}"
               Command="{Binding NextCommand}"
               MinWidth="80"
               Padding="12,6"

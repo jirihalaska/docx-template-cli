@@ -12,8 +12,8 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     public CliExecutableDiscoveryService()
     {
-        // Prefer self-contained executables over DLL for distribution packages
-        // Platform-specific executable names - self-contained executables first, then DLL as fallback
+        // Prefer single-file executables for distribution, DLL only for local debugging
+        // Platform-specific executable names - single-file executables first, then DLL as fallback
         _executableNames = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
             ? new[] { "docx-template.exe", "DocxTemplate.CLI.exe", "DocxTemplate.CLI.dll" }
             : new[] { "docx-template", "DocxTemplate.CLI", "DocxTemplate.CLI.dll" };

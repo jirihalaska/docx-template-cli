@@ -8,7 +8,8 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     
     <!-- Self-contained deployment configuration -->
-    <PublishSingleFile>true</PublishSingleFile>
+    <!-- PublishSingleFile disabled for better CLI integration -->
+    <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <PublishReadyToRun>true</PublishReadyToRun>
     

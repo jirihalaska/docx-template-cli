@@ -12,12 +12,14 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "📦 Building CLI executable..."
 dotnet publish src/DocxTemplate.CLI -c Release -r "$PLATFORM" --self-contained \
+    -p:PublishSingleFile=false \
     -o "$OUTPUT_DIR/cli-temp" \
     --verbosity quiet
 
 echo "🎨 Building GUI application..."
 dotnet publish src/DocxTemplate.UI -c Release -r "$PLATFORM" --self-contained \
     -p:SkipCliBuild=true \
+    -p:PublishSingleFile=false \
     -o "$OUTPUT_DIR/build-temp" \
     --verbosity quiet
 

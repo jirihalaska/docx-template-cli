@@ -38,6 +38,7 @@ fi
 
 echo "📦 Building CLI executable..."
 dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r "$PLATFORM" --self-contained \
+    -p:PublishSingleFile=false \
     -o "$TEST_DIR/cli" \
     --verbosity quiet
 
@@ -97,12 +98,13 @@ else
     exit 1
 fi
 
-cd ../..
+cd "$PROJECT_ROOT"
 
 # Test GUI (always run, crucial for CI validation)
 echo "📦 Building GUI executable..."
 dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj -c Release -r "$PLATFORM" --self-contained \
     -p:SkipCliBuild=true \
+    -p:PublishSingleFile=false \
     -o "$TEST_DIR/gui" \
     --verbosity minimal
 
@@ -112,11 +114,20 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "🔗 Setting up CLI-GUI integration..."
+# Copy the CLI executable with both names - original for runtime and alias for user
+# Also copy the DLL file that the native executable needs
 if [[ "$PLATFORM" == "win-x64" ]]; then
+    cp "$TEST_DIR/cli/$CLI_EXE" "$TEST_DIR/gui/$CLI_EXE"
     cp "$TEST_DIR/cli/$CLI_EXE" "$TEST_DIR/gui/docx-template.exe"
+    cp "$TEST_DIR/cli/DocxTemplate.CLI.dll" "$TEST_DIR/gui/"
+    cp "$TEST_DIR/cli/DocxTemplate.CLI.runtimeconfig.json" "$TEST_DIR/gui/"
 else
+    cp "$TEST_DIR/cli/$CLI_EXE" "$TEST_DIR/gui/$CLI_EXE"
     cp "$TEST_DIR/cli/$CLI_EXE" "$TEST_DIR/gui/docx-template"
+    chmod +x "$TEST_DIR/gui/$CLI_EXE"
     chmod +x "$TEST_DIR/gui/docx-template"
+    cp "$TEST_DIR/cli/DocxTemplate.CLI.dll" "$TEST_DIR/gui/"
+    cp "$TEST_DIR/cli/DocxTemplate.CLI.runtimeconfig.json" "$TEST_DIR/gui/"
 fi
 
 echo "🧪 Testing GUI executable..."
@@ -214,7 +225,7 @@ elif [[ "$PLATFORM" == "win-x64" ]]; then
     fi
 fi
 
-cd ../..
+cd "$PROJECT_ROOT"
 
 echo ""
 echo "✅ All executable startup tests passed!"

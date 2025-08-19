@@ -22,6 +22,7 @@ else
 fi
 
 dotnet publish src/DocxTemplate.CLI -c Release -r "$PLATFORM" --self-contained \
+    -p:PublishSingleFile=false \
     -o "$OUTPUT_DIR/cli-temp" \
     --verbosity quiet
 
@@ -29,6 +30,7 @@ echo "🎨 Building GUI with self-contained deployment..."
 # Build GUI
 dotnet publish src/DocxTemplate.UI -c Release -r "$PLATFORM" --self-contained \
     -p:SkipCliBuild=true \
+    -p:PublishSingleFile=false \
     -o "$OUTPUT_DIR" \
     --verbosity quiet
 

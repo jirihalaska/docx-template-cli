@@ -5,7 +5,8 @@ param(
 )
 
 Write-Host "Testing executable startup for platform: $Platform" -ForegroundColor Cyan
-Write-Host "Project root: $PWD" -ForegroundColor Gray
+$ProjectRoot = $PWD
+Write-Host "Project root: $ProjectRoot" -ForegroundColor Gray
 
 # Clean test directory
 if (Test-Path $TestDir) {
@@ -14,7 +15,7 @@ if (Test-Path $TestDir) {
 New-Item -ItemType Directory -Path $TestDir -Force | Out-Null
 
 Write-Host "Building CLI executable..." -ForegroundColor Yellow
-dotnet publish src\DocxTemplate.CLI\DocxTemplate.CLI.csproj -c Release -r $Platform --self-contained -o "$TestDir\cli" --verbosity minimal
+dotnet publish src\DocxTemplate.CLI\DocxTemplate.CLI.csproj -c Release -r $Platform --self-contained -p:PublishSingleFile=true -o "$TestDir\cli" --verbosity minimal
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] CLI build failed" -ForegroundColor Red
@@ -53,15 +54,31 @@ if ($LASTEXITCODE -eq 0) {
 
 # Test 3: Invalid command handling
 Write-Host "  Testing invalid command handling..." -ForegroundColor Gray
-$invalidResult = & .\DocxTemplate.CLI.exe invalid-command 2>&1 | Out-String
-if ($LASTEXITCODE -eq 0) {
+# Use Start-Process to properly handle stderr without triggering PowerShell errors
+$pinfo = New-Object System.Diagnostics.ProcessStartInfo
+$pinfo.FileName = ".\DocxTemplate.CLI.exe"
+$pinfo.Arguments = "invalid-command"
+$pinfo.RedirectStandardError = $true
+$pinfo.RedirectStandardOutput = $true
+$pinfo.UseShellExecute = $false
+$pinfo.CreateNoWindow = $true
+$p = New-Object System.Diagnostics.Process
+$p.StartInfo = $pinfo
+$p.Start() | Out-Null
+$stdout = $p.StandardOutput.ReadToEnd()
+$stderr = $p.StandardError.ReadToEnd()
+$p.WaitForExit()
+$exitCode = $p.ExitCode
+$invalidResult = "$stdout`n$stderr"
+
+if ($exitCode -eq 0) {
     Write-Host "  [WARN] Invalid command unexpectedly succeeded" -ForegroundColor Yellow
     $invalidResult | Out-File -FilePath "cli-invalid.txt"
-} elseif ($LASTEXITCODE -eq 1 -or $LASTEXITCODE -eq 2) {
-    Write-Host "  [OK] CLI properly handles invalid commands (exit code: $LASTEXITCODE)" -ForegroundColor Green
+} elseif ($exitCode -eq 1 -or $exitCode -eq 2) {
+    Write-Host "  [OK] CLI properly handles invalid commands (exit code: $exitCode)" -ForegroundColor Green
     $invalidResult | Out-File -FilePath "cli-invalid.txt"
 } else {
-    Write-Host "  [ERROR] CLI crashed on invalid command (exit code: $LASTEXITCODE)" -ForegroundColor Red
+    Write-Host "  [ERROR] CLI crashed on invalid command (exit code: $exitCode)" -ForegroundColor Red
     Write-Host $invalidResult -ForegroundColor Red
     exit 1
 }
@@ -82,11 +99,11 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
-Set-Location "..\..\"
+Set-Location $ProjectRoot
 
 # Test GUI
 Write-Host "Building GUI executable..." -ForegroundColor Yellow
-dotnet publish src\DocxTemplate.UI\DocxTemplate.UI.csproj -c Release -r $Platform --self-contained -p:SkipCliBuild=true -o "$TestDir\gui" --verbosity minimal
+dotnet publish src\DocxTemplate.UI\DocxTemplate.UI.csproj -c Release -r $Platform --self-contained -p:SkipCliBuild=true -p:PublishSingleFile=false -o "$TestDir\gui" --verbosity minimal
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] GUI build failed" -ForegroundColor Red
@@ -94,6 +111,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Setting up CLI-GUI integration..." -ForegroundColor Yellow
+# Copy the single-file CLI executable with user-friendly name
 Copy-Item "$TestDir\cli\DocxTemplate.CLI.exe" "$TestDir\gui\docx-template.exe"
 
 Write-Host "Testing GUI executable..." -ForegroundColor Yellow
@@ -161,7 +179,7 @@ if ($dllCount -gt 0) {
     exit 1
 }
 
-Set-Location "..\..\"
+Set-Location $ProjectRoot
 
 Write-Host ""
 Write-Host "[SUCCESS] All executable startup tests passed!" -ForegroundColor Green

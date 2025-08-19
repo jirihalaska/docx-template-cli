@@ -26,12 +26,14 @@ for platform in "${GUI_PLATFORMS[@]}"; do
     
     # Build CLI first for this platform
     dotnet publish src/DocxTemplate.CLI -c Release -r "$platform" --self-contained \
+        -p:PublishSingleFile=false \
         -o "dist/release/gui-$platform/cli-temp" \
         --verbosity quiet
     
     # Build GUI
     dotnet publish src/DocxTemplate.UI -c Release -r "$platform" --self-contained \
         -p:SkipCliBuild=true \
+        -p:PublishSingleFile=false \
         -o "dist/release/gui-$platform" \
         --verbosity quiet
     

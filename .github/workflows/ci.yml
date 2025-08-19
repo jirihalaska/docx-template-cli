@@ -13,7 +13,7 @@ env:
 
 jobs:
   executable-startup-test-windows:
-    name: Test Windows Executables (Fast Fail)
+    name: Test Windows GUI Executable (Fast Fail)
     runs-on: windows-latest
     
     steps:
@@ -28,7 +28,7 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     # Skip explicit restore - dotnet publish will restore as needed
-    - name: Test Windows x64 executables
+    - name: Test Windows x64 GUI executable
       shell: powershell
       run: |
         .\scripts\test-executables.ps1 -Platform "win-x64" -TestDir "test-output"
@@ -39,11 +39,10 @@ jobs:
       with:
         name: windows-executable-test-outputs
         path: |
-          test-output/cli/*.txt
           test-output/gui/*.txt
 
   # executable-startup-test-macos:
-  #   name: Test macOS Executables (Fast Fail)
+  #   name: Test macOS GUI Executable (Fast Fail)
   #   runs-on: macos-latest
   #   
   #   steps:
@@ -60,7 +59,7 @@ jobs:
   #   - name: Restore dependencies
   #     run: dotnet restore
   #     
-  #   - name: Test macOS ARM64 executables
+  #   - name: Test macOS ARM64 GUI executable
   #     shell: bash
   #     run: |
   #       ./scripts/test-executables.sh osx-arm64 test-output
@@ -71,7 +70,6 @@ jobs:
   #     with:
   #       name: macos-executable-test-outputs
   #       path: |
-  #         test-output/cli/*.txt
   #         test-output/gui/*.txt
 
   build-and-test:
@@ -100,4 +98,5 @@ jobs:
       run: |
         dotnet test tests/DocxTemplate.Core.Tests --configuration Release --verbosity minimal
         dotnet test tests/DocxTemplate.Infrastructure.Tests --configuration Release --verbosity minimal
-        dotnet test tests/DocxTemplate.CLI.Tests --configuration Release --verbosity minimal
+        dotnet test tests/DocxTemplate.UI.Tests --configuration Release --verbosity minimal
+        dotnet test tests/DocxTemplate.EndToEnd.Tests --configuration Release --verbosity minimal

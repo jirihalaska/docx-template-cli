@@ -40,9 +40,8 @@ jobs:
           Word document template processor with Czech language support and placeholder replacement functionality.
           
           ### 📥 Downloads
-          - **Windows (x64)**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-win-x64.zip` - *Recommended*
-          - **macOS (ARM64)**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-osx-arm64.zip` - *Apple Silicon*
-          - **macOS (x64)**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-osx-x64.zip` - *Intel Macs*
+          - **Windows (x64)**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-win-x64.zip` - *Single executable in ZIP*
+          - **macOS (ARM64)**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-osx-arm64.app.zip` - *Apple Silicon*
           
           ### 🎯 What's Included
           - **GUI Application**: Easy-to-use graphical interface with step-by-step wizard
@@ -51,26 +50,31 @@ jobs:
           - **Documentation**: Quick start guide and usage examples
           
           ### ✅ System Requirements
-          - **Windows**: Windows 10 version 1709 or later (x64)
-          - **macOS**: macOS 10.15 Catalina or later
+          - **Windows**: Windows 10 version 1709 or later (x64) 
+          - **macOS**: macOS 10.15 Catalina or later (Apple Silicon only)
           - **No additional software required** - fully self-contained
           
           ### 🚀 Quick Start
-          1. Download the appropriate package for your platform
+          **Windows**: 
+          1. Download `DocxTemplate-[version]-win-x64.zip`
           2. Extract the ZIP file
-          3. **Windows**: Double-click `DocxTemplate.UI.exe`
-          4. **macOS**: Double-click `DocxTemplate.UI` or run `./DocxTemplate.UI`
+          3. Double-click `DocxTemplate.exe` to run - no installation needed!
+          
+          **macOS (Apple Silicon)**:
+          1. Download `DocxTemplate-[version]-osx-arm64.app.zip`  
+          2. Extract and double-click `DocxTemplate.app`
+          3. If blocked by security, right-click → Open → Open anyway
           
           ### 🔧 CLI Usage
           ```bash
-          # Windows
-          docx-template.exe --help
+          # Windows - Extract ZIP and use the executable
+          DocxTemplate.exe --help
           
-          # macOS  
-          ./docx-template --help
+          # macOS - Access CLI through the app bundle
+          ./DocxTemplate.app/Contents/MacOS/DocxTemplate --help
           ```
           
-          Both executables are self-contained and don't require separate .NET runtime installation.
+          Both applications include GUI and CLI functionality in a single executable.
         draft: false
         prerelease: ${{ contains(steps.get-tag.outputs.tag, 'alpha') || contains(steps.get-tag.outputs.tag, 'beta') || contains(steps.get-tag.outputs.tag, 'rc') }}
 
@@ -114,9 +118,9 @@ jobs:
         
         Write-Host "Pre-release build and test completed successfully" -ForegroundColor Green
       
-    - name: Publish Windows GUI (portable)
+    - name: Publish Windows GUI (single-file)
       run: |
-        Write-Host "Publishing GUI application..." -ForegroundColor Cyan
+        Write-Host "Publishing GUI application as single file..." -ForegroundColor Cyan
         dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj `
           --configuration Release `
           --runtime win-x64 `
@@ -124,19 +128,6 @@ jobs:
           --output ./dist/windows-gui `
           --verbosity minimal `
           -p:SkipCliBuild=true `
-          -p:PublishSingleFile=false `
-          -p:PublishTrimmed=false `
-          -p:PublishReadyToRun=false
-          
-    - name: Publish Windows CLI (single-file)
-      run: |
-        Write-Host "Publishing CLI application..." -ForegroundColor Cyan  
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj `
-          --configuration Release `
-          --runtime win-x64 `
-          --self-contained true `
-          --output ./dist/windows-cli `
-          --verbosity minimal `
           -p:PublishSingleFile=true `
           -p:EnableCompressionInSingleFile=true `
           -p:PublishTrimmed=false `
@@ -144,78 +135,46 @@ jobs:
       
     - name: Create Windows distribution package
       run: |
+        Write-Host "Creating Windows distribution package..." -ForegroundColor Cyan
         $releaseDir = "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64"
-        Write-Host "Creating release directory: $releaseDir" -ForegroundColor Cyan
         New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
         
-        # Copy GUI application and its dependencies (portable distribution)
-        Write-Host "Copying GUI application..." -ForegroundColor Yellow
-        Copy-Item -Path "./dist/windows-gui/DocxTemplate.UI.exe" -Destination "$releaseDir/"
-        Copy-Item -Path "./dist/windows-gui/*.dll" -Destination "$releaseDir/" -ErrorAction SilentlyContinue
+        # Copy the single-file GUI executable
+        Copy-Item -Path "./dist/windows-gui/DocxTemplate.UI.exe" -Destination "$releaseDir/DocxTemplate.exe"
         
-        # Copy CLI executable (single-file, user-friendly name)
-        Write-Host "Copying CLI application..." -ForegroundColor Yellow  
-        Copy-Item -Path "./dist/windows-cli/DocxTemplate.CLI.exe" -Destination "$releaseDir/docx-template.exe"
-        
-        # Copy sample templates if they exist
-        if (Test-Path "templates") {
-            Write-Host "Copying sample templates..." -ForegroundColor Yellow
-            Copy-Item -Path "templates" -Destination "$releaseDir/" -Recurse
-        } else {
-            Write-Host "No templates directory found, skipping..." -ForegroundColor Gray
-        }
-        
-        # Create GUI launcher batch file for convenience  
-        Write-Host "Creating launcher scripts..." -ForegroundColor Yellow
-        "@echo off`ncd /d `"%~dp0`"`necho Starting DocxTemplate GUI Application...`nstart `"`" `"DocxTemplate.UI.exe`"" | Out-File -FilePath "$releaseDir/Launch-GUI.bat" -Encoding ASCII
-        
-        # Create CLI wrapper batch file  
-        "@echo off`ncd /d `"%~dp0`"`n`"%~dp0docx-template.exe`" %*" | Out-File -FilePath "$releaseDir/docx-template.bat" -Encoding ASCII
-        
-        # Create comprehensive README
-        Write-Host "Creating documentation..." -ForegroundColor Yellow
-        $readmeText = "DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64 Distribution`n================================================================`n`nQUICK START:`n1. Double-click 'DocxTemplate.UI.exe' to launch the GUI application`n2. Or double-click 'Launch-GUI.bat' for the same effect`n3. For command line usage, run 'docx-template.exe --help' in Command Prompt`n`nINCLUDED FILES:`n- DocxTemplate.UI.exe       - Main graphical application`n- docx-template.exe         - Command line tool (single-file)`n- docx-template.bat         - Command line wrapper script`n- Launch-GUI.bat           - GUI launcher script`n- templates/               - Sample Czech language templates`n- *.dll                    - Required runtime libraries for GUI`n- README.txt               - This file`n`nSYSTEM REQUIREMENTS:`n- Windows 10 version 1709 (Fall Creators Update) or later`n- x64 (64-bit) architecture`n- No additional software installation required`n- Approximately 200MB disk space for full installation`n`nFEATURES:`n- Czech language support with proper character encoding`n- Placeholder replacement in Word documents (.docx)`n- Batch processing capabilities via CLI`n- Step-by-step wizard interface via GUI`n- Template structure preservation`n`nQUICK EXAMPLES:`n`nGUI Usage:`n  Just double-click DocxTemplate.UI.exe and follow the wizard!`n`nCommand Line Usage:`n  # Show help`n  docx-template.exe --help`n  `n  # Discover template sets`n  docx-template.exe list-sets --templates `"./templates`"`n  `n  # Scan for placeholders`n  docx-template.exe scan --path `"./templates`" --output json`n  `n  # Process templates with replacements`n  docx-template.exe copy --templates `"./templates`" --output `"./output`" --mapping `"./data.json`"`n`nTROUBLESHOOTING:`n- If GUI doesn't start, ensure you have Windows 10 version 1709 or later`n- If CLI commands fail, try running from Command Prompt as Administrator`n- For Czech characters, ensure your system supports UTF-8 encoding`n`nSUPPORT:`n- Documentation: https://github.com/jirihalaska/docx-template-cli`n- Issues & Bug Reports: https://github.com/jirihalaska/docx-template-cli/issues`n- Version: ${{ needs.create-release.outputs.tag-name }}`n- Build Date: $(Get-Date -Format `"yyyy-MM-dd HH:mm:ss UTC`")`n`nLICENSE:`nThis software is distributed under the MIT License.`nSee the LICENSE file in the source repository for full details."
+        # Create a simple README
+        $readmeText = "DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64`n================================================================`n`nQUICK START:`n1. Double-click 'DocxTemplate.exe' to launch the application`n2. The application includes both GUI and CLI functionality`n`nCLI USAGE:`n1. Open Command Prompt in this folder`n2. Run: DocxTemplate.exe --help`n`nSYSTEM REQUIREMENTS:`n- Windows 10 version 1709 or later`n- x64 architecture`n- No additional software installation required`n`nSUPPORT:`n- Documentation: https://github.com/jirihalaska/docx-template-cli`n- Issues: https://github.com/jirihalaska/docx-template-cli/issues`n- Version: ${{ needs.create-release.outputs.tag-name }}"
         $readmeText | Out-File -FilePath "$releaseDir/README.txt" -Encoding UTF8
         
-        Write-Host "Windows distribution package created successfully!" -ForegroundColor Green
-        
-        # Show package contents for verification
-        Write-Host "`nPackage contents:" -ForegroundColor Cyan
-        Get-ChildItem $releaseDir -Recurse | Format-Table Name, Length, LastWriteTime -AutoSize
+        # Verify the executable
+        $fileInfo = Get-Item "$releaseDir/DocxTemplate.exe"
+        $fileSizeMB = [math]::Round($fileInfo.Length / 1MB, 2)
+        Write-Host "✅ Windows package created with executable: DocxTemplate.exe (${fileSizeMB}MB)" -ForegroundColor Green
       
-    - name: Test release artifacts
+    - name: Test Windows executable
       run: |
         $releaseDir = "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64"
-        Write-Host "Testing release artifacts..." -ForegroundColor Cyan
+        $exeFile = "$releaseDir/DocxTemplate.exe"
+        Write-Host "Testing Windows executable..." -ForegroundColor Cyan
         
-        # Test CLI executable
-        Write-Host "Testing CLI executable..." -ForegroundColor Yellow
-        & "$releaseDir/docx-template.exe" --version
+        # Test executable runs
+        Write-Host "Testing executable startup..." -ForegroundColor Yellow
+        & $exeFile --version
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ CLI executable test passed" -ForegroundColor Green
+            Write-Host "✅ Windows executable test passed" -ForegroundColor Green
         } else {
-            Write-Host "❌ CLI executable test failed" -ForegroundColor Red
+            Write-Host "❌ Windows executable test failed" -ForegroundColor Red
             exit 1
         }
         
-        # Verify required files exist
-        $requiredFiles = @("DocxTemplate.UI.exe", "docx-template.exe", "README.txt")
-        foreach ($file in $requiredFiles) {
-            if (Test-Path "$releaseDir/$file") {
-                Write-Host "✅ Required file exists: $file" -ForegroundColor Green
-            } else {
-                Write-Host "❌ Missing required file: $file" -ForegroundColor Red
-                exit 1
-            }
-        }
-        
-        Write-Host "✅ All release artifact tests passed!" -ForegroundColor Green
+        Write-Host "✅ Windows package ready!" -ForegroundColor Green
       
     - name: Create Windows ZIP package
       run: |
+        $releaseDir = "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64"
         $zipPath = "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64.zip"
         Write-Host "Creating ZIP package: $zipPath" -ForegroundColor Cyan
-        Compress-Archive -Path "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64/*" -DestinationPath $zipPath -Force
+        Compress-Archive -Path "$releaseDir/*" -DestinationPath $zipPath -Force
         
         # Verify ZIP was created and show size
         if (Test-Path $zipPath) {
@@ -234,7 +193,7 @@ jobs:
         tag_name: ${{ needs.create-release.outputs.tag-name }}
         files: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64.zip
         
-    - name: Upload build artifacts for inspection
+    - name: Upload Windows package for inspection
       uses: actions/upload-artifact@v4
       with:
         name: windows-release-${{ needs.create-release.outputs.tag-name }}
@@ -280,9 +239,9 @@ jobs:
         
         echo "✅ Pre-release build and test completed successfully"
       
-    - name: Publish macOS ARM64 GUI (portable)
+    - name: Publish macOS ARM64 GUI (single-file)
       run: |
-        echo "📱 Publishing GUI application for ARM64..."
+        echo "📱 Publishing GUI application as single file for ARM64..."
         dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj \
           --configuration Release \
           --runtime osx-arm64 \
@@ -290,126 +249,103 @@ jobs:
           --output ./dist/macos-arm64-gui \
           --verbosity minimal \
           -p:SkipCliBuild=true \
-          -p:PublishSingleFile=false \
-          -p:PublishTrimmed=false \
-          -p:PublishReadyToRun=false
-          
-    - name: Publish macOS ARM64 CLI (single-file)
-      run: |
-        echo "⌨️ Publishing CLI application for ARM64..."
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj \
-          --configuration Release \
-          --runtime osx-arm64 \
-          --self-contained true \
-          --output ./dist/macos-arm64-cli \
-          --verbosity minimal \
           -p:PublishSingleFile=true \
           -p:EnableCompressionInSingleFile=true \
           -p:PublishTrimmed=false \
           -p:PublishReadyToRun=true
       
-    - name: Create macOS ARM64 distribution package
+    - name: Create macOS App Bundle
       run: |
-        RELEASE_DIR="./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64"
-        echo "📁 Creating release directory: $RELEASE_DIR"
-        mkdir -p "$RELEASE_DIR"
+        echo "🍎 Creating macOS App Bundle..."
+        APP_NAME="DocxTemplate"
+        APP_DIR="./release/${APP_NAME}.app"
         
-        # Copy GUI application and its dependencies (portable distribution)
-        echo "📱 Copying GUI application..."
-        cp "./dist/macos-arm64-gui/DocxTemplate.UI" "$RELEASE_DIR/"
-        cp ./dist/macos-arm64-gui/*.dll "$RELEASE_DIR/" 2>/dev/null || true
-        cp ./dist/macos-arm64-gui/*.dylib "$RELEASE_DIR/" 2>/dev/null || true
+        # Create .app bundle structure
+        mkdir -p "$APP_DIR/Contents/MacOS"
+        mkdir -p "$APP_DIR/Contents/Resources"
         
-        # Copy CLI executable (single-file, user-friendly name)
-        echo "⌨️ Copying CLI application..."
-        cp "./dist/macos-arm64-cli/DocxTemplate.CLI" "$RELEASE_DIR/docx-template"
+        # Copy the single-file executable
+        echo "📱 Copying Avalonia GUI application..."
+        cp "./dist/macos-arm64-gui/DocxTemplate.UI" "$APP_DIR/Contents/MacOS/$APP_NAME"
+        chmod +x "$APP_DIR/Contents/MacOS/$APP_NAME"
         
-        # Make executables executable
-        echo "🔧 Setting executable permissions..."
-        chmod +x "$RELEASE_DIR/DocxTemplate.UI"
-        chmod +x "$RELEASE_DIR/docx-template"
+        # Create Info.plist for the app bundle
+        echo "📄 Creating Info.plist..."
+        cat > "$APP_DIR/Contents/Info.plist" << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleName</key>
+            <string>DocxTemplate</string>
+            <key>CFBundleDisplayName</key>
+            <string>DocxTemplate</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.jirihalaska.docxtemplate</string>
+            <key>CFBundleVersion</key>
+            <string>${{ needs.create-release.outputs.tag-name }}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ needs.create-release.outputs.tag-name }}</string>
+            <key>CFBundleExecutable</key>
+            <string>$APP_NAME</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleSignature</key>
+            <string>????</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.15</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>NSPrincipalClass</key>
+            <string>NSApplication</string>
+        </dict>
+        </plist>
+        EOF
         
-        # Copy sample templates if they exist
-        if [ -d "templates" ]; then
-            echo "📄 Copying sample templates..."
-            cp -r templates "$RELEASE_DIR/"
-        else
-            echo "⚠️ No templates directory found, skipping..."
-        fi
+        echo "✅ macOS App Bundle created successfully!"
         
-        # Create GUI launcher script for convenience
-        echo "🚀 Creating launcher scripts..."
-        echo -e '#!/bin/bash\ncd "$(dirname "$0")"\necho "Starting DocxTemplate GUI Application..."\nif [[ "$OSTYPE" == "darwin"* ]]; then\n    open -a "./DocxTemplate.UI" || ./DocxTemplate.UI\nelse\n    ./DocxTemplate.UI\nfi' > "$RELEASE_DIR/Launch-GUI.sh"
-        chmod +x "$RELEASE_DIR/Launch-GUI.sh"
-        
-        # Create CLI wrapper script
-        echo -e '#!/bin/bash\ncd "$(dirname "$0")"\n"$(dirname "$0")/docx-template" "$@"' > "$RELEASE_DIR/docx-template.sh"
-        chmod +x "$RELEASE_DIR/docx-template.sh"
-        
-        # Create comprehensive README
-        echo "📝 Creating documentation..."
-        echo "# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS ARM64 (Apple Silicon)" > "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## Quick Start" >> "$RELEASE_DIR/README.md"
-        echo "1. **GUI**: Double-click \`DocxTemplate.UI\` or run \`./Launch-GUI.sh\`" >> "$RELEASE_DIR/README.md"
-        echo "2. **CLI**: Open Terminal and run \`./docx-template --help\`" >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## System Requirements" >> "$RELEASE_DIR/README.md"
-        echo "- **macOS**: macOS 10.15 Catalina or later" >> "$RELEASE_DIR/README.md"
-        echo "- **Architecture**: Apple Silicon (M1, M2, M3) - ARM64" >> "$RELEASE_DIR/README.md"
-        echo "- **No additional software required** - fully self-contained" >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## Support" >> "$RELEASE_DIR/README.md"
-        echo "- 📖 **Documentation**: https://github.com/jirihalaska/docx-template-cli" >> "$RELEASE_DIR/README.md"
-        echo "- 🐛 **Issues**: https://github.com/jirihalaska/docx-template-cli/issues" >> "$RELEASE_DIR/README.md"
-        echo "- 🏷️ **Version**: ${{ needs.create-release.outputs.tag-name }}" >> "$RELEASE_DIR/README.md"
-        
-        echo "✅ macOS ARM64 distribution package created successfully!"
-        
-        # Show package contents for verification
+        # Show bundle info
         echo ""
-        echo "📦 Package contents:"
-        ls -la "$RELEASE_DIR"
+        echo "📦 App Bundle info:"
+        ls -la "$APP_DIR/Contents/MacOS/"
+        echo "Bundle size: $(du -sh "$APP_DIR" | cut -f1)"
       
-    - name: Test release artifacts
+    - name: Test macOS App Bundle
       run: |
-        RELEASE_DIR="./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64"
-        echo "🧪 Testing release artifacts..."
+        APP_DIR="./release/DocxTemplate.app"
+        echo "🧪 Testing macOS App Bundle..."
         
-        # Test CLI executable
-        echo "⌨️ Testing CLI executable..."
-        "$RELEASE_DIR/docx-template" --version
+        # Test app bundle executable
+        echo "🍎 Testing App Bundle executable..."
+        "$APP_DIR/Contents/MacOS/DocxTemplate" --version
         if [ $? -eq 0 ]; then
-            echo "✅ CLI executable test passed"
+            echo "✅ App Bundle executable test passed"
         else
-            echo "❌ CLI executable test failed"
+            echo "❌ App Bundle executable test failed"
             exit 1
         fi
         
-        # Verify required files exist
-        REQUIRED_FILES=("DocxTemplate.UI" "docx-template" "README.md")
-        for file in "${REQUIRED_FILES[@]}"; do
-            if [ -f "$RELEASE_DIR/$file" ]; then
-                echo "✅ Required file exists: $file"
-            else
-                echo "❌ Missing required file: $file"
-                exit 1
-            fi
-        done
+        # Verify app bundle structure
+        if [ -f "$APP_DIR/Contents/Info.plist" ]; then
+            echo "✅ Info.plist exists"
+        else
+            echo "❌ Missing Info.plist"
+            exit 1
+        fi
         
-        echo "✅ All release artifact tests passed!"
+        echo "✅ macOS App Bundle tests passed!"
       
-    - name: Create macOS ARM64 ZIP package
+    - name: Create macOS App Bundle ZIP package
       run: |
-        ZIP_PATH="./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.zip"
-        echo "📦 Creating ZIP package: $ZIP_PATH"
+        ZIP_PATH="./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.app.zip"
+        echo "📦 Creating App Bundle ZIP package: $ZIP_PATH"
         cd "./release"
-        zip -r "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.zip" "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64/"
+        zip -r "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.app.zip" "DocxTemplate.app/"
         
         # Verify ZIP was created and show size
-        if [ -f "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.zip" ]; then
-            ZIP_SIZE=$(du -h "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.zip" | cut -f1)
-            echo "✅ ZIP package created successfully: ${ZIP_SIZE}"
+        if [ -f "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.app.zip" ]; then
+            ZIP_SIZE=$(du -h "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.app.zip" | cut -f1)
+            echo "✅ App Bundle ZIP package created successfully: ${ZIP_SIZE}"
         else
             echo "❌ Failed to create ZIP package"
             exit 1
@@ -423,106 +359,12 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ needs.create-release.outputs.tag-name }}
-        files: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.zip
+        files: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64.app.zip
         
-    - name: Upload build artifacts for inspection
+    - name: Upload App Bundle for inspection
       uses: actions/upload-artifact@v4
       with:
         name: macos-arm64-release-${{ needs.create-release.outputs.tag-name }}
-        path: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-arm64/
+        path: ./release/DocxTemplate.app/
         retention-days: 30
 
-  build-macos-x64:
-    name: Build macOS x64 Distribution (Intel)
-    runs-on: macos-13  # Use Intel runner for x64 builds
-    needs: create-release
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: macos-x64-release-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: macos-x64-release-nuget-
-        
-    - name: Build macOS x64 distribution
-      run: |
-        echo "🖥️ Building DocxTemplate for macOS x64 (Intel)..."
-        
-        # Clean and restore
-        dotnet clean --verbosity minimal
-        dotnet restore --verbosity minimal
-        
-        # Build and test
-        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal
-        dotnet run --project src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal -- --version
-        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal
-        
-        # Publish for x64
-        dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj \
-          -c Release -r osx-x64 --self-contained \
-          -p:SkipCliBuild=true -p:PublishSingleFile=false \
-          -o ./dist/macos-x64-gui --verbosity minimal
-          
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj \
-          -c Release -r osx-x64 --self-contained \
-          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true \
-          -o ./dist/macos-x64-cli --verbosity minimal
-        
-        # Create distribution
-        RELEASE_DIR="./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64"
-        mkdir -p "$RELEASE_DIR"
-        
-        cp "./dist/macos-x64-gui/DocxTemplate.UI" "$RELEASE_DIR/"
-        cp ./dist/macos-x64-gui/*.dll "$RELEASE_DIR/" 2>/dev/null || true
-        cp ./dist/macos-x64-gui/*.dylib "$RELEASE_DIR/" 2>/dev/null || true
-        cp "./dist/macos-x64-cli/DocxTemplate.CLI" "$RELEASE_DIR/docx-template"
-        
-        chmod +x "$RELEASE_DIR/DocxTemplate.UI" "$RELEASE_DIR/docx-template"
-        
-        # Copy templates if available
-        [ -d "templates" ] && cp -r templates "$RELEASE_DIR/" || echo "No templates directory"
-        
-        # Create documentation
-        echo "# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS x64 (Intel)" > "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "This version is optimized for Intel-based Macs." >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## Quick Start" >> "$RELEASE_DIR/README.md"
-        echo "- **GUI**: Double-click \`DocxTemplate.UI\`" >> "$RELEASE_DIR/README.md"
-        echo "- **CLI**: Run \`./docx-template --help\`" >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## System Requirements" >> "$RELEASE_DIR/README.md"
-        echo "- macOS 10.15 Catalina or later" >> "$RELEASE_DIR/README.md"
-        echo "- Intel x64 processor" >> "$RELEASE_DIR/README.md"
-        echo "- No additional software required" >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "For Apple Silicon Macs (M1/M2/M3), download the ARM64 version for better performance." >> "$RELEASE_DIR/README.md"
-        echo "" >> "$RELEASE_DIR/README.md"
-        echo "## Support" >> "$RELEASE_DIR/README.md"
-        echo "📖 https://github.com/jirihalaska/docx-template-cli" >> "$RELEASE_DIR/README.md"
-        
-        # Test and package
-        "$RELEASE_DIR/docx-template" --version || exit 1
-        
-        cd "./release"
-        zip -r "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64.zip" "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/"
-        cd ..
-        
-        echo "✅ macOS x64 distribution created successfully"
-      
-    - name: Upload to GitHub Release
-      uses: softprops/action-gh-release@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ needs.create-release.outputs.tag-name }}
-        files: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64.zip

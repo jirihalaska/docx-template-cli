@@ -167,86 +167,15 @@ jobs:
         
         # Create GUI launcher batch file for convenience  
         Write-Host "Creating launcher scripts..." -ForegroundColor Yellow
-        @'
-@echo off
-cd /d "%~dp0"
-echo Starting DocxTemplate GUI Application...
-start "" "DocxTemplate.UI.exe"
-'@ | Out-File -FilePath "$releaseDir/Launch-GUI.bat" -Encoding ASCII
+        "@echo off`ncd /d `"%~dp0`"`necho Starting DocxTemplate GUI Application...`nstart `"`" `"DocxTemplate.UI.exe`"" | Out-File -FilePath "$releaseDir/Launch-GUI.bat" -Encoding ASCII
         
-        # Create CLI wrapper batch file
-        @'
-@echo off
-cd /d "%~dp0"  
-"%~dp0docx-template.exe" %*
-'@ | Out-File -FilePath "$releaseDir/docx-template.bat" -Encoding ASCII
+        # Create CLI wrapper batch file  
+        "@echo off`ncd /d `"%~dp0`"`n`"%~dp0docx-template.exe`" %*" | Out-File -FilePath "$releaseDir/docx-template.bat" -Encoding ASCII
         
         # Create comprehensive README
         Write-Host "Creating documentation..." -ForegroundColor Yellow
-        @"
-DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64 Distribution
-================================================================
-
-QUICK START:
-1. Double-click 'DocxTemplate.UI.exe' to launch the GUI application
-2. Or double-click 'Launch-GUI.bat' for the same effect
-3. For command line usage, run 'docx-template.exe --help' in Command Prompt
-
-INCLUDED FILES:
-- DocxTemplate.UI.exe       - Main graphical application
-- docx-template.exe         - Command line tool (single-file)  
-- docx-template.bat         - Command line wrapper script
-- Launch-GUI.bat           - GUI launcher script
-- templates/               - Sample Czech language templates
-- *.dll                    - Required runtime libraries for GUI
-- README.txt               - This file
-
-SYSTEM REQUIREMENTS:
-- Windows 10 version 1709 (Fall Creators Update) or later
-- x64 (64-bit) architecture
-- No additional software installation required
-- Approximately 200MB disk space for full installation
-
-FEATURES:
-- Czech language support with proper character encoding
-- Placeholder replacement in Word documents (.docx)
-- Batch processing capabilities via CLI
-- Step-by-step wizard interface via GUI  
-- Template structure preservation
-
-QUICK EXAMPLES:
-
-GUI Usage:
-  Just double-click DocxTemplate.UI.exe and follow the wizard!
-
-Command Line Usage:
-  # Show help
-  docx-template.exe --help
-  
-  # Discover template sets
-  docx-template.exe list-sets --templates "./templates"
-  
-  # Scan for placeholders  
-  docx-template.exe scan --path "./templates" --output json
-  
-  # Process templates with replacements
-  docx-template.exe copy --templates "./templates" --output "./output" --mapping "./data.json"
-
-TROUBLESHOOTING:
-- If GUI doesn't start, ensure you have Windows 10 version 1709 or later
-- If CLI commands fail, try running from Command Prompt as Administrator
-- For Czech characters, ensure your system supports UTF-8 encoding
-
-SUPPORT:
-- Documentation: https://github.com/jirihalaska/docx-template-cli
-- Issues & Bug Reports: https://github.com/jirihalaska/docx-template-cli/issues
-- Version: ${{ needs.create-release.outputs.tag-name }}
-- Build Date: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
-
-LICENSE:
-This software is distributed under the MIT License.
-See the LICENSE file in the source repository for full details.
-"@ | Out-File -FilePath "$releaseDir/README.txt" -Encoding UTF8
+        $readmeText = "DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64 Distribution`n================================================================`n`nQUICK START:`n1. Double-click 'DocxTemplate.UI.exe' to launch the GUI application`n2. Or double-click 'Launch-GUI.bat' for the same effect`n3. For command line usage, run 'docx-template.exe --help' in Command Prompt`n`nINCLUDED FILES:`n- DocxTemplate.UI.exe       - Main graphical application`n- docx-template.exe         - Command line tool (single-file)`n- docx-template.bat         - Command line wrapper script`n- Launch-GUI.bat           - GUI launcher script`n- templates/               - Sample Czech language templates`n- *.dll                    - Required runtime libraries for GUI`n- README.txt               - This file`n`nSYSTEM REQUIREMENTS:`n- Windows 10 version 1709 (Fall Creators Update) or later`n- x64 (64-bit) architecture`n- No additional software installation required`n- Approximately 200MB disk space for full installation`n`nFEATURES:`n- Czech language support with proper character encoding`n- Placeholder replacement in Word documents (.docx)`n- Batch processing capabilities via CLI`n- Step-by-step wizard interface via GUI`n- Template structure preservation`n`nQUICK EXAMPLES:`n`nGUI Usage:`n  Just double-click DocxTemplate.UI.exe and follow the wizard!`n`nCommand Line Usage:`n  # Show help`n  docx-template.exe --help`n  `n  # Discover template sets`n  docx-template.exe list-sets --templates `"./templates`"`n  `n  # Scan for placeholders`n  docx-template.exe scan --path `"./templates`" --output json`n  `n  # Process templates with replacements`n  docx-template.exe copy --templates `"./templates`" --output `"./output`" --mapping `"./data.json`"`n`nTROUBLESHOOTING:`n- If GUI doesn't start, ensure you have Windows 10 version 1709 or later`n- If CLI commands fail, try running from Command Prompt as Administrator`n- For Czech characters, ensure your system supports UTF-8 encoding`n`nSUPPORT:`n- Documentation: https://github.com/jirihalaska/docx-template-cli`n- Issues & Bug Reports: https://github.com/jirihalaska/docx-template-cli/issues`n- Version: ${{ needs.create-release.outputs.tag-name }}`n- Build Date: $(Get-Date -Format `"yyyy-MM-dd HH:mm:ss UTC`")`n`nLICENSE:`nThis software is distributed under the MIT License.`nSee the LICENSE file in the source repository for full details."
+        $readmeText | Out-File -FilePath "$releaseDir/README.txt" -Encoding UTF8
         
         Write-Host "Windows distribution package created successfully!" -ForegroundColor Green
         
@@ -410,100 +339,30 @@ See the LICENSE file in the source repository for full details.
         
         # Create GUI launcher script for convenience
         echo "🚀 Creating launcher scripts..."
-        cat > "$RELEASE_DIR/Launch-GUI.sh" << 'EOF'
-#!/bin/bash
-cd "$(dirname "$0")"
-echo "Starting DocxTemplate GUI Application..."
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    open -a "./DocxTemplate.UI" || ./DocxTemplate.UI
-else
-    ./DocxTemplate.UI
-fi
-EOF
+        echo -e '#!/bin/bash\ncd "$(dirname "$0")"\necho "Starting DocxTemplate GUI Application..."\nif [[ "$OSTYPE" == "darwin"* ]]; then\n    open -a "./DocxTemplate.UI" || ./DocxTemplate.UI\nelse\n    ./DocxTemplate.UI\nfi' > "$RELEASE_DIR/Launch-GUI.sh"
         chmod +x "$RELEASE_DIR/Launch-GUI.sh"
         
         # Create CLI wrapper script
-        cat > "$RELEASE_DIR/docx-template.sh" << 'EOF'
-#!/bin/bash  
-cd "$(dirname "$0")"
-"$(dirname "$0")/docx-template" "$@"
-EOF
+        echo -e '#!/bin/bash\ncd "$(dirname "$0")"\n"$(dirname "$0")/docx-template" "$@"' > "$RELEASE_DIR/docx-template.sh"
         chmod +x "$RELEASE_DIR/docx-template.sh"
         
         # Create comprehensive README
         echo "📝 Creating documentation..."
-        cat > "$RELEASE_DIR/README.md" << 'EOF'
-# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS ARM64 (Apple Silicon)
-
-## Quick Start
-1. **GUI**: Double-click `DocxTemplate.UI` or run `./Launch-GUI.sh`
-2. **CLI**: Open Terminal and run `./docx-template --help`
-
-## Included Files
-- `DocxTemplate.UI` - Main graphical application
-- `docx-template` - Command line tool (single-file)
-- `docx-template.sh` - Command line wrapper script  
-- `Launch-GUI.sh` - GUI launcher script
-- `templates/` - Sample Czech language templates
-- `*.dll`, `*.dylib` - Required runtime libraries for GUI
-- `README.md` - This file
-
-## System Requirements
-- **macOS**: macOS 10.15 Catalina or later
-- **Architecture**: Apple Silicon (M1, M2, M3) - ARM64
-- **Disk Space**: Approximately 200MB for full installation
-- **No additional software required** - fully self-contained
-
-## Features
-- ✅ Czech language support with proper character encoding
-- ✅ Placeholder replacement in Word documents (.docx)
-- ✅ Batch processing capabilities via CLI
-- ✅ Step-by-step wizard interface via GUI
-- ✅ Template structure preservation
-- ✅ Native Apple Silicon performance
-
-## Quick Examples
-
-### GUI Usage
-Just double-click `DocxTemplate.UI` and follow the wizard!
-
-### Command Line Usage
-```bash
-# Show help
-./docx-template --help
-
-# Discover template sets
-./docx-template list-sets --templates "./templates"
-
-# Scan for placeholders
-./docx-template scan --path "./templates" --output json
-
-# Process templates with replacements  
-./docx-template copy --templates "./templates" --output "./output" --mapping "./data.json"
-```
-
-## Installation
-1. Download and extract this package
-2. Open Terminal and navigate to the extracted folder
-3. Run `chmod +x DocxTemplate.UI docx-template` if needed
-4. Start with `./DocxTemplate.UI` or `./docx-template --help`
-
-## Troubleshooting
-- **"Cannot be opened because the developer cannot be verified"**: 
-  - Right-click → Open → Open anyway, or
-  - Run: `xattr -d com.apple.quarantine DocxTemplate.UI docx-template`
-- **Permission denied**: Run `chmod +x DocxTemplate.UI docx-template`
-- **Czech characters not displaying**: Ensure your system supports UTF-8
-
-## Support
-- 📖 **Documentation**: https://github.com/jirihalaska/docx-template-cli  
-- 🐛 **Issues**: https://github.com/jirihalaska/docx-template-cli/issues
-- 🏷️ **Version**: ${{ needs.create-release.outputs.tag-name }}
-- 📅 **Build**: $(date '+%Y-%m-%d %H:%M:%S UTC')
-
-## License
-MIT License - See repository for full details.
-EOF
+        echo "# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS ARM64 (Apple Silicon)" > "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## Quick Start" >> "$RELEASE_DIR/README.md"
+        echo "1. **GUI**: Double-click \`DocxTemplate.UI\` or run \`./Launch-GUI.sh\`" >> "$RELEASE_DIR/README.md"
+        echo "2. **CLI**: Open Terminal and run \`./docx-template --help\`" >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## System Requirements" >> "$RELEASE_DIR/README.md"
+        echo "- **macOS**: macOS 10.15 Catalina or later" >> "$RELEASE_DIR/README.md"
+        echo "- **Architecture**: Apple Silicon (M1, M2, M3) - ARM64" >> "$RELEASE_DIR/README.md"
+        echo "- **No additional software required** - fully self-contained" >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## Support" >> "$RELEASE_DIR/README.md"
+        echo "- 📖 **Documentation**: https://github.com/jirihalaska/docx-template-cli" >> "$RELEASE_DIR/README.md"
+        echo "- 🐛 **Issues**: https://github.com/jirihalaska/docx-template-cli/issues" >> "$RELEASE_DIR/README.md"
+        echo "- 🏷️ **Version**: ${{ needs.create-release.outputs.tag-name }}" >> "$RELEASE_DIR/README.md"
         
         echo "✅ macOS ARM64 distribution package created successfully!"
         
@@ -633,25 +492,23 @@ EOF
         [ -d "templates" ] && cp -r templates "$RELEASE_DIR/" || echo "No templates directory"
         
         # Create documentation
-        cat > "$RELEASE_DIR/README.md" << 'EOF'
-# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS x64 (Intel)
-
-This version is optimized for Intel-based Macs.
-
-## Quick Start
-- **GUI**: Double-click `DocxTemplate.UI`
-- **CLI**: Run `./docx-template --help`
-
-## System Requirements
-- macOS 10.15 Catalina or later
-- Intel x64 processor
-- No additional software required
-
-For Apple Silicon Macs (M1/M2/M3), download the ARM64 version for better performance.
-
-## Support
-📖 https://github.com/jirihalaska/docx-template-cli
-EOF
+        echo "# DocxTemplate ${{ needs.create-release.outputs.tag-name }} - macOS x64 (Intel)" > "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "This version is optimized for Intel-based Macs." >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## Quick Start" >> "$RELEASE_DIR/README.md"
+        echo "- **GUI**: Double-click \`DocxTemplate.UI\`" >> "$RELEASE_DIR/README.md"
+        echo "- **CLI**: Run \`./docx-template --help\`" >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## System Requirements" >> "$RELEASE_DIR/README.md"
+        echo "- macOS 10.15 Catalina or later" >> "$RELEASE_DIR/README.md"
+        echo "- Intel x64 processor" >> "$RELEASE_DIR/README.md"
+        echo "- No additional software required" >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "For Apple Silicon Macs (M1/M2/M3), download the ARM64 version for better performance." >> "$RELEASE_DIR/README.md"
+        echo "" >> "$RELEASE_DIR/README.md"
+        echo "## Support" >> "$RELEASE_DIR/README.md"
+        echo "📖 https://github.com/jirihalaska/docx-template-cli" >> "$RELEASE_DIR/README.md"
         
         # Test and package
         "$RELEASE_DIR/docx-template" --version || exit 1

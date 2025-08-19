@@ -36,7 +36,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
         
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
-        _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly))
+        _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories))
             .Returns(["/test/folder/test.docx"]);
         _mockFileSystemService.Setup(fs => fs.GetFileName("/test/folder/test.docx")).Returns("test.docx");
         _mockFileSystemService.Setup(fs => fs.GetFileSize("/test/folder/test.docx")).Returns(1024);
@@ -178,7 +178,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
         
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
-        _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly))
+        _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories))
             .Returns(["/test/folder/test.docx"]);
         _mockFileSystemService.Setup(fs => fs.GetFileName("/test/folder/test.docx")).Returns("test.docx");
         _mockFileSystemService.Setup(fs => fs.GetFileSize("/test/folder/test.docx")).Returns(1024);

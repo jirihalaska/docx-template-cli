@@ -34,7 +34,7 @@ public abstract class E2ETestBase : IDisposable
         var testName = GetType().Name;
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
         var testOutput = Path.Combine("./test-output/e2e", testName, timestamp);
-        
+
         // Clear previous runs for this test
         var testDir = Path.Combine("./test-output/e2e", testName);
         if (Directory.Exists(testDir))
@@ -42,7 +42,7 @@ public abstract class E2ETestBase : IDisposable
             TestOutput.WriteLine($"Clearing previous test runs in: {testDir}");
             Directory.Delete(testDir, recursive: true);
         }
-            
+
         Directory.CreateDirectory(testOutput);
         TestOutput.WriteLine($"Test output directory: {Path.GetFullPath(testOutput)}");
         return testOutput;
@@ -70,7 +70,7 @@ public abstract class E2ETestBase : IDisposable
     protected IServiceProvider SetupServices()
     {
         var services = new ServiceCollection();
-        
+
         // Create basic configuration
         var configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
@@ -78,7 +78,7 @@ public abstract class E2ETestBase : IDisposable
 
         // Register services using the UI service registration
         services.RegisterServices();
-        
+
         return services.BuildServiceProvider();
     }
 
@@ -104,7 +104,7 @@ public abstract class E2ETestBase : IDisposable
 
         var json = System.Text.Json.JsonSerializer.Serialize(parametersInfo, jsonOptions);
         await File.WriteAllTextAsync(filePath, json);
-        
+
         TestOutput.WriteLine($"Test parameters saved to: {filePath}");
     }
 
@@ -115,12 +115,12 @@ public abstract class E2ETestBase : IDisposable
     {
         // Templates are copied to the test output directory during build
         var templatesPath = Path.Combine(AppContext.BaseDirectory, "templates");
-        
+
         if (!Directory.Exists(templatesPath))
         {
             throw new DirectoryNotFoundException($"Templates directory not found at: {templatesPath}. Make sure the test project builds successfully.");
         }
-        
+
         return templatesPath;
     }
 

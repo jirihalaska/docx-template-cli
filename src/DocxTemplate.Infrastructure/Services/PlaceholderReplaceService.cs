@@ -394,7 +394,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
     private Task<IReadOnlyList<TemplateFile>> DiscoverTemplateFilesAsync(string folderPath, CancellationToken cancellationToken)
     {
-        var files = _fileSystemService.EnumerateFiles(folderPath, "*.docx", SearchOption.TopDirectoryOnly);
+        var files = _fileSystemService.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories);
         var templateFiles = new List<TemplateFile>();
 
         foreach (var filePath in files)

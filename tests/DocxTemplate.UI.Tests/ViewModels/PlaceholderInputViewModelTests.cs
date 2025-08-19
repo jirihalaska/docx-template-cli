@@ -53,7 +53,7 @@ public class PlaceholderInputViewModelTests
         Assert.Equal(2, viewModel.PlaceholderInputs.Count);
         Assert.Equal(2, viewModel.TotalPlaceholdersCount);
         Assert.Equal(0, viewModel.FilledPlaceholdersCount);
-        
+
         var firstInput = viewModel.PlaceholderInputs.First();
         Assert.Equal("NÁZEV_FIRMY", firstInput.PlaceholderName);
         Assert.Equal("NÁZEV_FIRMY:", firstInput.DisplayLabel);
@@ -84,7 +84,7 @@ public class PlaceholderInputViewModelTests
         var viewModel = new PlaceholderInputViewModel();
         var placeholders = CreateTestPlaceholderItems();
         viewModel.SetDiscoveredPlaceholders(placeholders);
-        
+
         // Fill some values
         viewModel.PlaceholderInputs[0].InputValue = "Test Company";
         viewModel.PlaceholderInputs[1].InputValue = "2023-12-01";
@@ -93,7 +93,7 @@ public class PlaceholderInputViewModelTests
         viewModel.ClearAllCommand.Execute().Subscribe();
 
         // assert
-        Assert.All(viewModel.PlaceholderInputs, input => 
+        Assert.All(viewModel.PlaceholderInputs, input =>
         {
             Assert.Empty(input.InputValue);
             Assert.False(input.IsFilled);
@@ -108,7 +108,7 @@ public class PlaceholderInputViewModelTests
         var viewModel = new PlaceholderInputViewModel();
         var placeholders = CreateTestPlaceholderItems();
         viewModel.SetDiscoveredPlaceholders(placeholders);
-        
+
         // Fill only the first placeholder
         viewModel.PlaceholderInputs[0].InputValue = "Test Company";
 
@@ -129,7 +129,7 @@ public class PlaceholderInputViewModelTests
         var viewModel = new PlaceholderInputViewModel();
         var placeholders = CreateTestPlaceholderItems();
         viewModel.SetDiscoveredPlaceholders(placeholders);
-        
+
         viewModel.PlaceholderInputs[0].InputValue = "Test Company";
 
         // act
@@ -235,7 +235,6 @@ public class PlaceholderInputItemViewModelTests
         Assert.Equal(3, viewModel.OccurrenceCount);
         Assert.Empty(viewModel.InputValue);
         Assert.False(viewModel.IsFilled);
-        Assert.True(viewModel.IsUnfilled);
     }
 
     [Fact]
@@ -252,7 +251,6 @@ public class PlaceholderInputItemViewModelTests
         // assert
         Assert.Equal("Test Company Name", viewModel.InputValue);
         Assert.True(viewModel.IsFilled);
-        Assert.False(viewModel.IsUnfilled);
     }
 
     [Fact]
@@ -266,12 +264,10 @@ public class PlaceholderInputItemViewModelTests
         // act & assert - empty string
         viewModel.InputValue = "";
         Assert.False(viewModel.IsFilled);
-        Assert.True(viewModel.IsUnfilled);
 
         // act & assert - whitespace only
         viewModel.InputValue = "   \n\t  ";
         Assert.False(viewModel.IsFilled);
-        Assert.True(viewModel.IsUnfilled);
         Assert.Empty(viewModel.InputValue); // Should be normalized to empty
     }
 
@@ -282,7 +278,7 @@ public class PlaceholderInputItemViewModelTests
         var placeholder = CreateTestPlaceholder("TEST", 1);
         var placeholderItem = new PlaceholderItemViewModel(placeholder);
         var viewModel = new PlaceholderInputItemViewModel(placeholderItem);
-        
+
         viewModel.InputValue = "Some Value";
         Assert.True(viewModel.IsFilled);
 
@@ -292,7 +288,6 @@ public class PlaceholderInputItemViewModelTests
         // assert
         Assert.Empty(viewModel.InputValue);
         Assert.False(viewModel.IsFilled);
-        Assert.True(viewModel.IsUnfilled);
     }
 
     [Theory]

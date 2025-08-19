@@ -104,8 +104,8 @@
              Condition="!Exists('$(CliExecutableSource)')" />
   </Target>
 
-  <!-- Copy templates folder to UI output directory for testing (disabled by default for performance) -->
-  <Target Name="CopyTemplatesFolder" AfterTargets="Build" BeforeTargets="Publish" Condition="'$(IncludeTemplatesForTesting)' == 'true'">
+  <!-- Copy templates folder to UI output directory -->
+  <Target Name="CopyTemplatesFolder" AfterTargets="Build" BeforeTargets="Publish">
     <PropertyGroup>
       <TemplatesSourcePath>$(MSBuildThisFileDirectory)../../templates</TemplatesSourcePath>
       <TemplatesTargetPath>$(OutputPath)templates</TemplatesTargetPath>

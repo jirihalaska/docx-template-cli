@@ -49,60 +49,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplate.Core\DocxTemplate.Core.csproj" />
+    <ProjectReference Include="..\DocxTemplate.Infrastructure\DocxTemplate.Infrastructure.csproj" />
   </ItemGroup>
 
-  <!-- Build CLI project and copy executable to UI output directory -->
-  <Target Name="BuildAndCopyCliExecutable" AfterTargets="Build" BeforeTargets="Publish" Condition="'$(SkipCliBuild)' != 'true'">
-    <PropertyGroup>
-      <CliProjectPath>$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\DocxTemplate.CLI.csproj</CliProjectPath>
-      <!-- Handle runtime-specific paths - use publish output for self-contained, build output for regular build -->
-      <CliOutputPath Condition="'$(RuntimeIdentifier)' != ''">$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\publish</CliOutputPath>
-      <CliOutputPath Condition="'$(RuntimeIdentifier)' == ''">$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\bin\$(Configuration)\$(TargetFramework)</CliOutputPath>
-      <!-- For published self-contained, the executable name changes -->
-      <CliExecutableName Condition="'$(RuntimeIdentifier)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI.exe</CliExecutableName>
-      <CliExecutableName Condition="'$(RuntimeIdentifier)' != '' AND !$([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI</CliExecutableName>
-      <CliExecutableName Condition="'$(RuntimeIdentifier)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI.exe</CliExecutableName>
-      <CliExecutableName Condition="'$(RuntimeIdentifier)' == '' AND !$([MSBuild]::IsOSPlatform('Windows'))">DocxTemplate.CLI</CliExecutableName>
-      <CliExecutableSource>$(CliOutputPath)/$(CliExecutableName)</CliExecutableSource>
-      <CliExecutableTarget Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(OutputPath)docx-template.exe</CliExecutableTarget>
-      <CliExecutableTarget Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(OutputPath)docx-template</CliExecutableTarget>
-    </PropertyGroup>
-    
-    <Message Text="Building CLI project: $(CliProjectPath)" Importance="high" />
-    
-    <!-- Build the CLI project as self-contained if runtime identifier is specified, otherwise as regular build -->
-    <MSBuild Projects="$(CliProjectPath)" 
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;PublishSingleFile=true" 
-             Targets="Publish" 
-             Condition="'$(RuntimeIdentifier)' != ''" />
-    <MSBuild Projects="$(CliProjectPath)" 
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" 
-             Targets="Build" 
-             Condition="'$(RuntimeIdentifier)' == ''" />
-    
-    <Message Text="Copying CLI executable from $(CliExecutableSource) to $(CliExecutableTarget)" Importance="high" />
-    
-    <!-- Copy the CLI executable to UI output directory with the expected name -->
-    <Copy SourceFiles="$(CliExecutableSource)" 
-          DestinationFiles="$(CliExecutableTarget)" 
-          Condition="Exists('$(CliExecutableSource)')"
-          SkipUnchangedFiles="true" />
-          
-    <!-- Also copy required runtime dependencies if they exist -->
-    <ItemGroup>
-      <CliRuntimeFiles Include="$(CliOutputPath)/*.dll" />
-      <CliRuntimeFiles Include="$(CliOutputPath)/*.json" />
-      <CliRuntimeFiles Include="$(CliOutputPath)/*.pdb" Condition="'$(Configuration)' == 'Debug'" />
-    </ItemGroup>
-    
-    <Copy SourceFiles="@(CliRuntimeFiles)" 
-          DestinationFolder="$(OutputPath)" 
-          SkipUnchangedFiles="true" 
-          Condition="@(CliRuntimeFiles) != ''" />
-          
-    <Warning Text="CLI executable not found at $(CliExecutableSource) after build attempt." 
-             Condition="!Exists('$(CliExecutableSource)')" />
-  </Target>
 
   <!-- Copy templates folder to UI output directory -->
   <Target Name="CopyTemplatesFolder" AfterTargets="Build" BeforeTargets="Publish">
@@ -130,12 +79,9 @@
              Condition="!Exists('$(TemplatesSourcePath)')" />
   </Target>
 
-  <!-- Include CLI executable and templates as content for publishing -->
-  <Target Name="IncludeCliAndTemplatesForPublish" BeforeTargets="PublishApp" DependsOnTargets="BuildAndCopyCliExecutable;CopyTemplatesFolder">
+  <!-- Include templates as content for publishing -->
+  <Target Name="IncludeTemplatesForPublish" BeforeTargets="PublishApp" DependsOnTargets="CopyTemplatesFolder">
     <ItemGroup>
-      <!-- Include CLI executable -->
-      <ResolvedFileToPublish Include="$(OutputPath)docx-template*" Condition="Exists('$(OutputPath)docx-template')" />
-      <ResolvedFileToPublish Include="$(OutputPath)docx-template.exe" Condition="Exists('$(OutputPath)docx-template.exe')" />
       <!-- Include templates directory -->
       <ResolvedFileToPublish Include="$(OutputPath)templates\**\*" RelativePath="templates\%(RecursiveDir)%(Filename)%(Extension)" Condition="Exists('$(OutputPath)templates')" />
     </ItemGroup>

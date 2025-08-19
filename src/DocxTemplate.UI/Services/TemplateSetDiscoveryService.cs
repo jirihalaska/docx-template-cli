@@ -3,23 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DocxTemplate.Core.Services;
 
 namespace DocxTemplate.UI.Services;
 
 /// <summary>
-/// Implementation of template set discovery using CLI list-sets command
+/// Implementation of template set discovery using Infrastructure services directly
 /// </summary>
 public class TemplateSetDiscoveryService : ITemplateSetDiscoveryService
 {
-    private readonly ICliCommandService _cliCommandService;
-    private readonly CliCommandBuilder _commandBuilder;
-    private readonly CliResultParser _resultParser;
+    private readonly ITemplateSetService _templateSetService;
 
-    public TemplateSetDiscoveryService(ICliCommandService cliCommandService, CliCommandBuilder commandBuilder)
+    public TemplateSetDiscoveryService(ITemplateSetService templateSetService)
     {
-        _cliCommandService = cliCommandService ?? throw new ArgumentNullException(nameof(cliCommandService));
-        _commandBuilder = commandBuilder ?? throw new ArgumentNullException(nameof(commandBuilder));
-        _resultParser = new CliResultParser();
+        _templateSetService = templateSetService ?? throw new ArgumentNullException(nameof(templateSetService));
     }
 
     /// <inheritdoc />
@@ -32,78 +29,42 @@ public class TemplateSetDiscoveryService : ITemplateSetDiscoveryService
 
         try
         {
-            // Use CliCommandBuilder to construct the command
-            var cliCommand = _commandBuilder.BuildListSetsCommand(templatesPath);
+            var templateSets = await _templateSetService.ListTemplateSetsAsync(
+                templatesPath, 
+                includeEmptyFolders: false, 
+                cancellationToken);
 
-            // Execute the command using the structured command data
-            var jsonOutput = await _cliCommandService.ExecuteCommandAsync(
-                cliCommand.CommandName, 
-                cliCommand.Arguments);
-
-            if (string.IsNullOrWhiteSpace(jsonOutput))
-            {
-                return Array.Empty<TemplateSetInfo>();
-            }
-
-            if (!_resultParser.IsSuccessResponse(jsonOutput))
-            {
-                throw new InvalidOperationException("CLI command returned unsuccessful response");
-            }
-
-            var response = _resultParser.ParseJsonResult<ListSetsResponse>(jsonOutput);
-            
-            return response.Data?.TemplateSets?
+            return templateSets
                 .Select(ts => new TemplateSetInfo
                 {
-                    Name = ts.Name ?? string.Empty,
-                    Path = System.IO.Path.Combine(templatesPath, ts.Name ?? string.Empty),
-                    FileCount = ts.FileCount,
-                    TotalSize = ts.TotalSize,
-                    TotalSizeFormatted = ts.TotalSizeFormatted ?? "0 B",
-                    LastModified = ts.LastModified ?? DateTime.UtcNow
+                    Name = ts.Name,
+                    Path = ts.FullPath,
+                    FileCount = ts.TemplateCount,
+                    TotalSize = ts.TotalSizeBytes,
+                    TotalSizeFormatted = FormatBytes(ts.TotalSizeBytes),
+                    LastModified = ts.LastModified
                 })
-                .ToArray() ?? Array.Empty<TemplateSetInfo>();
+                .ToArray();
         }
-        catch (InvalidOperationException)
+        catch (Exception)
         {
-            // CLI command failed - return empty result instead of throwing
+            // Return empty result on error instead of throwing
             // This allows the UI to show appropriate error messages
             return Array.Empty<TemplateSetInfo>();
         }
-        catch (Exception ex) when (ex is not ArgumentException)
-        {
-            // Other unexpected errors - return empty result
-            return Array.Empty<TemplateSetInfo>();
-        }
     }
-}
 
-/// <summary>
-/// Response model for CLI list-sets command
-/// </summary>
-internal record ListSetsResponse
-{
-    public string? Command { get; init; }
-    public bool Success { get; init; }
-    public ListSetsData? Data { get; init; }
-}
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
 
-/// <summary>
-/// Data section of CLI list-sets response
-/// </summary>
-internal record ListSetsData
-{
-    public IReadOnlyList<TemplateSetResponse>? TemplateSets { get; init; }
-}
-
-/// <summary>
-/// Individual template set in CLI response
-/// </summary>
-internal record TemplateSetResponse
-{
-    public string? Name { get; init; }
-    public int FileCount { get; init; }
-    public long TotalSize { get; init; }
-    public string? TotalSizeFormatted { get; init; }
-    public DateTime? LastModified { get; init; }
+        return $"{len:0.##} {sizes[order]}";
+    }
 }

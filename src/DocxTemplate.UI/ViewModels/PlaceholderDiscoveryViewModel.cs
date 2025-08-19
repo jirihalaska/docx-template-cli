@@ -5,10 +5,10 @@ using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
+using DocxTemplate.Core.Services;
 using DocxTemplate.UI.Models;
 using DocxTemplate.UI.Services;
 using ReactiveUI;
-using System.Text.Json;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -17,7 +17,7 @@ namespace DocxTemplate.UI.ViewModels;
 /// </summary>
 public class PlaceholderDiscoveryViewModel : StepViewModelBase
 {
-    private readonly ICliCommandService _cliCommandService;
+    private readonly IPlaceholderScanService _placeholderScanService;
     
     private ObservableCollection<PlaceholderItemViewModel> _discoveredPlaceholders;
     private bool _isScanning;
@@ -29,9 +29,9 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
     private int _totalOccurrences;
     private TemplateSetItemViewModel? _selectedTemplateSet;
 
-    public PlaceholderDiscoveryViewModel(ICliCommandService cliCommandService)
+    public PlaceholderDiscoveryViewModel(IPlaceholderScanService placeholderScanService)
     {
-        _cliCommandService = cliCommandService ?? throw new ArgumentNullException(nameof(cliCommandService));
+        _placeholderScanService = placeholderScanService ?? throw new ArgumentNullException(nameof(placeholderScanService));
         
         _discoveredPlaceholders = new ObservableCollection<PlaceholderItemViewModel>();
         
@@ -205,36 +205,14 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         try
         {
             var templatePath = SelectedTemplateSet.TemplateSetInfo.Path;
-            var arguments = new[] { "scan", "--path", $"\"{templatePath}\"", "--format", "json", "--quiet" };
             
-            var jsonOutput = await _cliCommandService.ExecuteCommandAsync("", arguments);
-            
-            // Validate JSON output
-            if (string.IsNullOrWhiteSpace(jsonOutput))
-            {
-                throw new InvalidOperationException("CLI command returned empty output");
-            }
-            
-            // If output starts with non-JSON characters, it might be an error message
-            if (!jsonOutput.TrimStart().StartsWith("{") && !jsonOutput.TrimStart().StartsWith("["))
-            {
-                throw new InvalidOperationException($"CLI command returned non-JSON output: {jsonOutput}");
-            }
-            
-            var cliResponse = JsonSerializer.Deserialize<CliScanResponse>(jsonOutput, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var scanResult = await _placeholderScanService.ScanPlaceholdersAsync(
+                templatePath,
+                pattern: @"\{\{.*?\}\}",
+                recursive: true,
+                cancellationToken: CancellationToken.None);
 
-            if (cliResponse != null)
-            {
-                var scanResult = cliResponse.ToPlaceholderScanResult();
-                await ProcessScanResult(scanResult);
-            }
-            else
-            {
-                throw new InvalidOperationException("Failed to parse scan results from CLI output");
-            }
+            await ProcessScanResult(scanResult);
         }
         catch (Exception ex)
         {

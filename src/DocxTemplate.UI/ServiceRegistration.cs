@@ -1,5 +1,9 @@
 using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using DocxTemplate.Core.Services;
+using DocxTemplate.Infrastructure.DependencyInjection;
+using DocxTemplate.Infrastructure.Services;
 using DocxTemplate.UI.Services;
 using DocxTemplate.UI.ViewModels;
 
@@ -17,14 +21,16 @@ public static class ServiceRegistration
     /// <returns>Configured service collection</returns>
     public static IServiceCollection RegisterServices(this IServiceCollection services)
     {
-        // Register CLI services as transient to avoid startup deadlock
-        services.AddTransient<ICliExecutableDiscoveryService, CliExecutableDiscoveryService>();
-        services.AddTransient<CliCommandServiceFactory>();
-        services.AddTransient<CliCommandBuilder>();
-        services.AddTransient<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
+        // Create configuration
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .Build();
+
+        // Register Infrastructure services directly (no CLI dependency)
+        services.AddInfrastructure(configuration);
         
-        // Register lazy CLI command service - discovery will happen on first use, not during startup
-        services.AddSingleton<ICliCommandService, LazyCliCommandService>();
+        // Register UI-specific template set discovery service
+        services.AddTransient<ITemplateSetDiscoveryService, UI.Services.TemplateSetDiscoveryService>();
         
         // Register ViewModels
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));

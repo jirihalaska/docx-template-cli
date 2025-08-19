@@ -2,18 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reactive;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using DocxTemplate.Core.Models;
+using DocxTemplate.Core.Services;
 using ReactiveUI;
-using DocxTemplate.UI.Services;
 
 namespace DocxTemplate.UI.ViewModels;
 
 public class ProcessingResultsViewModel : StepViewModelBase
 {
-    private readonly ICliCommandService _cliCommandService;
+    private readonly ITemplateCopyService _templateCopyService;
+    private readonly IPlaceholderReplaceService _placeholderReplaceService;
     private string _processingStatus = "";
     private bool _isProcessing = false;
     private bool _isProcessingComplete = false;
@@ -27,12 +30,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private Dictionary<string, string> _placeholderValues = new();
     private CancellationTokenSource? _cancellationTokenSource;
 
-    private readonly CliCommandBuilder _commandBuilder;
-
-    public ProcessingResultsViewModel(ICliCommandService cliCommandService, CliCommandBuilder commandBuilder)
+    public ProcessingResultsViewModel(ITemplateCopyService templateCopyService, IPlaceholderReplaceService placeholderReplaceService)
     {
-        _cliCommandService = cliCommandService ?? throw new ArgumentNullException(nameof(cliCommandService));
-        _commandBuilder = commandBuilder ?? throw new ArgumentNullException(nameof(commandBuilder));
+        _templateCopyService = templateCopyService ?? throw new ArgumentNullException(nameof(templateCopyService));
+        _placeholderReplaceService = placeholderReplaceService ?? throw new ArgumentNullException(nameof(placeholderReplaceService));
 
         var canProcessTemplates = this.WhenAnyValue(
             x => x.IsProcessing,
@@ -241,16 +242,19 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
-            // Use CliCommandBuilder to construct the copy command
-            var cliCommand = _commandBuilder.BuildCopyCommand(_templateSetPath, OutputFolderPath);
+            var result = await _templateCopyService.CopyTemplatesAsync(
+                _templateSetPath,
+                OutputFolderPath,
+                preserveStructure: true,
+                cancellationToken: _cancellationTokenSource?.Token ?? CancellationToken.None);
 
-            var result = await _cliCommandService.ExecuteCommandAsync(cliCommand.CommandName, cliCommand.Arguments);
-            await logFile.WriteLineAsync($"Copy command output: {result}");
+            await logFile.WriteLineAsync($"Copy operation completed successfully. Files copied: {result.FilesCount}, Total size: {result.TotalBytesCount} bytes");
+            await logFile.WriteLineAsync($"Target directory: {ActualTargetFolderPath}");
             return (true, "");
         }
         catch (Exception ex)
         {
-            await logFile.WriteLineAsync($"Copy command failed: {ex.Message}");
+            await logFile.WriteLineAsync($"Copy operation failed: {ex.Message}");
             return (false, ex.Message);
         }
     }
@@ -274,16 +278,26 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
-            // Use CliCommandBuilder to construct the replace command
-            var cliCommand = _commandBuilder.BuildReplaceCommand(ActualTargetFolderPath, mappingFilePath);
+            // Load the replacement mappings from JSON file
+            var jsonContent = await File.ReadAllTextAsync(mappingFilePath);
+            var replacementMap = ReplacementMap.FromJson(jsonContent, mappingFilePath);
 
-            var result = await _cliCommandService.ExecuteCommandAsync(cliCommand.CommandName, cliCommand.Arguments);
-            await logFile.WriteLineAsync($"Replace command output: {result}");
+            var result = await _placeholderReplaceService.ReplacePlaceholdersAsync(
+                ActualTargetFolderPath,
+                replacementMap,
+                createBackup: false,
+                cancellationToken: _cancellationTokenSource?.Token ?? CancellationToken.None);
+
+            await logFile.WriteLineAsync($"Replace operation completed successfully. Files processed: {result.FilesProcessed}, Placeholders replaced: {result.TotalReplacements}");
+            if (result.HasErrors)
+            {
+                await logFile.WriteLineAsync($"Warnings/Errors: {string.Join(", ", result.AllErrors)}");
+            }
             return (true, "");
         }
         catch (Exception ex)
         {
-            await logFile.WriteLineAsync($"Replace command failed: {ex.Message}");
+            await logFile.WriteLineAsync($"Replace operation failed: {ex.Message}");
             return (false, ex.Message);
         }
     }

@@ -76,7 +76,7 @@ public class WizardViewModel : ViewModelBase
         };
 
         var canGoBack = this.WhenAnyValue(x => x.CurrentStep)
-            .Select(step => step > 1)
+            .Select(step => step > 1 && step < TotalSteps)  // Hide back button on final step
             .ObserveOn(RxApp.MainThreadScheduler);
             
         var canGoNext = this.WhenAnyValue(x => x.CurrentStep)
@@ -85,9 +85,14 @@ public class WizardViewModel : ViewModelBase
                 this.WhenAnyValue(x => x.CanAdvanceToNextStep).ObserveOn(RxApp.MainThreadScheduler), 
                 (step, canAdvance) => step < TotalSteps && canAdvance)
             .ObserveOn(RxApp.MainThreadScheduler);
+            
+        var canFinish = this.WhenAnyValue(x => x.CurrentStep)
+            .Select(step => step == TotalSteps)
+            .ObserveOn(RxApp.MainThreadScheduler);
 
         NextCommand = ReactiveCommand.Create(GoToNextStep, canGoNext, RxApp.MainThreadScheduler);
         BackCommand = ReactiveCommand.Create(GoToPreviousStep, canGoBack, RxApp.MainThreadScheduler);
+        FinishCommand = ReactiveCommand.Create(FinishWizard, canFinish, RxApp.MainThreadScheduler);
 
         this.WhenAnyValue(x => x.CurrentStep)
             .Subscribe(UpdateStepStates);
@@ -132,6 +137,23 @@ public class WizardViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> NextCommand { get; }
 
     public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    
+    public ReactiveCommand<Unit, Unit> FinishCommand { get; }
+    
+    /// <summary>
+    /// Indicates whether the back button should be visible
+    /// </summary>
+    public bool IsBackButtonVisible => CurrentStep > 1 && CurrentStep < TotalSteps;
+    
+    /// <summary>
+    /// Indicates whether the next button should be visible
+    /// </summary>
+    public bool IsNextButtonVisible => CurrentStep < TotalSteps;
+    
+    /// <summary>
+    /// Indicates whether the finish button should be visible
+    /// </summary>
+    public bool IsFinishButtonVisible => CurrentStep == TotalSteps;
 
     private async void GoToNextStep()
     {
@@ -201,6 +223,18 @@ public class WizardViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(CurrentStepTitle));
         this.RaisePropertyChanged(nameof(StepIndicatorText));
         this.RaisePropertyChanged(nameof(CurrentStepContent));
+        this.RaisePropertyChanged(nameof(IsBackButtonVisible));
+        this.RaisePropertyChanged(nameof(IsNextButtonVisible));
+        this.RaisePropertyChanged(nameof(IsFinishButtonVisible));
+    }
+    
+    /// <summary>
+    /// Finishes the wizard and closes the application
+    /// </summary>
+    private void FinishWizard()
+    {
+        // Close the application
+        Environment.Exit(0);
     }
 
     /// <summary>

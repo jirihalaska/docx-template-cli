@@ -78,7 +78,8 @@
               Command="{Binding BackCommand}"
               MinWidth="80"
               Padding="12,6"
-              TabIndex="100" />
+              TabIndex="100"
+              IsVisible="{Binding IsBackButtonVisible}" />
               
       <Button Content="Další"
               Command="{Binding NextCommand}"
@@ -86,7 +87,17 @@
               Padding="12,6"
               Classes="accent"
               TabIndex="101"
-              IsDefault="True" />
+              IsDefault="True"
+              IsVisible="{Binding IsNextButtonVisible}" />
+              
+      <Button Content="Ukončit"
+              Command="{Binding FinishCommand}"
+              MinWidth="80"
+              Padding="12,6"
+              Classes="accent"
+              TabIndex="102"
+              IsDefault="True"
+              IsVisible="{Binding IsFinishButtonVisible}" />
     </StackPanel>
 
   </Grid>

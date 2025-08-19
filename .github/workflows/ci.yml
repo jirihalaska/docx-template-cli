@@ -175,7 +175,7 @@ jobs:
         verbose: true
         
   package:
-    name: Create Packages
+    name: Create Windows Release Package
     runs-on: windows-latest
     needs: [build-and-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -191,32 +191,71 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    # Skip explicit restore - dotnet pack will restore as needed
-    - name: Create NuGet packages
+    - name: Build Windows Release Package
+      shell: powershell
       run: |
-        # Build only what's needed for NuGet packages, exclude UI project to avoid CLI build conflicts
-        dotnet pack src/DocxTemplate.Core/DocxTemplate.Core.csproj --configuration Release --output ./packages --verbosity minimal
-        dotnet pack src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj --configuration Release --output ./packages --verbosity minimal
-        dotnet pack src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --output ./packages --verbosity minimal
+        $ReleaseDir = "release\DocxTemplate-Windows"
         
-    - name: Create Windows executable
+        Write-Host "Building CLI as single-file executable..." -ForegroundColor Cyan
+        dotnet publish src\DocxTemplate.CLI\DocxTemplate.CLI.csproj `
+          -c Release -r win-x64 --self-contained `
+          -p:PublishSingleFile=true `
+          -o "$ReleaseDir\cli-temp" `
+          --verbosity minimal
+        
+        Write-Host "Building GUI application..." -ForegroundColor Cyan
+        dotnet publish src\DocxTemplate.UI\DocxTemplate.UI.csproj `
+          -c Release -r win-x64 --self-contained `
+          -p:SkipCliBuild=true `
+          -p:PublishSingleFile=false `
+          -o "$ReleaseDir" `
+          --verbosity minimal
+        
+        Write-Host "Setting up CLI integration..." -ForegroundColor Cyan
+        # Copy single-file CLI with user-friendly name
+        Copy-Item "$ReleaseDir\cli-temp\DocxTemplate.CLI.exe" "$ReleaseDir\docx-template.exe"
+        Remove-Item -Recurse -Force "$ReleaseDir\cli-temp"
+        
+        Write-Host "Creating README..." -ForegroundColor Cyan
+        @"
+        DocxTemplate - Word Document Template Processor
+        ===============================================
+        
+        QUICK START:
+        1. Double-click "DocxTemplate.UI.exe" to start the GUI application
+        
+        COMMAND LINE USAGE:
+        1. Open Command Prompt in this folder
+        2. Run: docx-template.exe --help
+        
+        FILES INCLUDED:
+        - DocxTemplate.UI.exe - Main GUI application
+        - docx-template.exe - Command-line tool (single-file)
+        - *.dll - Required runtime libraries for GUI
+        
+        SYSTEM REQUIREMENTS:
+        - Windows 10 version 1709 or later
+        - x64 architecture
+        - No additional software installation required
+        
+        VERSION: 1.0.0
+        "@ | Out-File -FilePath "$ReleaseDir\README.txt" -Encoding UTF8
+        
+        Write-Host "Package created successfully!" -ForegroundColor Green
+        
+    - name: Create ZIP archive
+      shell: powershell
       run: |
-        # Build CLI executable directly without UI project dependencies
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r win-x64 --self-contained -o ./publish/win-x64 --verbosity minimal
+        Compress-Archive -Path "release\DocxTemplate-Windows" -DestinationPath "release\DocxTemplate-Windows-Portable.zip"
         
-    - name: Create macOS executable  
-      run: |
-        # Build CLI executable directly without UI project dependencies  
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r osx-x64 --self-contained -o ./publish/osx-x64 --verbosity minimal
-        
-    - name: Upload NuGet packages
+    - name: Upload Windows Package
       uses: actions/upload-artifact@v4
       with:
-        name: nuget-packages
-        path: ./packages/*.nupkg
+        name: windows-release-package
+        path: release/DocxTemplate-Windows-Portable.zip
         
-    - name: Upload executables
+    - name: Upload Package Contents (for inspection)
       uses: actions/upload-artifact@v4
       with:
-        name: executables
-        path: ./publish/*
+        name: windows-release-contents
+        path: release/DocxTemplate-Windows/*

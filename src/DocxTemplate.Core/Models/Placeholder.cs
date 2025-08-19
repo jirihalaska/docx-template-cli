@@ -34,6 +34,11 @@ public record Placeholder
     public required int TotalOccurrences { get; init; }
 
     /// <summary>
+    /// Constant for the file prefix system placeholder
+    /// </summary>
+    public const string FilePrefixPlaceholder = "SOUBOR_PREFIX";
+
+    /// <summary>
     /// Validates that the placeholder pattern is a valid regular expression
     /// </summary>
     /// <returns>True if the pattern is valid</returns>

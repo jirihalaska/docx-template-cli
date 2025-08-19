@@ -146,13 +146,26 @@ public class PlaceholderScanService : IPlaceholderScanService
         }
 
         // Create final placeholder objects with aggregated locations
-        var finalPlaceholders = allPlaceholders.Select(kvp => new Placeholder
+        var placeholderList = allPlaceholders.Select(kvp => new Placeholder
         {
             Name = kvp.Key,
             Pattern = pattern,
             Locations = kvp.Value.AsReadOnly(),
             TotalOccurrences = kvp.Value.Sum(l => l.Occurrences)
         }).ToList();
+
+        // Put SOUBOR_PREFIX first if it exists, keep the rest in original order
+        var finalPlaceholders = new List<Placeholder>();
+        var prefixPlaceholder = placeholderList.FirstOrDefault(p => string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase));
+        if (prefixPlaceholder != null)
+        {
+            finalPlaceholders.Add(prefixPlaceholder);
+            finalPlaceholders.AddRange(placeholderList.Where(p => !string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase)));
+        }
+        else
+        {
+            finalPlaceholders.AddRange(placeholderList);
+        }
 
         var duration = DateTime.UtcNow - startTime;
 
@@ -344,13 +357,26 @@ public class PlaceholderScanService : IPlaceholderScanService
         }
 
         // Convert to final placeholder objects
-        var finalPlaceholders = placeholders.Select(kvp => new Placeholder
+        var placeholderList = placeholders.Select(kvp => new Placeholder
         {
             Name = kvp.Key,
             Pattern = pattern,
             Locations = kvp.Value.AsReadOnly(),
             TotalOccurrences = kvp.Value.Sum(l => l.Occurrences)
         }).ToList();
+
+        // Put SOUBOR_PREFIX first if it exists, keep the rest in original order
+        var finalPlaceholders = new List<Placeholder>();
+        var prefixPlaceholder = placeholderList.FirstOrDefault(p => string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase));
+        if (prefixPlaceholder != null)
+        {
+            finalPlaceholders.Add(prefixPlaceholder);
+            finalPlaceholders.AddRange(placeholderList.Where(p => !string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase)));
+        }
+        else
+        {
+            finalPlaceholders.AddRange(placeholderList);
+        }
 
         return new ScanFileResult
         {

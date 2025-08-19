@@ -241,13 +241,26 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         // Process data in background thread
         var processedData = await Task.Run(() =>
         {
-            // Sort placeholders by discovery order (first occurrence determines position)
-            // Use the first location as the reference point for ordering
-            var sortedPlaceholders = scanResult.Placeholders
-                .OrderBy(p => p.Locations.FirstOrDefault()?.FilePath ?? "")
-                .ThenBy(p => p.Locations.FirstOrDefault()?.CharacterPositions?.FirstOrDefault() ?? 0)
+            // Create list starting with discovered placeholders (already sorted by scan service)
+            var placeholderViewModels = scanResult.Placeholders
                 .Select(p => new PlaceholderItemViewModel(p))
                 .ToList();
+
+            // Ensure SOUBOR_PREFIX appears first, even if not found in templates
+            if (!scanResult.Placeholders.Any(p => p.Name == Placeholder.FilePrefixPlaceholder))
+            {
+                // Create a placeholder for SOUBOR_PREFIX with zero occurrences
+                var souborPrefixPlaceholder = new Placeholder
+                {
+                    Name = Placeholder.FilePrefixPlaceholder,
+                    Pattern = @"\{\{.*?\}\}",
+                    Locations = new List<PlaceholderLocation>().AsReadOnly(),
+                    TotalOccurrences = 0
+                };
+                
+                // Insert at the beginning of the list
+                placeholderViewModels.Insert(0, new PlaceholderItemViewModel(souborPrefixPlaceholder));
+            }
 
             var statusMessage = scanResult.IsSuccessful
                 ? $"Dokončeno: nalezeno {scanResult.UniquePlaceholderCount} zástupných symbolů ({scanResult.TotalOccurrences} výskytů)"
@@ -259,7 +272,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
 
             return new
             {
-                Placeholders = sortedPlaceholders,
+                Placeholders = placeholderViewModels,
                 TotalPlaceholders = scanResult.UniquePlaceholderCount,
                 TotalOccurrences = scanResult.TotalOccurrences,
                 IsSuccessful = scanResult.IsSuccessful,
@@ -344,13 +357,33 @@ public class PlaceholderItemViewModel : ReactiveObject
     /// <summary>
     /// Formatted display text with occurrence count
     /// </summary>
-    public string DisplayText => $"{Name} ({OccurrenceCount} výskytů)";
+    public string DisplayText 
+    {
+        get
+        {
+            if (Name == Placeholder.FilePrefixPlaceholder && OccurrenceCount == 0)
+            {
+                return $"{Name} (systémový prefix - volitelný)";
+            }
+            return $"{Name} ({OccurrenceCount} výskytů)";
+        }
+    }
 
     /// <summary>
     /// List of files where this placeholder appears
     /// </summary>
-    public string FilesListText => string.Join(", ", 
-        Placeholder.Locations.Select(l => System.IO.Path.GetFileName(l.FilePath)).Distinct());
+    public string FilesListText
+    {
+        get
+        {
+            if (Name == Placeholder.FilePrefixPlaceholder && !Placeholder.Locations.Any())
+            {
+                return "Automaticky přidáno pro prefix souborů";
+            }
+            return string.Join(", ", 
+                Placeholder.Locations.Select(l => System.IO.Path.GetFileName(l.FilePath)).Distinct());
+        }
+    }
 
     /// <summary>
     /// Number of files containing this placeholder

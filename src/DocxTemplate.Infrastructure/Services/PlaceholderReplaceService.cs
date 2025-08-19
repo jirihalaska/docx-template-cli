@@ -149,14 +149,23 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             }
 
             var replacementCount = await ProcessDocumentReplacementsAsync(templatePath, replacementMap, cancellationToken);
+            
+            // Handle file prefix renaming if SOUBOR_PREFIX was provided
+            var finalFilePath = templatePath;
+            if (replacementMap.Mappings.TryGetValue(Placeholder.FilePrefixPlaceholder, out var prefix) && 
+                !string.IsNullOrWhiteSpace(prefix))
+            {
+                finalFilePath = await ApplyFilePrefixAsync(templatePath, prefix, cancellationToken);
+            }
+            
             var endTime = DateTime.UtcNow;
 
             return FileReplaceResult.Success(
-                templatePath,
+                finalFilePath,
                 replacementCount,
                 backupPath,
                 endTime - startTime,
-                _fileSystemService.GetFileSize(templatePath));
+                _fileSystemService.GetFileSize(finalFilePath));
         }
         catch (Exception ex)
         {
@@ -569,11 +578,19 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         {
             var replacementCount = await ProcessDocumentReplacementsAsync(templateFile.FullPath, replacementMap, cancellationToken);
 
+            // Handle file prefix renaming if SOUBOR_PREFIX was provided
+            var finalFilePath = templateFile.FullPath;
+            if (replacementMap.Mappings.TryGetValue(Placeholder.FilePrefixPlaceholder, out var prefix) && 
+                !string.IsNullOrWhiteSpace(prefix))
+            {
+                finalFilePath = await ApplyFilePrefixAsync(templateFile.FullPath, prefix, cancellationToken);
+            }
+
             var endTime = DateTime.UtcNow;
             var duration = endTime - startTime;
 
             var fileResult = FileReplaceResult.Success(
-                templateFile.FullPath,
+                finalFilePath,
                 replacementCount,
                 processingDuration: duration);
 
@@ -597,5 +614,116 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 [fileResult],
                 duration);
         }
+    }
+
+    /// <summary>
+    /// Applies a file prefix to a template file by renaming it
+    /// </summary>
+    /// <param name="originalPath">The original file path</param>
+    /// <param name="prefix">The prefix to apply</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The new file path after renaming</returns>
+    private async Task<string> ApplyFilePrefixAsync(string originalPath, string prefix, CancellationToken cancellationToken)
+    {
+        await Task.Yield(); // Make method async
+        
+        var directory = Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
+        var fileName = Path.GetFileName(originalPath);
+        var extension = Path.GetExtension(fileName);
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        
+        // Sanitize prefix for file system compatibility
+        var sanitizedPrefix = SanitizePrefix(prefix);
+        if (string.IsNullOrWhiteSpace(sanitizedPrefix))
+        {
+            _logger.LogDebug("Empty prefix after sanitization, keeping original filename: {OriginalPath}", originalPath);
+            return originalPath;
+        }
+        
+        // Create new filename with prefix
+        var newFileName = $"{sanitizedPrefix}_{fileNameWithoutExtension}{extension}";
+        var newFilePath = Path.Combine(directory, newFileName);
+        
+        // Handle file conflicts by adding numeric suffix
+        newFilePath = GetUniqueFilePath(newFilePath);
+        
+        try
+        {
+            _fileSystemService.MoveFile(originalPath, newFilePath);
+            _logger.LogDebug("Applied file prefix: {OriginalPath} -> {NewPath}", originalPath, newFilePath);
+            return newFilePath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to apply file prefix, keeping original name: {OriginalPath}", originalPath);
+            return originalPath; // Fall back to original path if rename fails
+        }
+    }
+
+    /// <summary>
+    /// Sanitizes a prefix string for file system compatibility
+    /// </summary>
+    /// <param name="prefix">The raw prefix</param>
+    /// <returns>Sanitized prefix safe for file names</returns>
+    private static string SanitizePrefix(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+            return string.Empty;
+        
+        // Remove or replace invalid file name characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = prefix;
+        
+        foreach (var invalidChar in invalidChars)
+        {
+            sanitized = sanitized.Replace(invalidChar, '_');
+        }
+        
+        // Additional sanitization for common problematic characters
+        sanitized = sanitized
+            .Replace(":", "_")
+            .Replace("*", "_")
+            .Replace("?", "_")
+            .Replace("\"", "_")
+            .Replace("<", "_")
+            .Replace(">", "_")
+            .Replace("|", "_");
+        
+        // Trim whitespace and limit length
+        sanitized = sanitized.Trim();
+        if (sanitized.Length > 50) // Reasonable limit to avoid long paths
+        {
+            sanitized = sanitized.Substring(0, 50).Trim();
+        }
+        
+        return sanitized;
+    }
+
+    /// <summary>
+    /// Gets a unique file path by adding numeric suffix if file already exists
+    /// </summary>
+    /// <param name="originalPath">The desired file path</param>
+    /// <returns>Unique file path</returns>
+    private string GetUniqueFilePath(string originalPath)
+    {
+        if (!_fileSystemService.FileExists(originalPath))
+            return originalPath;
+        
+        var directory = Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
+        var fileName = Path.GetFileNameWithoutExtension(originalPath);
+        var extension = Path.GetExtension(originalPath);
+        
+        var counter = 1;
+        string newPath;
+        
+        do
+        {
+            var newFileName = $"{fileName}({counter}){extension}";
+            newPath = Path.Combine(directory, newFileName);
+            counter++;
+        } 
+        while (_fileSystemService.FileExists(newPath) && counter < 1000); // Prevent infinite loop
+        
+        return newPath;
     }
 }

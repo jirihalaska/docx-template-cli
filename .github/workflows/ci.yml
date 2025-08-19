@@ -27,9 +27,7 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Restore dependencies
-      run: dotnet restore
-      
+    # Skip explicit restore - dotnet publish will restore as needed
     - name: Test Windows x64 executables
       shell: powershell
       run: |
@@ -111,30 +109,28 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
           
-    - name: Restore dependencies
-      run: dotnet restore
-      
+    # Build solution - restore happens automatically
     - name: Build solution (exclude UI to prevent CLI build conflicts)
       run: |
         # Build projects individually to avoid CLI file lock from UI project dependency
-        dotnet build src/DocxTemplate.Core/DocxTemplate.Core.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.TestUtilities/DocxTemplate.TestUtilities.csproj --configuration Release --no-restore --verbosity minimal
+        dotnet build src/DocxTemplate.Core/DocxTemplate.Core.csproj --configuration Release --verbosity minimal
+        dotnet build src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj --configuration Release --verbosity minimal
+        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.TestUtilities/DocxTemplate.TestUtilities.csproj --configuration Release --verbosity minimal
         # Build UI-related projects last, after CLI is already built
-        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.UI.Tests/DocxTemplate.UI.Tests.csproj --configuration Release --no-restore --verbosity minimal
-        dotnet build tests/DocxTemplate.EndToEnd.Tests/DocxTemplate.EndToEnd.Tests.csproj --configuration Release --no-restore --verbosity minimal
+        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.UI.Tests/DocxTemplate.UI.Tests.csproj --configuration Release --verbosity minimal
+        dotnet build tests/DocxTemplate.EndToEnd.Tests/DocxTemplate.EndToEnd.Tests.csproj --configuration Release --verbosity minimal
       
     - name: Run unit tests
       run: |
         # Run tests excluding UI and E2E tests to avoid platform-specific issues in CI
-        dotnet test tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-        dotnet test tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-        dotnet test tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+        dotnet test tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+        dotnet test tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+        dotnet test tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
       
     - name: Kill any remaining processes (Windows)
       if: matrix.os == 'windows-latest'
@@ -195,9 +191,7 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Restore dependencies
-      run: dotnet restore
-      
+    # Skip explicit restore - dotnet pack will restore as needed
     - name: Create NuGet packages
       run: |
         # Build only what's needed for NuGet packages, exclude UI project to avoid CLI build conflicts

@@ -15,7 +15,7 @@ public class ModeSelectionViewModel : StepViewModelBase
     public ModeSelectionViewModel()
     {
         SelectModeCommand = ReactiveCommand.Create<ProcessingMode>(OnModeSelected);
-        
+
         // Always valid - user can select any mode
         IsValid = true;
     }
@@ -30,7 +30,7 @@ public class ModeSelectionViewModel : StepViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _selectedMode, value);
             UpdateValidation();
-            
+
             // Raise event to notify wizard of mode selection
             ModeSelected?.Invoke(value);
         }
@@ -49,12 +49,12 @@ public class ModeSelectionViewModel : StepViewModelBase
     /// <summary>
     /// Czech text for "Select processing mode"
     /// </summary>
-    public string SelectModeText => "Vyberte režim zpracování:";
+    public string SelectModeText => "Co chcete dělat?";
 
     /// <summary>
     /// Czech text for "New Project" mode
     /// </summary>
-    public string NewProjectTitle => "Nova zakazka";
+    public string NewProjectTitle => "Nová zakázka";
 
     /// <summary>
     /// Czech description for "New Project" mode
@@ -69,7 +69,7 @@ public class ModeSelectionViewModel : StepViewModelBase
     /// <summary>
     /// Czech text for "Update Project" mode
     /// </summary>
-    public string UpdateProjectTitle => "Uprava zakazky";
+    public string UpdateProjectTitle => "Úprava zakázky";
 
     /// <summary>
     /// Czech description for "Update Project" mode
@@ -102,7 +102,7 @@ public class ModeSelectionViewModel : StepViewModelBase
     private void OnModeSelected(ProcessingMode mode)
     {
         SelectedMode = mode;
-        
+
         // Raise property change notifications for selection state
         this.RaisePropertyChanged(nameof(IsNewProjectSelected));
         this.RaisePropertyChanged(nameof(IsUpdateProjectSelected));

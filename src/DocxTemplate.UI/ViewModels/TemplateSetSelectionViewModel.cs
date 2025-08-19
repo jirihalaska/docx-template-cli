@@ -17,7 +17,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
 {
     private readonly ITemplateSetDiscoveryService _templateSetDiscoveryService;
     private readonly string _templatesPath = Path.Combine(AppContext.BaseDirectory, "templates");
-    
+
     private ObservableCollection<TemplateSetItemViewModel> _templateSets;
     private TemplateSetItemViewModel? _selectedTemplateSet;
     private bool _isLoading;
@@ -26,11 +26,11 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
 
     public TemplateSetSelectionViewModel(ITemplateSetDiscoveryService templateSetDiscoveryService)
     {
-        _templateSetDiscoveryService = templateSetDiscoveryService ?? 
+        _templateSetDiscoveryService = templateSetDiscoveryService ??
             throw new ArgumentNullException(nameof(templateSetDiscoveryService));
-        
+
         _templateSets = new ObservableCollection<TemplateSetItemViewModel>();
-        
+
         // Initialize reactive command for template set selection
         SelectTemplateSetCommand = ReactiveCommand.Create<TemplateSetItemViewModel>(OnTemplateSetSelected);
         RefreshCommand = ReactiveCommand.CreateFromTask(LoadTemplateSetsAsync);
@@ -115,7 +115,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
     /// <summary>
     /// Step description for display
     /// </summary>
-    public string StepDescription => "Vyberte sadu šablon pro zpracování z dostupných složek.";
+    public string StepDescription => "Kterou předlohu (druh řízení) chcete zvolit?";
 
     /// <inheritdoc />
     public override bool ValidateStep()
@@ -136,7 +136,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
     public override void OnStepActivated()
     {
         base.OnStepActivated();
-        
+
         // Load template sets when step is activated
         // Run on UI thread to avoid cross-thread issues with ObservableCollection
         _ = LoadTemplateSetsAsync();
@@ -154,7 +154,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
         try
         {
             var templateSets = await _templateSetDiscoveryService.DiscoverTemplateSetsAsync(
-                _templatesPath, 
+                _templatesPath,
                 CancellationToken.None);
 
             TemplateSets.Clear();
@@ -169,7 +169,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
             {
                 // Sort template sets alphabetically by name
                 var sortedTemplateSets = templateSets.OrderBy(ts => ts.Name, StringComparer.OrdinalIgnoreCase);
-                
+
                 foreach (var templateSet in sortedTemplateSets)
                 {
                     var viewModel = new TemplateSetItemViewModel(templateSet);
@@ -213,7 +213,7 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
             // Select the chosen template set
             templateSet.IsSelected = true;
             SelectedTemplateSet = templateSet;
-            
+
             // Trigger auto-advance to next step
             TemplateSelected?.Invoke();
         }

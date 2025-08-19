@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using ReactiveUI;
 using Avalonia.Platform.Storage;
@@ -23,8 +24,9 @@ public class ExistingProjectFolderSelectionViewModel : StepViewModelBase
     {
         SelectFolderCommand = ReactiveCommand.CreateFromTask(SelectFolderAsync);
         
-        // Subscribe to property changes to update validation
+        // Subscribe to property changes to update validation, but skip the initial null value
         this.WhenAnyValue(x => x.SelectedFolderPath)
+            .Skip(1) // Skip the initial null value to prevent premature validation
             .Subscribe(_ => UpdateValidation());
     }
 
@@ -87,6 +89,17 @@ public class ExistingProjectFolderSelectionViewModel : StepViewModelBase
     /// Command to open folder selection dialog
     /// </summary>
     public ReactiveCommand<Unit, Unit> SelectFolderCommand { get; }
+
+    /// <summary>
+    /// Override to prevent immediate validation on step activation
+    /// </summary>
+    public override void OnStepActivated()
+    {
+        // Don't call base.OnStepActivated() to avoid immediate validation
+        // Clear any existing validation message when step is activated
+        ValidationMessage = null;
+        // Validation will occur when the user actually selects a folder
+    }
 
     public override bool ValidateStep()
     {

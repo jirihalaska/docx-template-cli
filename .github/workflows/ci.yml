@@ -161,3 +161,69 @@ jobs:
       with:
         name: executables
         path: ./publish/*
+
+  executable-startup-test-windows:
+    name: Test Windows Executables
+    runs-on: windows-latest
+    needs: [build-and-test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Test Windows x64 executables
+      shell: powershell
+      run: |
+        .\scripts\test-executables.ps1 -Platform "win-x64" -TestDir "test-output"
+        
+    - name: Upload Windows test outputs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-executable-test-outputs
+        path: |
+          test-output/cli/*.txt
+          test-output/gui/*.txt
+
+  executable-startup-test-macos:
+    name: Test macOS Executables  
+    runs-on: macos-latest
+    needs: [build-and-test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Test macOS ARM64 executables
+      shell: bash
+      run: |
+        ./scripts/test-executables.sh osx-arm64 test-output
+        
+    - name: Upload macOS test outputs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-executable-test-outputs
+        path: |
+          test-output/cli/*.txt
+          test-output/gui/*.txt

@@ -11,11 +11,24 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <PublishReadyToRun>true</PublishReadyToRun>
+    
+    <!-- Native AOT configuration (disabled due to Avalonia compatibility issues) -->
+    <!-- <PublishAot>true</PublishAot> -->
+    <!-- <TrimMode>link</TrimMode> -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- Trimmer configuration for Native AOT -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Avalonia.Themes.Fluent" />
+    <TrimmerRootAssembly Include="Avalonia.Themes.Default" />
+    <TrimmerRootAssembly Include="DocxTemplate.Core" />
+    <TrimmerRootAssembly Include="DocxTemplate.UI" />
   </ItemGroup>
 
   <ItemGroup>

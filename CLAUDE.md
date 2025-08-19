@@ -27,12 +27,57 @@ dotnet tool install --global --add-source ./nupkg DocxTemplate.CLI
 ```
 
 ### Publishing
+
+#### CLI Only (Traditional)
 ```bash
-# Create self-contained executables
-dotnet publish -c Release -r win-x64 --self-contained
-dotnet publish -c Release -r osx-x64 --self-contained
-dotnet publish -c Release -r linux-x64 --self-contained
+# Create self-contained CLI executables
+dotnet publish src/DocxTemplate.CLI -c Release -r win-x64 --self-contained
+dotnet publish src/DocxTemplate.CLI -c Release -r osx-x64 --self-contained
+dotnet publish src/DocxTemplate.CLI -c Release -r linux-x64 --self-contained
 ```
+
+#### GUI Application (Self-Contained)
+```bash
+# Create self-contained GUI applications with embedded CLI
+dotnet publish src/DocxTemplate.UI -c Release -r win-x64 --self-contained -p:SkipCliBuild=true
+dotnet publish src/DocxTemplate.UI -c Release -r osx-arm64 --self-contained -p:SkipCliBuild=true
+dotnet publish src/DocxTemplate.UI -c Release -r linux-x64 --self-contained -p:SkipCliBuild=true
+```
+
+#### Complete Release Build (Recommended)
+```bash
+# Build both CLI and GUI together for all platforms
+./scripts/build-release.sh
+
+# Or build just GUI for current platform (with app bundle on macOS)
+./scripts/publish-gui.sh
+
+# Build GUI for specific platform
+./scripts/publish-gui.sh win-x64
+./scripts/publish-gui.sh osx-arm64
+./scripts/publish-gui.sh linux-x64
+```
+
+#### Platform-Specific Builds
+```bash
+# Windows: Multiple distribution formats
+./scripts/build-windows.sh
+
+# macOS: App bundle with double-click support  
+./scripts/publish-gui.sh osx-arm64
+
+# Linux: Standard tarball
+./scripts/publish-gui.sh linux-x64
+```
+
+#### Windows Distribution Options
+1. **Portable ZIP** (Recommended): Extract and run, no installation
+2. **Single-file EXE**: Minimal footprint, slower first startup  
+3. **Developer package**: Includes debug symbols for troubleshooting
+
+#### macOS Distribution
+- **App Bundle**: Native `.app` format for double-click launching
+- Self-contained with all dependencies in `Contents/MacOS/`
 
 ## Architecture
 
@@ -69,6 +114,24 @@ All commands support JSON output format for programmatic use.
 - Unit tests use XUnit framework
 - Use lowercase arrange, act, assert comments in tests
 - Execute specific tests using `--filter` parameter
+
+### Executable Testing
+```bash
+# macOS/Linux: Test executable startup functionality
+./scripts/test-executables.sh
+
+# Windows: Test executable startup functionality  
+./scripts/test-executables.ps1
+
+# Test specific platform
+./scripts/test-executables.sh osx-arm64
+./scripts/test-executables.ps1 -Platform "win-x64"
+
+# CI automatically tests platform-native executables:
+# - Windows runner: Tests win-x64 using PowerShell
+# - macOS runner: Tests osx-arm64 using bash
+# See .github/workflows/ci.yml for automated testing
+```
 
 ## CLI Documentation Maintenance
 **IMPORTANT**: When making changes to CLI commands, you MUST update the documentation:

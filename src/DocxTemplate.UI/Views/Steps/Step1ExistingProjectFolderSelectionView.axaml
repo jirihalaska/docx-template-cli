@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DocxTemplate.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DocxTemplate.UI.Views.Steps.Step1ExistingProjectFolderSelectionView"
+             x:DataType="vm:ExistingProjectFolderSelectionViewModel">
+
+  <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+          CornerRadius="8"
+          Padding="20">
+    <StackPanel Spacing="20" HorizontalAlignment="Center">
+      
+      <!-- Step Title -->
+      <TextBlock Text="{Binding FolderSelectionText}"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center" />
+      
+      <!-- Step Description -->
+      <TextBlock Text="{Binding FolderDescriptionText}"
+                 FontSize="14"
+                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap" />
+
+      <!-- Folder Selection -->
+      <StackPanel Spacing="15" MaxWidth="500">
+        
+        <!-- Folder Selection Button -->
+        <Button Command="{Binding SelectFolderCommand}"
+                IsEnabled="{Binding !IsSelectingFolder}"
+                MinHeight="60"
+                Padding="20"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderThickness="2"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                CornerRadius="8">
+          
+          <Button.Styles>
+            <Style Selector="Button:pointerover">
+              <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+              <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+            </Style>
+          </Button.Styles>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <!-- Icon -->
+            <TextBlock Text="📁" 
+                       FontSize="24" 
+                       VerticalAlignment="Center" />
+            
+            <!-- Button Text -->
+            <StackPanel>
+              <TextBlock Text="Výběr složky..."
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding IsSelectingFolder}" />
+              <TextBlock Text="Vybrat složku"
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding !IsSelectingFolder}" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <!-- Selected Folder Display -->
+        <Border IsVisible="{Binding SelectedFolderPath, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                CornerRadius="4"
+                Padding="15">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Vybraná složka:"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            <TextBlock Text="{Binding SelectedFolderPath}"
+                       FontSize="14"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            <TextBlock Text="{Binding DocxFileCountText}"
+                       FontSize="12"
+                       Foreground="{DynamicResource SystemAccentColor}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+
+        <!-- Validation Error -->
+        <Border IsVisible="{Binding ValidationMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource SystemFillColorCriticalBrush}"
+                CornerRadius="4"
+                Padding="15">
+          <StackPanel Spacing="10">
+            <TextBlock Text="⚠️ Chyba"
+                       FontWeight="Bold"
+                       Foreground="White" />
+            <TextBlock Text="{Binding ValidationMessage}"
+                       Foreground="White"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <!-- Empty State Help -->
+        <Border IsVisible="{Binding SelectedFolderPath, Converter={x:Static ObjectConverters.IsNull}}"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                CornerRadius="4"
+                Padding="15">
+          <StackPanel Spacing="10" HorizontalAlignment="Center">
+            <TextBlock Text="💡 Nápověda"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource SystemAccentColor}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Vyberte složku, která již obsahuje částečně vyplněné .docx soubory ze šablon (včetně všech podsložek). Systém najde zbývající nevyplněné proměnné ve všech souborech a umožní vám je dokončit."
+                       FontSize="12"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"
+                       MaxWidth="400" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

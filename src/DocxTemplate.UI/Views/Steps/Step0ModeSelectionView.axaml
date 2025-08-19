@@ -1,0 +1,158 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DocxTemplate.UI.ViewModels"
+             xmlns:models="using:DocxTemplate.UI.Models"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DocxTemplate.UI.Views.Steps.Step0ModeSelectionView"
+             x:DataType="vm:ModeSelectionViewModel">
+
+  <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+          CornerRadius="8"
+          Padding="20">
+    <StackPanel Spacing="30" HorizontalAlignment="Center">
+      
+      <!-- Step Title -->
+      <TextBlock Text="Procesor šablon DOCX - Výběr režimu"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center" />
+      
+      <!-- Step Description -->
+      <TextBlock Text="{Binding SelectModeText}"
+                 FontSize="16"
+                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap" />
+
+      <!-- Mode Selection Options -->
+      <StackPanel Spacing="20" MaxWidth="600">
+        
+        <!-- New Project Mode -->
+        <Button Command="{Binding SelectModeCommand}"
+                CommandParameter="{x:Static models:ProcessingMode.NewProject}"
+                MinHeight="120"
+                Padding="20"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                VerticalContentAlignment="Center"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                CornerRadius="8">
+          
+          <!-- Button styles for selection state -->
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="BorderThickness" Value="2" />
+              <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+            </Style>
+            <Style Selector="Button:pointerover">
+              <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+              <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+            </Style>
+          </Button.Styles>
+
+          <StackPanel Orientation="Horizontal" Spacing="15">
+            <!-- Icon -->
+            <TextBlock Text="🆕" 
+                       FontSize="32" 
+                       VerticalAlignment="Center" />
+            
+            <!-- Content -->
+            <StackPanel VerticalAlignment="Center" Spacing="5">
+              <TextBlock Text="{Binding NewProjectTitle}"
+                         FontSize="18"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding NewProjectDescription}"
+                         FontSize="14"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+              <TextBlock Text="{Binding NewProjectDetails}"
+                         FontSize="12"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            
+            <!-- Selection Indicator -->
+            <Border IsVisible="{Binding IsNewProjectSelected}"
+                    Background="{DynamicResource SystemAccentColor}"
+                    CornerRadius="12"
+                    Width="24"
+                    Height="24"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,10,0">
+              <TextBlock Text="✓"
+                         FontSize="14"
+                         Foreground="White"
+                         FontWeight="Bold"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+          </StackPanel>
+        </Button>
+
+        <!-- Update Project Mode -->
+        <Button Command="{Binding SelectModeCommand}"
+                CommandParameter="{x:Static models:ProcessingMode.UpdateProject}"
+                MinHeight="120"
+                Padding="20"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                VerticalContentAlignment="Center"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                CornerRadius="8">
+          
+          <!-- Button styles for selection state -->
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="BorderThickness" Value="2" />
+              <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+            </Style>
+            <Style Selector="Button:pointerover">
+              <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+              <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+            </Style>
+          </Button.Styles>
+
+          <StackPanel Orientation="Horizontal" Spacing="15">
+            <!-- Icon -->
+            <TextBlock Text="✏️" 
+                       FontSize="32" 
+                       VerticalAlignment="Center" />
+            
+            <!-- Content -->
+            <StackPanel VerticalAlignment="Center" Spacing="5">
+              <TextBlock Text="{Binding UpdateProjectTitle}"
+                         FontSize="18"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding UpdateProjectDescription}"
+                         FontSize="14"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+              <TextBlock Text="{Binding UpdateProjectDetails}"
+                         FontSize="12"
+                         Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            
+            <!-- Selection Indicator -->
+            <Border IsVisible="{Binding IsUpdateProjectSelected}"
+                    Background="{DynamicResource SystemAccentColor}"
+                    CornerRadius="12"
+                    Width="24"
+                    Height="24"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,10,0">
+              <TextBlock Text="✓"
+                         FontSize="14"
+                         Foreground="White"
+                         FontWeight="Bold"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

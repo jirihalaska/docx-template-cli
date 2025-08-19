@@ -328,4 +328,255 @@ public class HappyPathE2ETest : E2ETestBase
         TestOutput.WriteLine($"  - Folder structure preserved with {copiedStructure.Count} directories");
         TestOutput.WriteLine($"Test output available at: {Path.GetFullPath(TestOutputDirectory)}");
     }
+
+    [Fact]
+    public async Task UpdateWorkflow_WithPartiallyProcessedTemplates_CompletesRemainingPlaceholders()
+    {
+        // arrange - Set up services and create partially processed templates
+        var services = SetupServices();
+        var templatesPath = GetTemplatesPath();
+        TestOutput.WriteLine($"Templates path: {templatesPath}");
+
+        // Create a separate output directory for update workflow test
+        var updateTestDirectory = Path.Combine(TestOutputDirectory, "UpdateWorkflowTest");
+        Directory.CreateDirectory(updateTestDirectory);
+
+        // Step 1: Create initial partially processed templates (simulating previous processing)
+        TestOutput.WriteLine("=== Step 1: Setup Partially Processed Templates ===");
+        var templateSetService = services.GetRequiredService<ITemplateSetDiscoveryService>();
+        var templateSets = await templateSetService.DiscoverTemplateSetsAsync(templatesPath);
+        
+        var targetTemplateSet = templateSets.FirstOrDefault(ts => ts.Name.Contains("01 VZOR Užší řízení"))
+                              ?? templateSets.First();
+
+        TestOutput.WriteLine($"Using template set: {targetTemplateSet.Name}");
+
+        // Copy templates to create "partially processed" templates
+        var copyService = services.GetRequiredService<ITemplateCopyService>();
+        await copyService.CopyTemplatesAsync(
+            targetTemplateSet.Path,
+            updateTestDirectory,
+            preserveStructure: true);
+
+        var partiallyProcessedPath = Path.Combine(updateTestDirectory, Path.GetFileName(targetTemplateSet.Path));
+        TestOutput.WriteLine($"Partially processed templates at: {partiallyProcessedPath}");
+
+        // Step 2: Perform partial processing (only some placeholders)
+        TestOutput.WriteLine("\n=== Step 2: Partial Processing (First Round) ===");
+        var scanService = services.GetRequiredService<IPlaceholderScanService>();
+        var initialScanResult = await scanService.ScanPlaceholdersAsync(
+            partiallyProcessedPath,
+            recursive: true);
+
+        TestOutput.WriteLine($"Initial scan: {initialScanResult.Placeholders.Count} unique placeholders found");
+
+        // Create partial replacement mappings (only process some placeholders)
+        var partialReplacementMap = new Dictionary<string, string>();
+        var allPlaceholders = initialScanResult.Placeholders.ToList();
+        
+        // Process only the first half of placeholders, leaving others unfilled
+        var placeholdersToProcessInitially = allPlaceholders.Take(allPlaceholders.Count / 2).ToList();
+        
+        foreach (var placeholder in placeholdersToProcessInitially)
+        {
+            if (CzechTestValues.ContainsKey(placeholder.Name))
+            {
+                partialReplacementMap[placeholder.Name] = CzechTestValues[placeholder.Name];
+            }
+            else
+            {
+                partialReplacementMap[placeholder.Name] = $"ČástečněZpracováno_{placeholder.Name}_Round1";
+            }
+        }
+
+        TestOutput.WriteLine($"Processing {partialReplacementMap.Count} placeholders in first round:");
+        foreach (var kvp in partialReplacementMap.Take(5))
+        {
+            TestOutput.WriteLine($"  ✓ {kvp.Key} -> {kvp.Value}");
+        }
+
+        // Execute partial replacement
+        var replaceService = services.GetRequiredService<IPlaceholderReplaceService>();
+        var partialReplacements = ReplacementMap.FromJson(
+            System.Text.Json.JsonSerializer.Serialize(partialReplacementMap),
+            "partial-replacement.json");
+
+        var partialReplaceResult = await replaceService.ReplacePlaceholdersAsync(
+            partiallyProcessedPath,
+            partialReplacements,
+            createBackup: false);
+
+        TestOutput.WriteLine($"Partial processing: {partialReplaceResult.FilesProcessed} files, {partialReplaceResult.TotalReplacements} replacements");
+        Assert.True(partialReplaceResult.TotalReplacements > 0, "Partial processing should make replacements");
+
+        // Step 3: Simulate Update Workflow - Scan for remaining placeholders
+        TestOutput.WriteLine("\n=== Step 3: Update Workflow - Recursive Placeholder Discovery ===");
+        
+        // This simulates what ExistingProjectFolderSelectionViewModel does
+        var docxFiles = Directory.GetFiles(partiallyProcessedPath, "*.docx", SearchOption.AllDirectories);
+        TestOutput.WriteLine($"Found {docxFiles.Length} .docx files for update workflow (including subfolders)");
+
+        // Scan for remaining placeholders (this is what the Update workflow does)
+        var updateScanResult = await scanService.ScanPlaceholdersAsync(
+            partiallyProcessedPath,
+            recursive: true);
+
+        TestOutput.WriteLine($"Update scan: {updateScanResult.Placeholders.Count} placeholders still need processing");
+        
+        // Verify that some placeholders remain unprocessed
+        Assert.True(updateScanResult.Placeholders.Count > 0, "Should have remaining placeholders for update workflow");
+        
+        // Verify that SOUBOR_PREFIX is filtered out (as per requirements)
+        var remainingPlaceholderNames = updateScanResult.Placeholders.Select(p => p.Name).ToList();
+        Assert.DoesNotContain("SOUBOR_PREFIX", remainingPlaceholderNames);
+        TestOutput.WriteLine("✓ SOUBOR_PREFIX correctly filtered out from update workflow");
+
+        foreach (var placeholder in updateScanResult.Placeholders.Take(5))
+        {
+            TestOutput.WriteLine($"  - {placeholder.Name} (found in {placeholder.UniqueFileCount} files, {placeholder.TotalOccurrences} occurrences)");
+        }
+
+        // Step 4: Complete remaining placeholders (Update workflow completion)
+        TestOutput.WriteLine("\n=== Step 4: Complete Remaining Placeholders ===");
+        
+        var completionReplacementMap = new Dictionary<string, string>();
+        foreach (var placeholder in updateScanResult.Placeholders)
+        {
+            if (CzechTestValues.ContainsKey(placeholder.Name))
+            {
+                completionReplacementMap[placeholder.Name] = CzechTestValues[placeholder.Name];
+            }
+            else
+            {
+                completionReplacementMap[placeholder.Name] = $"Dokončeno_{placeholder.Name}_UpdateWorkflow_ČeskéZnaky";
+            }
+        }
+
+        TestOutput.WriteLine($"Completing {completionReplacementMap.Count} remaining placeholders:");
+        foreach (var kvp in completionReplacementMap.Take(5))
+        {
+            TestOutput.WriteLine($"  ✓ {kvp.Key} -> {kvp.Value}");
+        }
+
+        var completionReplacements = ReplacementMap.FromJson(
+            System.Text.Json.JsonSerializer.Serialize(completionReplacementMap),
+            "completion-replacement.json");
+
+        var completionReplaceResult = await replaceService.ReplacePlaceholdersAsync(
+            partiallyProcessedPath,
+            completionReplacements,
+            createBackup: false);
+
+        TestOutput.WriteLine($"Completion processing: {completionReplaceResult.FilesProcessed} files, {completionReplaceResult.TotalReplacements} replacements");
+        Assert.True(completionReplaceResult.TotalReplacements > 0, "Completion processing should make replacements");
+
+        // Step 5: Verify all placeholders are now processed
+        TestOutput.WriteLine("\n=== Step 5: Final Verification - All Placeholders Completed ===");
+        
+        var finalScanResult = await scanService.ScanPlaceholdersAsync(
+            partiallyProcessedPath,
+            recursive: true);
+
+        TestOutput.WriteLine($"Final scan: {finalScanResult.Placeholders.Count} placeholders remain");
+
+        // Check that all our targeted placeholders were replaced
+        var allProcessedPlaceholders = partialReplacementMap.Keys.Concat(completionReplacementMap.Keys).ToHashSet();
+        var stillRemainingTargetedPlaceholders = finalScanResult.Placeholders
+            .Where(p => allProcessedPlaceholders.Contains(p.Name))
+            .ToList();
+
+        if (stillRemainingTargetedPlaceholders.Any())
+        {
+            TestOutput.WriteLine("❌ UPDATE WORKFLOW FAILED: The following placeholders were NOT completed:");
+            foreach (var placeholder in stillRemainingTargetedPlaceholders)
+            {
+                TestOutput.WriteLine($"  - {placeholder.Name} still found {placeholder.TotalOccurrences} times");
+            }
+        }
+        else
+        {
+            TestOutput.WriteLine("✅ All targeted placeholders successfully completed in update workflow");
+        }
+
+        Assert.Empty(stillRemainingTargetedPlaceholders);
+
+        // Step 6: Verify files exist in nested directories
+        TestOutput.WriteLine("\n=== Step 6: Verify Recursive Directory Processing ===");
+        
+        var allProcessedFiles = Directory.GetFiles(partiallyProcessedPath, "*.docx", SearchOption.AllDirectories);
+        var nestedFiles = allProcessedFiles.Where(f => 
+            !Path.GetDirectoryName(f)!.Equals(partiallyProcessedPath, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        TestOutput.WriteLine($"Total processed files: {allProcessedFiles.Length}");
+        TestOutput.WriteLine($"Files in nested directories: {nestedFiles.Count}");
+
+        if (nestedFiles.Any())
+        {
+            TestOutput.WriteLine("✅ Recursive directory processing verified - files in subfolders were processed:");
+            foreach (var nestedFile in nestedFiles.Take(3))
+            {
+                var relativePath = Path.GetRelativePath(partiallyProcessedPath, nestedFile);
+                TestOutput.WriteLine($"  - {relativePath}");
+            }
+        }
+
+        // Step 7: Content validation for update workflow
+        TestOutput.WriteLine("\n=== Step 7: Update Workflow Content Validation ===");
+        
+        var sampleFiles = allProcessedFiles.Take(3).ToList();
+        foreach (var file in sampleFiles)
+        {
+            // Verify partial processing values exist
+            foreach (var kvp in partialReplacementMap.Take(2))
+            {
+                var contentExists = await DocumentContentValidator.ValidateTextExists(file, kvp.Value);
+                if (contentExists)
+                {
+                    TestOutput.WriteLine($"  ✓ Partial processing verified in {Path.GetFileName(file)}: {kvp.Value}");
+                }
+            }
+
+            // Verify completion values exist
+            foreach (var kvp in completionReplacementMap.Take(2))
+            {
+                var contentExists = await DocumentContentValidator.ValidateTextExists(file, kvp.Value);
+                if (contentExists)
+                {
+                    TestOutput.WriteLine($"  ✓ Update completion verified in {Path.GetFileName(file)}: {kvp.Value}");
+                }
+            }
+        }
+
+        // Step 8: Generate update workflow test report
+        TestOutput.WriteLine("\n=== Step 8: Update Workflow Test Summary ===");
+        
+        await CreateTestParametersFile(new
+        {
+            TestName = "Update Workflow - Complete Partially Processed Templates",
+            TemplateSet = targetTemplateSet.Name,
+            InitialPlaceholders = initialScanResult.Placeholders.Count,
+            PartiallyProcessedPlaceholders = partialReplacementMap.Count,
+            RemainingAfterPartial = updateScanResult.Placeholders.Count,
+            CompletedInUpdate = completionReplacementMap.Count,
+            FinalRemainingPlaceholders = finalScanResult.Placeholders.Count,
+            TotalFilesProcessed = allProcessedFiles.Length,
+            NestedFilesProcessed = nestedFiles.Count,
+            PartialReplacements = partialReplaceResult.TotalReplacements,
+            CompletionReplacements = completionReplaceResult.TotalReplacements,
+            RecursiveDirectoryProcessing = nestedFiles.Count > 0,
+            SouborPrefixFiltered = !remainingPlaceholderNames.Contains("SOUBOR_PREFIX"),
+            TestResult = "PASSED - Update workflow successfully completed all remaining placeholders"
+        });
+
+        TestOutput.WriteLine("✅ Update Workflow E2E Test completed successfully!");
+        TestOutput.WriteLine($"  - Started with {initialScanResult.Placeholders.Count} placeholders");
+        TestOutput.WriteLine($"  - Processed {partialReplacementMap.Count} placeholders initially");
+        TestOutput.WriteLine($"  - Found {updateScanResult.Placeholders.Count} remaining for update");
+        TestOutput.WriteLine($"  - Completed {completionReplacementMap.Count} placeholders in update workflow");
+        TestOutput.WriteLine($"  - Final result: {finalScanResult.Placeholders.Count} placeholders remaining");
+        TestOutput.WriteLine($"  - Processed files recursively: {allProcessedFiles.Length} total ({nestedFiles.Count} in subfolders)");
+        TestOutput.WriteLine($"  - SOUBOR_PREFIX correctly filtered: {!remainingPlaceholderNames.Contains("SOUBOR_PREFIX")}");
+        TestOutput.WriteLine($"Update workflow test output at: {Path.GetFullPath(updateTestDirectory)}");
+    }
 }

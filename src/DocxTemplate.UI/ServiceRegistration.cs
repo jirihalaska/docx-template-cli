@@ -35,10 +35,12 @@ public static class ServiceRegistration
         // Register ViewModels
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<ModeSelectionViewModel>();
         services.AddTransient<TemplateSetSelectionViewModel>();
         services.AddTransient<PlaceholderDiscoveryViewModel>();
         services.AddTransient<PlaceholderInputViewModel>();
         services.AddTransient<OutputFolderSelectionViewModel>();
+        services.AddTransient<ExistingProjectFolderSelectionViewModel>();
         services.AddTransient<ProcessingResultsViewModel>();
         
         return services;

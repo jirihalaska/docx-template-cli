@@ -82,180 +82,22 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-        include:
-          - os: windows-latest
-            platform: windows
-            binary-suffix: '.exe'
-          - os: macos-latest
-            platform: macos
-            binary-suffix: ''
         
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
           
-    # Build solution - restore happens automatically
-    - name: Build solution (exclude UI to prevent CLI build conflicts)
+    - name: Build solution
       run: |
-        # Build projects individually to avoid CLI file lock from UI project dependency
-        dotnet build src/DocxTemplate.Core/DocxTemplate.Core.csproj --configuration Release --verbosity minimal
-        dotnet build src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj --configuration Release --verbosity minimal
-        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.TestUtilities/DocxTemplate.TestUtilities.csproj --configuration Release --verbosity minimal
-        # Build UI-related projects last, after CLI is already built
-        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.UI.Tests/DocxTemplate.UI.Tests.csproj --configuration Release --verbosity minimal
-        dotnet build tests/DocxTemplate.EndToEnd.Tests/DocxTemplate.EndToEnd.Tests.csproj --configuration Release --verbosity minimal
+        dotnet build --configuration Release --verbosity minimal
       
     - name: Run unit tests
       run: |
-        # Run tests excluding UI and E2E tests to avoid platform-specific issues in CI
-        dotnet test tests/DocxTemplate.Core.Tests/DocxTemplate.Core.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-        dotnet test tests/DocxTemplate.Infrastructure.Tests/DocxTemplate.Infrastructure.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-        dotnet test tests/DocxTemplate.CLI.Tests/DocxTemplate.CLI.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-      
-    - name: Kill any remaining processes (Windows)
-      if: matrix.os == 'windows-latest'
-      shell: powershell
-      run: |
-        # Kill any DocxTemplate processes that might be hanging
-        Get-Process | Where-Object {$_.ProcessName -like "*DocxTemplate*"} | Stop-Process -Force -ErrorAction SilentlyContinue
-        # Wait a moment for cleanup
-        Start-Sleep -Seconds 2
-        
-    - name: Kill any remaining processes (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        # Kill any DocxTemplate processes that might be hanging
-        pkill -f "DocxTemplate" || true
-        # Wait a moment for cleanup
-        sleep 2
-      
-    - name: Test Czech character handling
-      shell: bash
-      run: |
-        echo "Testing Czech character handling on ${{ matrix.platform }}"
-        # Create test file with Czech characters
-        echo '{"název": "Testovací dokument", "město": "Brno", "ulice": "Údolní"}' > test-czech.json
-        
-        # Verify file contents
-        if [ "${{ matrix.platform }}" = "windows" ]; then
-          type test-czech.json || cat test-czech.json
-        else
-          cat test-czech.json
-        fi
-        
-        # Clean up
-        rm test-czech.json
-      
-    - name: Upload coverage reports to Codecov
-      if: matrix.os == 'windows-latest'
-      uses: codecov/codecov-action@v4
-      with:
-        directory: ./coverage
-        fail_ci_if_error: false
-        verbose: true
-        
-  package:
-    name: Create Windows Release Package
-    runs-on: windows-latest
-    needs: [build-and-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Build Windows Release Package
-      shell: powershell
-      run: |
-        $ReleaseDir = "release\DocxTemplate-Windows"
-        
-        Write-Host "Building CLI as single-file executable..." -ForegroundColor Cyan
-        dotnet publish src\DocxTemplate.CLI\DocxTemplate.CLI.csproj `
-          -c Release -r win-x64 --self-contained `
-          -p:PublishSingleFile=true `
-          -o "$ReleaseDir\cli-temp" `
-          --verbosity minimal
-        
-        Write-Host "Building GUI application..." -ForegroundColor Cyan
-        dotnet publish src\DocxTemplate.UI\DocxTemplate.UI.csproj `
-          -c Release -r win-x64 --self-contained `
-          -p:SkipCliBuild=true `
-          -p:PublishSingleFile=false `
-          -o "$ReleaseDir" `
-          --verbosity minimal
-        
-        Write-Host "Setting up CLI integration..." -ForegroundColor Cyan
-        # Copy single-file CLI with user-friendly name
-        Copy-Item "$ReleaseDir\cli-temp\DocxTemplate.CLI.exe" "$ReleaseDir\docx-template.exe"
-        Remove-Item -Recurse -Force "$ReleaseDir\cli-temp"
-        
-        Write-Host "Creating README..." -ForegroundColor Cyan
-        @"
-        DocxTemplate - Word Document Template Processor
-        ===============================================
-        
-        QUICK START:
-        1. Double-click "DocxTemplate.UI.exe" to start the GUI application
-        
-        COMMAND LINE USAGE:
-        1. Open Command Prompt in this folder
-        2. Run: docx-template.exe --help
-        
-        FILES INCLUDED:
-        - DocxTemplate.UI.exe - Main GUI application
-        - docx-template.exe - Command-line tool (single-file)
-        - *.dll - Required runtime libraries for GUI
-        
-        SYSTEM REQUIREMENTS:
-        - Windows 10 version 1709 or later
-        - x64 architecture
-        - No additional software installation required
-        
-        VERSION: 1.0.0
-        "@ | Out-File -FilePath "$ReleaseDir\README.txt" -Encoding UTF8
-        
-        Write-Host "Package created successfully!" -ForegroundColor Green
-        
-    - name: Create ZIP archive
-      shell: powershell
-      run: |
-        Compress-Archive -Path "release\DocxTemplate-Windows" -DestinationPath "release\DocxTemplate-Windows-Portable.zip"
-        
-    - name: Upload Windows Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-release-package
-        path: release/DocxTemplate-Windows-Portable.zip
-        
-    - name: Upload Package Contents (for inspection)
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-release-contents
-        path: release/DocxTemplate-Windows/*
+        dotnet test tests/DocxTemplate.Core.Tests --configuration Release --verbosity minimal
+        dotnet test tests/DocxTemplate.Infrastructure.Tests --configuration Release --verbosity minimal
+        dotnet test tests/DocxTemplate.CLI.Tests --configuration Release --verbosity minimal

@@ -45,9 +45,9 @@ jobs:
           
           ### 🎯 What's Included
           - **GUI Application**: Easy-to-use graphical interface with step-by-step wizard
-          - **CLI Tool**: Command-line interface for automation and batch processing  
-          - **Sample Templates**: Czech language templates for testing
-          - **Documentation**: Quick start guide and usage examples
+          - **Template Processing**: Placeholder replacement in Word documents (.docx)
+          - **Czech Language Support**: Proper character encoding and localization
+          - **Self-Contained**: No installation or dependencies required
           
           ### ✅ System Requirements
           - **Windows**: Windows 10 version 1709 or later (x64) 
@@ -65,16 +65,10 @@ jobs:
           2. Extract and double-click `DocxTemplate.app`
           3. If blocked by security, right-click → Open → Open anyway
           
-          ### 🔧 CLI Usage
-          ```bash
-          # Windows - Extract ZIP and use the executable
-          DocxTemplate.exe --help
-          
-          # macOS - Access CLI through the app bundle
-          ./DocxTemplate.app/Contents/MacOS/DocxTemplate --help
-          ```
-          
-          Both applications include GUI and CLI functionality in a single executable.
+          ### 💻 Pure GUI Application
+          - Easy-to-use graphical interface with step-by-step wizard
+          - No command-line interface - designed for desktop users
+          - Drag-and-drop file selection and processing
         draft: false
         prerelease: ${{ contains(steps.get-tag.outputs.tag, 'alpha') || contains(steps.get-tag.outputs.tag, 'beta') || contains(steps.get-tag.outputs.tag, 'rc') }}
 
@@ -106,17 +100,11 @@ jobs:
       
     - name: Build and test before release
       run: |
-        # Build CLI first to avoid file locking issues
-        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal
+        # Build UI project only
+        Write-Host "Building GUI application..." -ForegroundColor Cyan
+        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal -p:SkipCliBuild=true
         
-        # Test CLI executable can be built and runs
-        Write-Host "Testing CLI build..." -ForegroundColor Cyan
-        dotnet run --project src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal -- --version
-        
-        # Build UI project (with SkipCliBuild to avoid conflicts)  
-        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal
-        
-        Write-Host "Pre-release build and test completed successfully" -ForegroundColor Green
+        Write-Host "Pre-release build completed successfully" -ForegroundColor Green
       
     - name: Publish Windows GUI (single-file)
       run: |
@@ -143,7 +131,7 @@ jobs:
         Copy-Item -Path "./dist/windows-gui/DocxTemplate.UI.exe" -Destination "$releaseDir/DocxTemplate.exe"
         
         # Create a simple README
-        $readmeText = "DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64`n================================================================`n`nQUICK START:`n1. Double-click 'DocxTemplate.exe' to launch the application`n2. The application includes both GUI and CLI functionality`n`nCLI USAGE:`n1. Open Command Prompt in this folder`n2. Run: DocxTemplate.exe --help`n`nSYSTEM REQUIREMENTS:`n- Windows 10 version 1709 or later`n- x64 architecture`n- No additional software installation required`n`nSUPPORT:`n- Documentation: https://github.com/jirihalaska/docx-template-cli`n- Issues: https://github.com/jirihalaska/docx-template-cli/issues`n- Version: ${{ needs.create-release.outputs.tag-name }}"
+        $readmeText = "DocxTemplate ${{ needs.create-release.outputs.tag-name }} - Windows x64`n================================================================`n`nQUICK START:`n1. Double-click 'DocxTemplate.exe' to launch the application`n2. Follow the step-by-step wizard to process your templates`n`nFEATURES:`n- Word document template processing with placeholder replacement`n- Czech language support with proper character encoding`n- Easy-to-use graphical interface`n- Self-contained - no additional software required`n`nSYSTEM REQUIREMENTS:`n- Windows 10 version 1709 or later`n- x64 architecture`n- No additional software installation required`n`nSUPPORT:`n- Documentation: https://github.com/jirihalaska/docx-template-cli`n- Issues: https://github.com/jirihalaska/docx-template-cli/issues`n- Version: ${{ needs.create-release.outputs.tag-name }}"
         $readmeText | Out-File -FilePath "$releaseDir/README.txt" -Encoding UTF8
         
         # Verify the executable
@@ -157,13 +145,14 @@ jobs:
         $exeFile = "$releaseDir/DocxTemplate.exe"
         Write-Host "Testing Windows executable..." -ForegroundColor Cyan
         
-        # Test executable runs
-        Write-Host "Testing executable startup..." -ForegroundColor Yellow
-        & $exeFile --version
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Windows executable test passed" -ForegroundColor Green
+        # Test executable exists and has proper size
+        Write-Host "Testing executable..." -ForegroundColor Yellow
+        if (Test-Path $exeFile) {
+            $fileInfo = Get-Item $exeFile
+            $fileSizeMB = [math]::Round($fileInfo.Length / 1MB, 2)
+            Write-Host "✅ Windows executable test passed: ${fileSizeMB}MB" -ForegroundColor Green
         } else {
-            Write-Host "❌ Windows executable test failed" -ForegroundColor Red
+            Write-Host "❌ Windows executable test failed - file not found" -ForegroundColor Red
             exit 1
         }
         
@@ -228,16 +217,10 @@ jobs:
       
     - name: Build and test before release
       run: |
-        echo "🍎 Building CLI first to avoid file locking issues..."
-        dotnet build src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal
+        echo "🎨 Building GUI application..."
+        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal -p:SkipCliBuild=true
         
-        echo "🧪 Testing CLI build..."
-        dotnet run --project src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --verbosity minimal -- --version
-        
-        echo "🎨 Building UI project..."
-        dotnet build src/DocxTemplate.UI/DocxTemplate.UI.csproj --configuration Release --verbosity minimal
-        
-        echo "✅ Pre-release build and test completed successfully"
+        echo "✅ GUI build completed successfully"
       
     - name: Publish macOS ARM64 GUI (single-file)
       run: |
@@ -315,13 +298,13 @@ jobs:
         APP_DIR="./release/DocxTemplate.app"
         echo "🧪 Testing macOS App Bundle..."
         
-        # Test app bundle executable
+        # Test app bundle executable exists and has proper permissions
         echo "🍎 Testing App Bundle executable..."
-        "$APP_DIR/Contents/MacOS/DocxTemplate" --version
-        if [ $? -eq 0 ]; then
-            echo "✅ App Bundle executable test passed"
+        if [ -x "$APP_DIR/Contents/MacOS/DocxTemplate" ]; then
+            EXEC_SIZE=$(du -sh "$APP_DIR/Contents/MacOS/DocxTemplate" | cut -f1)
+            echo "✅ App Bundle executable test passed: ${EXEC_SIZE}"
         else
-            echo "❌ App Bundle executable test failed"
+            echo "❌ App Bundle executable test failed - not executable or missing"
             exit 1
         fi
         

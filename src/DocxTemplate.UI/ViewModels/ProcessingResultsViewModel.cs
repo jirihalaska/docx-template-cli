@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.UI.Models;
 using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
@@ -28,6 +29,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private string _templateSetPath = "";
     private int _placeholderCount = 0;
     private Dictionary<string, string> _placeholderValues = new();
+    private ProcessingMode _processingMode = ProcessingMode.NewProject;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public ProcessingResultsViewModel(ITemplateCopyService templateCopyService, IPlaceholderReplaceService placeholderReplaceService)
@@ -113,6 +115,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         get
         {
+            // In UpdateProject mode, we process files in place, so target is the same as source
+            if (_processingMode == ProcessingMode.UpdateProject)
+                return _templateSetPath;
+                
             if (string.IsNullOrEmpty(_templateSetPath) || string.IsNullOrEmpty(OutputFolderPath))
                 return OutputFolderPath;
                 
@@ -137,7 +143,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
     public ReactiveCommand<Unit, Unit> OpenLogCommand { get; }
     public ReactiveCommand<Unit, Unit> StartOverCommand { get; }
 
-    public void SetProcessingData(string templateSetPath, string outputPath, Dictionary<string, string> placeholders)
+    public void SetProcessingData(string templateSetPath, string outputPath, Dictionary<string, string> placeholders, ProcessingMode processingMode = ProcessingMode.NewProject)
     {
         // Store the full path for CLI commands
         _templateSetPath = templateSetPath ?? "";
@@ -146,6 +152,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         OutputFolderPath = outputPath;
         _placeholderValues = placeholders ?? new Dictionary<string, string>();
         PlaceholderCount = _placeholderValues.Count;
+        _processingMode = processingMode;
         
         this.RaisePropertyChanged(nameof(ProcessingSummary));
         this.RaisePropertyChanged(nameof(ActualTargetFolderPath));
@@ -168,14 +175,21 @@ public class ProcessingResultsViewModel : StepViewModelBase
             using var logFile = new StreamWriter(LogFilePath, append: true);
             await logFile.WriteLineAsync($"=== Template Processing Started at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
             
-            // Step 1: Copy templates
-            ProcessingStatus = "Kopírování šablon...";
-            await logFile.WriteLineAsync("Phase 1: Copying templates");
-            
-            var copyResult = await ExecuteCopyCommand(logFile);
-            if (!copyResult.Success)
+            // Step 1: Copy templates (only for NewProject mode)
+            if (_processingMode == ProcessingMode.NewProject)
             {
-                throw new InvalidOperationException($"Template copy failed: {copyResult.Error}");
+                ProcessingStatus = "Kopírování šablon...";
+                await logFile.WriteLineAsync("Phase 1: Copying templates");
+                
+                var copyResult = await ExecuteCopyCommand(logFile);
+                if (!copyResult.Success)
+                {
+                    throw new InvalidOperationException($"Template copy failed: {copyResult.Error}");
+                }
+            }
+            else
+            {
+                await logFile.WriteLineAsync("Phase 1: Skipping template copy (UpdateProject mode - processing existing files in place)");
             }
             
             // Step 2: Create temporary JSON mapping file
@@ -184,9 +198,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
             {
                 await CreatePlaceholderMappingFile(tempJsonPath, logFile);
                 
-                // Step 3: Replace placeholders
+                // Step 2/3: Replace placeholders
                 ProcessingStatus = "Nahrazování zástupných symbolů...";
-                await logFile.WriteLineAsync("Phase 2: Replacing placeholders");
+                await logFile.WriteLineAsync($"Phase 2: Replacing placeholders (Mode: {_processingMode})");
                 
                 var replaceResult = await ExecuteReplaceCommand(tempJsonPath, logFile);
                 if (!replaceResult.Success)
@@ -281,8 +295,12 @@ public class ProcessingResultsViewModel : StepViewModelBase
             var jsonContent = await File.ReadAllTextAsync(mappingFilePath);
             var replacementMap = ReplacementMap.FromJson(jsonContent, mappingFilePath);
 
+            // For UpdateProject mode, process files in the source folder directly
+            var targetPath = _processingMode == ProcessingMode.UpdateProject ? _templateSetPath : ActualTargetFolderPath;
+            await logFile.WriteLineAsync($"Target path for replacement: {targetPath}");
+            
             var result = await _placeholderReplaceService.ReplacePlaceholdersAsync(
-                ActualTargetFolderPath,
+                targetPath,
                 replacementMap,
                 createBackup: false,
                 cancellationToken: _cancellationTokenSource?.Token ?? CancellationToken.None);

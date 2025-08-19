@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Linq;
 using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
@@ -8,9 +9,17 @@ public class MainWindowViewModel : ViewModelBase
     private string _title = "Procesor šablon DOCX";
     private string _statusText = "Připraveno";
 
-    public MainWindowViewModel(WizardViewModel wizardViewModel)
+    public MainWindowViewModel(WizardCoordinatorViewModel wizardCoordinator)
     {
-        WizardViewModel = wizardViewModel ?? throw new ArgumentNullException(nameof(wizardViewModel));
+        WizardCoordinator = wizardCoordinator ?? throw new ArgumentNullException(nameof(wizardCoordinator));
+        
+        // Update status text based on wizard coordinator state
+        this.WhenAnyValue(
+                x => x.WizardCoordinator.ShowModeSelection,
+                x => x.WizardCoordinator.SelectedMode,
+                x => x.WizardCoordinator.CurrentWizard)
+            .Select(_ => WizardCoordinator.GetStatusText())
+            .Subscribe(statusText => StatusText = statusText);
     }
 
     public string Title
@@ -25,5 +34,5 @@ public class MainWindowViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _statusText, value);
     }
 
-    public WizardViewModel WizardViewModel { get; }
+    public WizardCoordinatorViewModel WizardCoordinator { get; }
 }

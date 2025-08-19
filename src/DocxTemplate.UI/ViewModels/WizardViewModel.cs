@@ -125,9 +125,24 @@ public class WizardViewModel : ViewModelBase
     public UserControl CurrentStepContent => _stepViews[CurrentStep];
 
     /// <summary>
-    /// Dynamic button text based on current step
+    /// Dynamic button text based on current step and mode
     /// </summary>
-    public string NextButtonText => CurrentStep == 3 ? "Generuj" : "Další";
+    public string NextButtonText
+    {
+        get
+        {
+            if (SelectedMode == ProcessingMode.NewProject)
+            {
+                // NewProject: Step 4 is processing/results, show "Generuj" at step 3 to advance to processing
+                return CurrentStep == 3 ? "Generuj" : "Další";
+            }
+            else // UpdateProject
+            {
+                // UpdateProject: Step 3 is processing, show "Generuj" at step 2 to advance to processing
+                return CurrentStep == 2 ? "Generuj" : "Další";
+            }
+        }
+    }
 
     public ReactiveCommand<Unit, Unit> NextCommand { get; }
 
@@ -346,7 +361,8 @@ public class WizardViewModel : ViewModelBase
                     step4ViewModel.SetProcessingData(
                         step1ViewModel.SelectedTemplateSet.TemplateSetInfo.Path,
                         step3ViewModel.SelectedFolderPath,
-                        step2ViewModel.GetReplacementMapping());
+                        step2ViewModel.GetReplacementMapping(),
+                        ProcessingMode.NewProject);
                 }
             }
             else if (SelectedMode == ProcessingMode.UpdateProject)
@@ -364,7 +380,8 @@ public class WizardViewModel : ViewModelBase
                     step4ViewModel.SetProcessingData(
                         step1ViewModel.SelectedFolderPath, // Source folder (contains existing files)
                         step1ViewModel.SelectedFolderPath, // Target folder (same as source for in-place updates)
-                        step2ViewModel.GetReplacementMapping());
+                        step2ViewModel.GetReplacementMapping(),
+                        ProcessingMode.UpdateProject);
                 }
             }
         }

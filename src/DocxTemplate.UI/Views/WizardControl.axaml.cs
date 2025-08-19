@@ -13,7 +13,7 @@ public partial class WizardControl : UserControl
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.Enter && DataContext is ViewModels.WizardViewModel viewModel)
+        if (e.Key == Key.Enter && DataContext is ViewModels.WizardViewModelBase viewModel)
         {
             if (viewModel.NextCommand.CanExecute.FirstAsync().Wait())
             {

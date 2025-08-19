@@ -34,6 +34,9 @@ public static class ServiceRegistration
         
         // Register ViewModels
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));
+        services.AddTransient<WizardCoordinatorViewModel>();
+        services.AddTransient<NewProjectWizardViewModel>();
+        services.AddTransient<UpdateProjectWizardViewModel>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<ModeSelectionViewModel>();
         services.AddTransient<TemplateSetSelectionViewModel>();

@@ -22,7 +22,7 @@ public class OutputFolderSelectionViewModel : StepViewModelBase
         
         // Subscribe to property changes to update validation
         this.WhenAnyValue(x => x.SelectedFolderPath)
-            .Subscribe(_ => UpdateValidation());
+            .Subscribe(_ => ValidateStep());
     }
 
     /// <summary>

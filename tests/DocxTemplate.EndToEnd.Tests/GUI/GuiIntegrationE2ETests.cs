@@ -175,10 +175,10 @@ public class GuiIntegrationE2ETests : IAsyncLifetime
 
         // assert - View model should initialize properly
         mainWindowViewModel.Should().NotBeNull("Main window view model should be created");
-        mainWindowViewModel.WizardViewModel.Should().NotBeNull("Wizard view model should be available");
+        mainWindowViewModel.WizardCoordinator.Should().NotBeNull("Wizard coordinator should be available");
         
-        // Test that wizard starts in correct state
-        mainWindowViewModel.WizardViewModel.CurrentStep.Should().Be(1, "Should start on first wizard step");
+        // Test that coordinator starts in correct state  
+        mainWindowViewModel.WizardCoordinator.ShowModeSelection.Should().BeTrue("Should start showing mode selection");
         
         await Task.CompletedTask;
     }

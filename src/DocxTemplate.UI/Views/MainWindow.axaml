@@ -18,9 +18,9 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="*,Auto">
-        <!-- Main content area - Wizard Control -->
-        <views:WizardControl Grid.Row="0" 
-                           DataContext="{Binding WizardViewModel}" />
+        <!-- Main content area - Wizard Coordinator Control -->
+        <views:WizardCoordinatorControl Grid.Row="0" 
+                                       DataContext="{Binding WizardCoordinator}" />
         
         <!-- Status bar -->
         <Border Grid.Row="1" 

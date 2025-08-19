@@ -13,13 +13,13 @@
     <StackPanel Spacing="20">
       
       <!-- Step Title -->
-      <SelectableTextBlock Text="{Binding StepTitle}"
+      <TextBlock Text="{Binding StepTitle}"
                  FontSize="24"
                  FontWeight="Bold"
                  HorizontalAlignment="Center" />
       
       <!-- Step Description -->
-      <SelectableTextBlock Text="{Binding StepDescription}"
+      <TextBlock Text="{Binding StepDescription}"
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"
@@ -37,10 +37,10 @@
               CornerRadius="4"
               Padding="15">
         <StackPanel Spacing="10">
-          <SelectableTextBlock Text="⚠️ Chyba"
+          <TextBlock Text="⚠️ Chyba"
                      FontWeight="Bold"
                      Foreground="White" />
-          <SelectableTextBlock Text="{Binding ErrorText}"
+          <TextBlock Text="{Binding ErrorText}"
                      Foreground="White"
                      TextWrapping="Wrap" />
           <Button Content="Zkusit znovu"
@@ -91,20 +91,20 @@
                 <Button.Content>
                   <StackPanel Spacing="8">
                   <!-- Template Set Name -->
-                  <SelectableTextBlock Text="{Binding Name}"
+                  <TextBlock Text="{Binding Name}"
                              FontSize="16"
                              FontWeight="Bold"
                              TextWrapping="Wrap"
                              HorizontalAlignment="Center" />
                   
                   <!-- File Count -->
-                  <SelectableTextBlock Text="{Binding DisplayText}"
+                  <TextBlock Text="{Binding DisplayText}"
                              FontSize="12"
                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                              HorizontalAlignment="Center" />
                   
                   <!-- Total Size -->
-                  <SelectableTextBlock Text="{Binding TotalSizeFormatted}"
+                  <TextBlock Text="{Binding TotalSizeFormatted}"
                              FontSize="11"
                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                              HorizontalAlignment="Center" />
@@ -115,7 +115,7 @@
                             CornerRadius="2"
                             Padding="5,2"
                             HorizontalAlignment="Center">
-                      <SelectableTextBlock Text="✓ Vybráno"
+                      <TextBlock Text="✓ Vybráno"
                                  FontSize="10"
                                  Foreground="White"
                                  FontWeight="Bold" />
@@ -132,11 +132,11 @@
       <StackPanel IsVisible="{Binding !HasError}"
                   Spacing="10"
                   HorizontalAlignment="Center">
-        <SelectableTextBlock Text="📁"
+        <TextBlock Text="📁"
                    FontSize="48"
                    HorizontalAlignment="Center"
                    IsVisible="{Binding !TemplateSets.Count}" />
-        <SelectableTextBlock Text="Vytvořte složku './templates' a přidejte do ní podsložky s vašimi šablonami .docx"
+        <TextBlock Text="Vytvořte složku './templates' a přidejte do ní podsložky s vašimi šablonami .docx"
                    FontSize="12"
                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                    TextWrapping="Wrap"

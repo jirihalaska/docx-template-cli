@@ -143,7 +143,22 @@ public class ReplaceCommand : Command
             try
             {
                 var jsonContent = await File.ReadAllTextAsync(mapPath, cancellationToken);
-                replacementMap = ReplacementMap.FromJson(jsonContent, mapPath);
+                var jsonDocument = JsonDocument.Parse(jsonContent);
+
+                var mappings = new Dictionary<string, string>();
+                if (jsonDocument.RootElement.TryGetProperty("placeholders", out var placeholdersElement))
+                {
+                    foreach (var property in placeholdersElement.EnumerateObject())
+                    {
+                        mappings[property.Name] = property.Value.GetString() ?? string.Empty;
+                    }
+                }
+
+                replacementMap = new ReplacementMap
+                {
+                    Mappings = mappings,
+                    SourceFilePath = mapPath
+                };
             }
             catch (JsonException ex)
             {

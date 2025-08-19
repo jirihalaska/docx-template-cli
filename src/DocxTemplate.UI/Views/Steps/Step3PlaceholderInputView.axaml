@@ -66,9 +66,9 @@
                       Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                       CornerRadius="6"
                       Padding="16,12"
-                      BorderThickness="{Binding IsUnfilled, Converter={StaticResource BooleanToThicknessConverter}}"
-                      BorderBrush="{Binding IsUnfilled, Converter={x:Static converters:BooleanToBrushConverter.Instance}, 
-                                   ConverterParameter='Orange|Transparent'}">
+                      BorderThickness="{Binding IsFilled, Converter={StaticResource BooleanToThicknessConverter}}"
+                      BorderBrush="{Binding IsFilled, Converter={x:Static converters:BooleanToBrushConverter.Instance}, 
+                                   ConverterParameter='Transparent|Orange'}">
                 <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,Auto">
                   
                   <!-- Placeholder Label -->
@@ -78,9 +78,9 @@
                              FontSize="14"
                              Margin="0,0,0,6" />
                   
-                  <!-- Warning Icon for Unfilled -->
+                  <!-- Warning Icon for Unfilled (shown when NOT filled) -->
                   <Border Grid.Row="0" Grid.Column="1"
-                          IsVisible="{Binding IsUnfilled}"
+                          IsVisible="{Binding !IsFilled}"
                           Background="Orange"
                           CornerRadius="10"
                           Width="20"

@@ -153,11 +153,12 @@ public class PlaceholderInputViewModel : StepViewModelBase
     /// <summary>
     /// Gets the JSON mapping as a JSON string for CLI replace command
     /// </summary>
-    /// <returns>JSON string containing only filled placeholders</returns>
+    /// <returns>JSON string containing only filled placeholders in expected nested format</returns>
     public string GetReplacementMappingJson()
     {
         var mapping = GetReplacementMapping();
-        return JsonSerializer.Serialize(mapping, new JsonSerializerOptions
+        var wrappedMapping = new { placeholders = mapping };
+        return JsonSerializer.Serialize(wrappedMapping, new JsonSerializerOptions
         {
             WriteIndented = true
         });
@@ -176,16 +177,24 @@ public class PlaceholderInputItemViewModel : ReactiveObject
     {
         PlaceholderItem = placeholderItem ?? throw new ArgumentNullException(nameof(placeholderItem));
         
+        // Initialize the filled state based on current input value (should be empty initially)
+        IsFilled = !string.IsNullOrWhiteSpace(_inputValue);
+        
         // Subscribe to input value changes for automatic whitespace normalization
         this.WhenAnyValue(x => x.InputValue)
             .Subscribe(value => 
             {
                 var normalized = NormalizeWhitespace(value);
+                
+                // Always update IsFilled state first, based on the normalized value
+                IsFilled = !string.IsNullOrWhiteSpace(normalized);
+                
+                // Then normalize the input if needed (this might trigger the subscription again,
+                // but IsFilled is already set correctly above)
                 if (normalized != value)
                 {
                     InputValue = normalized;
                 }
-                IsFilled = !string.IsNullOrWhiteSpace(normalized);
             });
     }
 
@@ -231,11 +240,6 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         get => _isFilled;
         private set => this.RaiseAndSetIfChanged(ref _isFilled, value);
     }
-
-    /// <summary>
-    /// Indicates whether this placeholder is unfilled (for warning styling)
-    /// </summary>
-    public bool IsUnfilled => !IsFilled;
 
     /// <summary>
     /// Clears the input value and resets the filled state

@@ -167,7 +167,10 @@ public class TemplateSetSelectionViewModel : StepViewModelBase
             }
             else
             {
-                foreach (var templateSet in templateSets)
+                // Sort template sets alphabetically by name
+                var sortedTemplateSets = templateSets.OrderBy(ts => ts.Name, StringComparer.OrdinalIgnoreCase);
+                
+                foreach (var templateSet in sortedTemplateSets)
                 {
                     var viewModel = new TemplateSetItemViewModel(templateSet);
                     TemplateSets.Add(viewModel);

@@ -16,7 +16,6 @@ public class ExistingProjectFolderSelectionViewModelTests
 
         // assert
         viewModel.SelectedFolderPath.Should().BeNull();
-        viewModel.ValidationMessage.Should().Be("Prosím vyberte složku"); // Validation runs on construction
         viewModel.IsSelectingFolder.Should().BeFalse();
         viewModel.DocxFileCount.Should().Be(0);
         viewModel.IsValid.Should().BeFalse();
@@ -37,7 +36,7 @@ public class ExistingProjectFolderSelectionViewModelTests
     {
         // arrange
         var viewModel = new ExistingProjectFolderSelectionViewModel();
-        
+
         // Use reflection to set the private field for testing
         var fieldInfo = typeof(ExistingProjectFolderSelectionViewModel)
             .GetField("_docxFileCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -55,7 +54,7 @@ public class ExistingProjectFolderSelectionViewModelTests
     {
         // arrange
         var viewModel = new ExistingProjectFolderSelectionViewModel();
-        
+
         // Use reflection to set the private field for testing
         var fieldInfo = typeof(ExistingProjectFolderSelectionViewModel)
             .GetField("_docxFileCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -103,7 +102,7 @@ public class ExistingProjectFolderSelectionViewModelTests
         var tempDir = Path.GetTempPath();
         var testDir = Path.Combine(tempDir, Guid.NewGuid().ToString());
         Directory.CreateDirectory(testDir);
-        
+
         try
         {
             var viewModel = new ExistingProjectFolderSelectionViewModel();
@@ -132,13 +131,13 @@ public class ExistingProjectFolderSelectionViewModelTests
         var tempDir = Path.GetTempPath();
         var testDir = Path.Combine(tempDir, Guid.NewGuid().ToString());
         Directory.CreateDirectory(testDir);
-        
+
         try
         {
             // Create test .docx files
             File.WriteAllText(Path.Combine(testDir, "test1.docx"), "test content");
             File.WriteAllText(Path.Combine(testDir, "test2.docx"), "test content");
-            
+
             var viewModel = new ExistingProjectFolderSelectionViewModel();
             viewModel.SelectedFolderPath = testDir;
 

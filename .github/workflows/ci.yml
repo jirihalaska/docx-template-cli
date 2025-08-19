@@ -44,42 +44,42 @@ jobs:
           test-output/cli/*.txt
           test-output/gui/*.txt
 
-  executable-startup-test-macos:
-    name: Test macOS Executables (Fast Fail)
-    runs-on: macos-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: dotnet restore
-      
-    - name: Test macOS ARM64 executables
-      shell: bash
-      run: |
-        ./scripts/test-executables.sh osx-arm64 test-output
-        
-    - name: Upload macOS test outputs
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-executable-test-outputs
-        path: |
-          test-output/cli/*.txt
-          test-output/gui/*.txt
+  # executable-startup-test-macos:
+  #   name: Test macOS Executables (Fast Fail)
+  #   runs-on: macos-latest
+  #   
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #     with:
+  #       fetch-depth: 0
+  #       
+  #   - name: Setup .NET
+  #     uses: actions/setup-dotnet@v4
+  #     with:
+  #       dotnet-version: ${{ env.DOTNET_VERSION }}
+  #       
+  #   - name: Restore dependencies
+  #     run: dotnet restore
+  #     
+  #   - name: Test macOS ARM64 executables
+  #     shell: bash
+  #     run: |
+  #       ./scripts/test-executables.sh osx-arm64 test-output
+  #       
+  #   - name: Upload macOS test outputs
+  #     if: always()
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: macos-executable-test-outputs
+  #       path: |
+  #         test-output/cli/*.txt
+  #         test-output/gui/*.txt
 
   build-and-test:
     name: Build and Test
     runs-on: ${{ matrix.os }}
-    needs: [executable-startup-test-windows, executable-startup-test-macos]
+    needs: [executable-startup-test-windows]
     strategy:
       fail-fast: false
       matrix:

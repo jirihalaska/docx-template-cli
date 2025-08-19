@@ -12,11 +12,11 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     public CliExecutableDiscoveryService()
     {
-        // Prefer DLL over executable since the executables may not have proper runtime
-        // Platform-specific executable names - DLL first, then executables
+        // Prefer self-contained executables over DLL for distribution packages
+        // Platform-specific executable names - self-contained executables first, then DLL as fallback
         _executableNames = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-            ? new[] { "DocxTemplate.CLI.dll", "docx-template.exe", "DocxTemplate.CLI.exe" }
-            : new[] { "DocxTemplate.CLI.dll", "docx-template", "DocxTemplate.CLI" };
+            ? new[] { "docx-template.exe", "DocxTemplate.CLI.exe", "DocxTemplate.CLI.dll" }
+            : new[] { "docx-template", "DocxTemplate.CLI", "DocxTemplate.CLI.dll" };
     }
 
     public Task<string> DiscoverCliExecutableAsync()

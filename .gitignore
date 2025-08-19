@@ -94,6 +94,7 @@ output/
 test-output/
 temp/
 publish/
+dist/
 
 # GUI-specific artifacts
 *.app/

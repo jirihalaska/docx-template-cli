@@ -1,0 +1,257 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      upload-url: ${{ steps.create-release.outputs.upload_url }}
+      tag-name: ${{ steps.get-tag.outputs.tag }}
+    
+    steps:
+    - name: Get tag name
+      id: get-tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get-tag.outputs.tag }}
+        release_name: Release ${{ steps.get-tag.outputs.tag }}
+        body: |
+          ## DocxTemplate Release ${{ steps.get-tag.outputs.tag }}
+          
+          This release includes both GUI and CLI executables in a single distribution package.
+          
+          ### Downloads
+          - **Windows**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-win-x64.zip`
+          - **macOS**: `DocxTemplate-${{ steps.get-tag.outputs.tag }}-osx-x64.zip`
+          
+          ### What's Included
+          - GUI Application (DocxTemplate.UI)
+          - Command Line Interface (docx-template)
+          - Sample templates
+          - Quick start documentation
+          
+          Both executables are self-contained and don't require separate .NET runtime installation.
+        draft: false
+        prerelease: false
+
+  build-windows:
+    name: Build Windows Distribution
+    runs-on: windows-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Publish Windows GUI
+      run: |
+        dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output ./dist/windows-gui `
+          --verbosity minimal `
+          /p:PublishSingleFile=true `
+          /p:PublishReadyToRun=true
+          
+    - name: Publish Windows CLI  
+      run: |
+        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output ./dist/windows-cli `
+          --verbosity minimal `
+          /p:PublishSingleFile=true `
+          /p:PublishReadyToRun=true
+      
+    - name: Create Windows distribution directory
+      run: |
+        New-Item -ItemType Directory -Force -Path "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64"
+        
+        # Copy GUI executable
+        Copy-Item -Path "./dist/windows-gui/DocxTemplate.UI.exe" -Destination "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64/"
+        
+        # Copy CLI executable (self-contained)
+        Copy-Item -Path "./dist/windows-cli/DocxTemplate.CLI.exe" -Destination "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64/docx-template.exe"
+        
+        # Note: Templates not included in release packages to keep download size small
+        # Users can download templates separately or use their own
+        
+        # Create README
+        @"
+        # DocxTemplate ${{ needs.create-release.outputs.tag-name }}
+        
+        This package contains both GUI and CLI tools for Word document template processing.
+        
+        ## Quick Start
+        
+        ### GUI Application
+        - Double-click `DocxTemplate.UI.exe` to launch the graphical interface
+        
+        ### Command Line Interface  
+        - Open Command Prompt or PowerShell
+        - Run: `docx-template.exe --help` to see available commands
+        
+        ## Sample Usage
+        
+        ```cmd
+        # Discover templates in a directory
+        docx-template.exe discover --path "./templates"
+        
+        # Scan for placeholders
+        docx-template.exe scan --path "./templates"
+        
+        # Copy templates with placeholder replacement
+        docx-template.exe copy --templates "./templates" --output "./output" --mapping "./data.json"
+        ```
+        
+        ## Support
+        
+        For documentation and support, visit: https://github.com/jirihalaska/docx-template-cli
+        "@ | Out-File -FilePath "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64/README.txt" -Encoding UTF8
+      
+    - name: Create Windows ZIP package
+      run: |
+        Compress-Archive -Path "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64/*" `
+                        -DestinationPath "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64.zip"
+      
+    - name: Upload Windows Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload-url }}
+        asset_path: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64.zip
+        asset_name: DocxTemplate-${{ needs.create-release.outputs.tag-name }}-win-x64.zip
+        asset_content_type: application/zip
+
+  build-macos:
+    name: Build macOS Distribution
+    runs-on: macos-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Publish macOS GUI
+      run: |
+        dotnet publish src/DocxTemplate.UI/DocxTemplate.UI.csproj \
+          --configuration Release \
+          --runtime osx-x64 \
+          --self-contained true \
+          --output ./dist/macos-gui \
+          --verbosity minimal \
+          /p:PublishSingleFile=true \
+          /p:PublishReadyToRun=true
+          
+    - name: Publish macOS CLI
+      run: |
+        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj \
+          --configuration Release \
+          --runtime osx-x64 \
+          --self-contained true \
+          --output ./dist/macos-cli \
+          --verbosity minimal \
+          /p:PublishSingleFile=true \
+          /p:PublishReadyToRun=true
+      
+    - name: Create macOS distribution directory
+      run: |
+        mkdir -p "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64"
+        
+        # Copy GUI executable
+        cp "./dist/macos-gui/DocxTemplate.UI" "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/"
+        
+        # Copy CLI executable (self-contained)
+        cp "./dist/macos-cli/DocxTemplate.CLI" "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/docx-template"
+        
+        # Make executables executable
+        chmod +x "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/DocxTemplate.UI"
+        chmod +x "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/docx-template"
+        
+        # Note: Templates not included in release packages to keep download size small
+        # Users can download templates separately or use their own
+        
+        # Create README
+        cat > "./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/README.md" << 'EOF'
+        # DocxTemplate ${{ needs.create-release.outputs.tag-name }}
+        
+        This package contains both GUI and CLI tools for Word document template processing.
+        
+        ## Quick Start
+        
+        ### GUI Application
+        - Double-click `DocxTemplate.UI` to launch the graphical interface
+        - Or run from Terminal: `./DocxTemplate.UI`
+        
+        ### Command Line Interface  
+        - Open Terminal
+        - Run: `./docx-template --help` to see available commands
+        
+        ## Sample Usage
+        
+        ```bash
+        # Discover templates in a directory
+        ./docx-template discover --path "./templates"
+        
+        # Scan for placeholders
+        ./docx-template scan --path "./templates"
+        
+        # Copy templates with placeholder replacement
+        ./docx-template copy --templates "./templates" --output "./output" --mapping "./data.json"
+        ```
+        
+        ## Support
+        
+        For documentation and support, visit: https://github.com/jirihalaska/docx-template-cli
+        EOF
+      
+    - name: Create macOS ZIP package
+      run: |
+        cd "./release"
+        zip -r "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64.zip" "DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64/"
+      
+    - name: Upload macOS Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload-url }}
+        asset_path: ./release/DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64.zip
+        asset_name: DocxTemplate-${{ needs.create-release.outputs.tag-name }}-osx-x64.zip
+        asset_content_type: application/zip

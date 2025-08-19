@@ -18,7 +18,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
       
       <!-- Step Title -->
-      <TextBlock Grid.Row="0"
+      <SelectableTextBlock Grid.Row="0"
                  Text="Zadání hodnot zástupných symbolů"
                  FontSize="24"
                  FontWeight="Bold"
@@ -26,7 +26,7 @@
                  Margin="0,0,0,10" />
       
       <!-- Step Description -->
-      <TextBlock Grid.Row="1"
+      <SelectableTextBlock Grid.Row="1"
                  Text="Zadejte hodnoty pro nalezené zástupné symboly."
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -41,7 +41,7 @@
               Padding="12,8"
               Margin="0,0,0,15">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0"
+          <SelectableTextBlock Grid.Column="0"
                      Text="{Binding CompletionSummary}"
                      FontWeight="SemiBold"
                      VerticalAlignment="Center" />
@@ -72,7 +72,7 @@
                 <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,Auto">
                   
                   <!-- Placeholder Label -->
-                  <TextBlock Grid.Row="0" Grid.Column="0"
+                  <SelectableTextBlock Grid.Row="0" Grid.Column="0"
                              Text="{Binding DisplayLabel}"
                              FontWeight="SemiBold"
                              FontSize="14"
@@ -86,7 +86,7 @@
                           Width="20"
                           Height="20"
                           VerticalAlignment="Top">
-                    <TextBlock Text="!"
+                    <SelectableTextBlock Text="!"
                                Foreground="White"
                                FontSize="12"
                                FontWeight="Bold"
@@ -95,7 +95,7 @@
                   </Border>
                   
                   <!-- Placeholder Info -->
-                  <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                  <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                              Text="{Binding OccurrenceCount, StringFormat='{}{0} výskytů'}"
                              FontSize="11"
                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -135,14 +135,14 @@
                   Height="20"
                   VerticalAlignment="Top"
                   Margin="0,0,10,0">
-            <TextBlock Text="!"
+            <SelectableTextBlock Text="!"
                        Foreground="White"
                        FontSize="12"
                        FontWeight="Bold"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
           </Border>
-          <TextBlock Grid.Column="1"
+          <SelectableTextBlock Grid.Column="1"
                      Text="{Binding UnfilledWarningText}"
                      TextWrapping="Wrap"
                      FontSize="13"
@@ -151,7 +151,7 @@
       </Border>
       
       <!-- Instructions -->
-      <TextBlock Grid.Row="5"
+      <SelectableTextBlock Grid.Row="5"
                  Text="Můžete pokračovat i s nevyplněnými zástupnými symboly. Použijte tlačítko 'Zpět' pro návrat k předchozímu kroku."
                  FontSize="12"
                  FontStyle="Italic"

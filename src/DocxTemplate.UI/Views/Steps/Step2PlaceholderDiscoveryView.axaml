@@ -15,12 +15,12 @@
         
         <!-- Header -->
         <StackPanel Spacing="8">
-          <TextBlock Text="{Binding StepTitle}"
+          <SelectableTextBlock Text="{Binding StepTitle}"
                      FontSize="24"
                      FontWeight="Bold"
                      HorizontalAlignment="Center" />
           
-          <TextBlock Text="{Binding StepDescription}"
+          <SelectableTextBlock Text="{Binding StepDescription}"
                      FontSize="14"
                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                      HorizontalAlignment="Center"
@@ -54,7 +54,7 @@
                 </Style>
               </Border.Styles>
             </Border>
-            <TextBlock Text="{Binding ScanStatusMessage}"
+            <SelectableTextBlock Text="{Binding ScanStatusMessage}"
                        FontSize="14"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
@@ -69,11 +69,11 @@
                 Padding="15"
                 IsVisible="{Binding HasScanError}">
           <StackPanel Spacing="8">
-            <TextBlock Text="⚠ Chyba při prohledávání"
+            <SelectableTextBlock Text="⚠ Chyba při prohledávání"
                        FontWeight="Bold"
                        Foreground="#FFCC0000"
                        FontSize="14" />
-            <TextBlock Text="{Binding ScanErrorMessage}"
+            <SelectableTextBlock Text="{Binding ScanErrorMessage}"
                        TextWrapping="Wrap"
                        Foreground="#FFCC0000"
                        FontSize="13" />
@@ -93,31 +93,31 @@
                 Padding="15"
                 IsVisible="{Binding HasScanCompleted}">
           <StackPanel Spacing="5">
-            <TextBlock FontWeight="Bold"
+            <SelectableTextBlock FontWeight="Bold"
                        Foreground="#FF2E7D32"
                        FontSize="14">
               <Run Text="✓ Prohledávání dokončeno"/>
-            </TextBlock>
-            <TextBlock Text="{Binding ScanStatusMessage}"
+            </SelectableTextBlock>
+            <SelectableTextBlock Text="{Binding ScanStatusMessage}"
                        Foreground="#FF2E7D32"
                        FontSize="13" />
             <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,5,0,0">
-              <TextBlock Foreground="#FF2E7D32" FontSize="12">
+              <SelectableTextBlock Foreground="#FF2E7D32" FontSize="12">
                 <Run Text="Nalezeno:" FontWeight="Bold"/>
                 <Run Text="{Binding TotalPlaceholdersFound}"/>
                 <Run Text="zástupných symbolů"/>
-              </TextBlock>
-              <TextBlock Foreground="#FF2E7D32" FontSize="12">
+              </SelectableTextBlock>
+              <SelectableTextBlock Foreground="#FF2E7D32" FontSize="12">
                 <Run Text="Celkem výskytů:" FontWeight="Bold"/>
                 <Run Text="{Binding TotalOccurrences}"/>
-              </TextBlock>
+              </SelectableTextBlock>
             </StackPanel>
           </StackPanel>
         </Border>
 
         <!-- Placeholders List -->
         <StackPanel Spacing="10" IsVisible="{Binding HasScanCompleted}">
-          <TextBlock Text="Nalezené zástupné symboly:"
+          <SelectableTextBlock Text="Nalezené zástupné symboly:"
                      FontSize="16"
                      FontWeight="SemiBold"
                      Margin="0,10,0,0" />
@@ -142,14 +142,14 @@
                       </Style>
                     </Border.Styles>
                     <StackPanel Spacing="4">
-                      <TextBlock Text="{Binding DisplayText}"
+                      <SelectableTextBlock Text="{Binding DisplayText}"
                                  FontWeight="SemiBold"
                                  FontSize="13" />
-                      <TextBlock FontSize="11"
+                      <SelectableTextBlock FontSize="11"
                                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
                         <Run Text="Soubory:"/>
                         <Run Text="{Binding FilesListText}"/>
-                      </TextBlock>
+                      </SelectableTextBlock>
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -163,14 +163,14 @@
                   Padding="20"
                   IsVisible="{Binding !DiscoveredPlaceholders.Count}">
             <StackPanel Spacing="8" HorizontalAlignment="Center">
-              <TextBlock Text="🔍"
+              <SelectableTextBlock Text="🔍"
                          FontSize="32"
                          HorizontalAlignment="Center" />
-              <TextBlock Text="V šablonách nebyly nalezeny žádné zástupné symboly"
+              <SelectableTextBlock Text="V šablonách nebyly nalezeny žádné zástupné symboly"
                          FontSize="14"
                          HorizontalAlignment="Center"
                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-              <TextBlock Text="Zkontrolujte, že šablony obsahují zástupné symboly ve formátu {{NÁZEV}}"
+              <SelectableTextBlock Text="Zkontrolujte, že šablony obsahují zástupné symboly ve formátu {{NÁZEV}}"
                          FontSize="12"
                          HorizontalAlignment="Center"
                          TextWrapping="Wrap"
@@ -187,7 +187,7 @@
           <Button Content="Prohledat znovu"
                   Command="{Binding RescanCommand}"
                   Classes="accent" />
-          <TextBlock Text="Klikněte pro nové prohledání šablon"
+          <SelectableTextBlock Text="Klikněte pro nové prohledání šablon"
                      FontSize="11"
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />

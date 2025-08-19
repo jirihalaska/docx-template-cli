@@ -26,7 +26,7 @@
         <Border Grid.Row="1" 
                 Background="LightGray" 
                 Padding="10,5">
-            <TextBlock Text="{Binding StatusText}" />
+            <SelectableTextBlock Text="{Binding StatusText}" />
         </Border>
     </Grid>
 

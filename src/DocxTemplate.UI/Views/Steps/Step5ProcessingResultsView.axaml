@@ -13,12 +13,12 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="20">
         
-        <TextBlock Text="Zpracování a výsledky"
+        <SelectableTextBlock Text="Zpracování a výsledky"
                    FontSize="24"
                    FontWeight="Bold"
                    HorizontalAlignment="Center" />
         
-        <TextBlock Text="Sledujte průběh zpracování a zobrazte výsledky."
+        <SelectableTextBlock Text="Sledujte průběh zpracování a zobrazte výsledky."
                    FontSize="14"
                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                    HorizontalAlignment="Center"
@@ -32,10 +32,10 @@
                 Padding="15"
                 IsVisible="{Binding !IsProcessingComplete}">
           <StackPanel Spacing="10">
-            <TextBlock Text="Shrnutí zpracování"
+            <SelectableTextBlock Text="Shrnutí zpracování"
                        FontSize="16"
                        FontWeight="SemiBold" />
-            <TextBlock Text="{Binding ProcessingSummary}"
+            <SelectableTextBlock Text="{Binding ProcessingSummary}"
                        FontSize="12"
                        TextWrapping="Wrap"
                        LineHeight="18" />
@@ -56,13 +56,13 @@
                 Padding="15"
                 IsVisible="{Binding IsProcessing}">
           <StackPanel Spacing="10">
-            <TextBlock Text="Zpracovává se..."
+            <SelectableTextBlock Text="Zpracovává se..."
                        FontSize="16"
                        FontWeight="SemiBold" />
             <ProgressBar IsIndeterminate="True"
                          Height="8"
                          Margin="0,5" />
-            <TextBlock Text="{Binding ProcessingStatus}"
+            <SelectableTextBlock Text="{Binding ProcessingStatus}"
                        FontSize="12"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -81,12 +81,12 @@
             <StackPanel Spacing="10" IsVisible="{Binding ProcessingSuccessful}">
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Ellipse Width="12" Height="12" Fill="Green" />
-                <TextBlock Text="Zpracování dokončeno úspěšně"
+                <SelectableTextBlock Text="Zpracování dokončeno úspěšně"
                            FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="Green" />
               </StackPanel>
-              <TextBlock Text="{Binding ProcessingResults}"
+              <SelectableTextBlock Text="{Binding ProcessingResults}"
                          FontSize="12"
                          TextWrapping="Wrap" />
             </StackPanel>
@@ -95,12 +95,12 @@
             <StackPanel Spacing="10" IsVisible="{Binding !ProcessingSuccessful}">
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Ellipse Width="12" Height="12" Fill="Red" />
-                <TextBlock Text="Zpracování selhalo"
+                <SelectableTextBlock Text="Zpracování selhalo"
                            FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="Red" />
               </StackPanel>
-              <TextBlock Text="{Binding ProcessingResults}"
+              <SelectableTextBlock Text="{Binding ProcessingResults}"
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="Red" />
@@ -108,7 +108,7 @@
 
             <!-- Log File Information -->
             <StackPanel Spacing="5" IsVisible="{Binding LogFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-              <TextBlock Text="{Binding LogFilePath, StringFormat='Log: {0}'}"
+              <SelectableTextBlock Text="{Binding LogFilePath, StringFormat='Log: {0}'}"
                          FontSize="10"
                          FontFamily="Consolas"
                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />

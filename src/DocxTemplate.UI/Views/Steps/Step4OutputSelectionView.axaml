@@ -13,13 +13,13 @@
     <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Center">
       
       <!-- Step Title -->
-      <TextBlock Text="{Binding StepTitle}"
+      <SelectableTextBlock Text="{Binding StepTitle}"
                  FontSize="24"
                  FontWeight="Bold"
                  HorizontalAlignment="Center" />
       
       <!-- Step Description -->
-      <TextBlock Text="{Binding StepDescription}"
+      <SelectableTextBlock Text="{Binding StepDescription}"
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"
@@ -44,7 +44,7 @@
                   IsEnabled="{Binding !IsSelectingFolder}" />
           
           <!-- Loading indicator -->
-          <TextBlock Text="Otevírám dialog pro výběr složky..."
+          <SelectableTextBlock Text="Otevírám dialog pro výběr složky..."
                      HorizontalAlignment="Center"
                      FontStyle="Italic"
                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -63,7 +63,7 @@
         
         <StackPanel Spacing="10">
           
-          <TextBlock Text="Vybraná výstupní složka:"
+          <SelectableTextBlock Text="Vybraná výstupní složka:"
                      FontSize="14"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
@@ -72,7 +72,7 @@
           <ScrollViewer HorizontalScrollBarVisibility="Auto" 
                         VerticalScrollBarVisibility="Disabled"
                         MaxHeight="100">
-            <TextBlock Text="{Binding FolderDisplayText}"
+            <SelectableTextBlock Text="{Binding FolderDisplayText}"
                        FontSize="14"
                        FontFamily="Consolas,Monaco,monospace"
                        TextWrapping="NoWrap"
@@ -99,7 +99,7 @@
                   CornerRadius="10"
                   VerticalAlignment="Top"
                   IsVisible="{Binding IsValid}">
-            <TextBlock Text="✓"
+            <SelectableTextBlock Text="✓"
                        FontSize="12"
                        Foreground="White"
                        HorizontalAlignment="Center"
@@ -113,7 +113,7 @@
                   CornerRadius="10"
                   VerticalAlignment="Top"
                   IsVisible="{Binding !IsValid}">
-            <TextBlock Text="✗"
+            <SelectableTextBlock Text="✗"
                        FontSize="12"
                        Foreground="White"
                        HorizontalAlignment="Center"
@@ -122,7 +122,7 @@
           </Border>
           
           <!-- Validation Message -->
-          <TextBlock Text="{Binding ValidationMessage}"
+          <SelectableTextBlock Text="{Binding ValidationMessage}"
                      FontSize="14"
                      TextWrapping="Wrap"
                      VerticalAlignment="Center" />
@@ -131,7 +131,7 @@
       </Border>
       
       <!-- No Folder Selected Message -->
-      <TextBlock Text="Žádná složka není vybrána. Pro pokračování musíte vybrat výstupní složku."
+      <SelectableTextBlock Text="Žádná složka není vybrána. Pro pokračování musíte vybrat výstupní složku."
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                  HorizontalAlignment="Center"

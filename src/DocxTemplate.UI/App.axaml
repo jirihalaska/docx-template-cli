@@ -11,5 +11,10 @@
   
     <Application.Styles>
         <FluentTheme />
+        
+        <!-- Global style to use SelectableTextBlock styling for better text selection -->
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="SelectionBrush" Value="{DynamicResource SystemAccentColor}" />
+        </Style>
     </Application.Styles>
 </Application>

@@ -11,7 +11,7 @@
   <Grid RowDefinitions="Auto,Auto,*,Auto">
     
     <!-- Step Indicator Title -->
-    <TextBlock Grid.Row="0" 
+    <SelectableTextBlock Grid.Row="0" 
                Text="{Binding StepIndicatorText}"
                FontSize="16"
                FontWeight="SemiBold"
@@ -50,7 +50,7 @@
                   <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
                 </Style>
               </Border.Styles>
-              <TextBlock Text="✓" 
+              <SelectableTextBlock Text="✓" 
                          IsVisible="{Binding IsCompleted}"
                          Foreground="White"
                          FontSize="12"

@@ -23,15 +23,8 @@ public static class ServiceRegistration
         services.AddTransient<CliCommandBuilder>();
         services.AddTransient<ITemplateSetDiscoveryService, TemplateSetDiscoveryService>();
         
-        // Register ICliCommandService factory that won't block startup
-        services.AddTransient<ICliCommandService>(provider =>
-        {
-            var factory = provider.GetRequiredService<CliCommandServiceFactory>();
-            // Create CLI service synchronously to avoid deadlock
-            var discoveryService = provider.GetRequiredService<ICliExecutableDiscoveryService>();
-            var cliPath = discoveryService.DiscoverCliExecutableAsync().GetAwaiter().GetResult();
-            return new CliProcessRunner(cliPath);
-        });
+        // Register lazy CLI command service - discovery will happen on first use, not during startup
+        services.AddSingleton<ICliCommandService, LazyCliCommandService>();
         
         // Register ViewModels
         services.AddTransient<WizardViewModel>(provider => new WizardViewModel(provider));

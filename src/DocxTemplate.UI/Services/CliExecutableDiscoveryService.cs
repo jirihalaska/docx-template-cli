@@ -21,21 +21,29 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     public Task<string> DiscoverCliExecutableAsync()
     {
-        var guiExecutableDirectory = GetGuiExecutableDirectory();
-        
-        foreach (var executableName in _executableNames)
+        try
         {
-            var candidatePath = Path.Combine(guiExecutableDirectory, executableName);
+            var guiExecutableDirectory = GetGuiExecutableDirectory();
             
-            if (File.Exists(candidatePath))
+            foreach (var executableName in _executableNames)
             {
-                // Skip validation during startup to avoid deadlock
-                // Validation will happen when CLI is actually used
-                return Task.FromResult(candidatePath);
+                var candidatePath = Path.Combine(guiExecutableDirectory, executableName);
+                
+                if (File.Exists(candidatePath))
+                {
+                    // Skip validation during startup to avoid deadlock
+                    // Validation will happen when CLI is actually used
+                    return Task.FromResult(candidatePath);
+                }
             }
+            
+            throw new CliExecutableNotFoundException(guiExecutableDirectory);
         }
-        
-        throw new CliExecutableNotFoundException(guiExecutableDirectory);
+        catch (Exception ex) when (!(ex is CliExecutableNotFoundException))
+        {
+            // Wrap any unexpected exceptions
+            throw new CliExecutableNotFoundException($"Error during CLI discovery: {ex.Message}");
+        }
     }
 
     public async Task<bool> ValidateCliExecutableAsync(string cliExecutablePath)
@@ -50,7 +58,7 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
                 startInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"{cliExecutablePath} --version",
+                    Arguments = $"\"{cliExecutablePath}\" --version",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -74,12 +82,12 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
             process.Start();
 
-            // Wait for process completion with timeout
-            var completed = await WaitForExitAsync(process, TimeSpan.FromSeconds(5));
+            // Use shorter timeout for validation to prevent GUI hanging
+            var completed = await WaitForExitAsync(process, TimeSpan.FromSeconds(3));
             
             if (!completed)
             {
-                process.Kill();
+                try { process.Kill(); } catch { }
                 return false;
             }
 
@@ -96,8 +104,21 @@ public class CliExecutableDiscoveryService : ICliExecutableDiscoveryService
 
     private static string GetGuiExecutableDirectory()
     {
-        // Use AppContext.BaseDirectory which points to the application's directory
-        // This works correctly for both single-file apps and regular deployments
+        // For single-file deployments, AppContext.BaseDirectory might point to temp extraction directory
+        // Try multiple strategies to find the actual executable directory
+        
+        // Strategy 1: Use the directory of the current executable
+        var currentExePath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(currentExePath))
+        {
+            var currentExeDir = Path.GetDirectoryName(currentExePath);
+            if (!string.IsNullOrEmpty(currentExeDir))
+            {
+                return currentExeDir;
+            }
+        }
+        
+        // Strategy 2: Use AppContext.BaseDirectory as fallback
         return AppContext.BaseDirectory;
     }
 

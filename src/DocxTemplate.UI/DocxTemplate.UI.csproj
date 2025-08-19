@@ -38,7 +38,7 @@
   </ItemGroup>
 
   <!-- Build CLI project and copy executable to UI output directory -->
-  <Target Name="BuildAndCopyCliExecutable" AfterTargets="Build" BeforeTargets="Publish">
+  <Target Name="BuildAndCopyCliExecutable" AfterTargets="Build" BeforeTargets="Publish" Condition="'$(SkipCliBuild)' != 'true'">
     <PropertyGroup>
       <CliProjectPath>$(MSBuildThisFileDirectory)..\DocxTemplate.CLI\DocxTemplate.CLI.csproj</CliProjectPath>
       <!-- Handle runtime-specific paths - use publish output for self-contained, build output for regular build -->

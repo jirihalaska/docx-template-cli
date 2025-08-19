@@ -54,22 +54,15 @@ if ($LASTEXITCODE -eq 0) {
 
 # Test 3: Invalid command handling
 Write-Host "  Testing invalid command handling..." -ForegroundColor Gray
-# Use Start-Process to properly handle stderr without triggering PowerShell errors
-$pinfo = New-Object System.Diagnostics.ProcessStartInfo
-$pinfo.FileName = ".\DocxTemplate.CLI.exe"
-$pinfo.Arguments = "invalid-command"
-$pinfo.RedirectStandardError = $true
-$pinfo.RedirectStandardOutput = $true
-$pinfo.UseShellExecute = $false
-$pinfo.CreateNoWindow = $true
-$p = New-Object System.Diagnostics.Process
-$p.StartInfo = $pinfo
-$p.Start() | Out-Null
-$stdout = $p.StandardOutput.ReadToEnd()
-$stderr = $p.StandardError.ReadToEnd()
-$p.WaitForExit()
-$exitCode = $p.ExitCode
-$invalidResult = "$stdout`n$stderr"
+# Try running invalid command and capture exit code
+try {
+    $invalidResult = & .\DocxTemplate.CLI.exe invalid-command 2>&1 | Out-String
+    $exitCode = $LASTEXITCODE
+} catch {
+    # If command throws an exception, capture it
+    $invalidResult = $_.Exception.Message
+    $exitCode = 1
+}
 
 if ($exitCode -eq 0) {
     Write-Host "  [WARN] Invalid command unexpectedly succeeded" -ForegroundColor Yellow

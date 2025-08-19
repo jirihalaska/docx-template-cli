@@ -25,7 +25,7 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
     {
     }
 
-    public override int TotalSteps => 4;
+    public override int TotalSteps => 3;
 
     public override string NextButtonText
     {
@@ -33,7 +33,7 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
         {
             return CurrentStep switch
             {
-                3 => "Generuj", // Step 3: Processing step
+                2 => "Generuj", // Step 2: Processing step (now step 3 - 1)
                 _ => "Další"
             };
         }
@@ -44,9 +44,8 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
         var stepList = new List<StepInfo>
         {
             new() { Title = "Vyberte složku s šablonami", IsActive = true },  // Step 0: Existing Folder Selection
-            new() { Title = "Nalezené zástupné symboly" },                    // Step 1: Placeholder Discovery  
-            new() { Title = "Zadání hodnot zástupných symbolů" },             // Step 2: Placeholder Input  
-            new() { Title = "Zpracování a výsledky" }                         // Step 3: Processing Results
+            new() { Title = "Zadání hodnot zástupných symbolů" },             // Step 1: Placeholder Input (skip discovery)
+            new() { Title = "Zpracování a výsledky" }                         // Step 2: Processing Results
         };
         Steps = new ReadOnlyCollection<StepInfo>(stepList);
     }
@@ -73,10 +72,9 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
 
         StepViewModels = new List<StepViewModelBase>
         {
-            _existingFolderSelectionViewModel, // Step 0
-            _placeholderDiscoveryViewModel,    // Step 1
-            _placeholderInputViewModel,        // Step 2
-            _processingResultsViewModel        // Step 3
+            _existingFolderSelectionViewModel, // Step 0: Existing Folder Selection
+            _placeholderInputViewModel,        // Step 1: Placeholder Input (skip discovery)
+            _processingResultsViewModel        // Step 2: Processing Results
         };
     }
 
@@ -87,17 +85,12 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
             DataContext = _existingFolderSelectionViewModel
         };
 
-        var step1View = new Step2PlaceholderDiscoveryView
-        {
-            DataContext = _placeholderDiscoveryViewModel
-        };
-
-        var step2View = new Step3PlaceholderInputView
+        var step1View = new Step3PlaceholderInputView
         {
             DataContext = _placeholderInputViewModel
         };
 
-        var step3View = new Step5ProcessingResultsView
+        var step2View = new Step5ProcessingResultsView
         {
             DataContext = _processingResultsViewModel
         };
@@ -105,9 +98,8 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
         StepViews = new List<UserControl>
         {
             step0View,  // Step 0: Existing Folder Selection
-            step1View,  // Step 1: Placeholder Discovery
-            step2View,  // Step 2: Placeholder Input
-            step3View   // Step 3: Processing Results
+            step1View,  // Step 1: Placeholder Input (skip discovery)
+            step2View   // Step 2: Processing Results
         };
     }
 
@@ -115,7 +107,7 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
     {
         switch (toStep)
         {
-            case 1: // Moving to Placeholder Discovery
+            case 1: // Moving to Placeholder Input (skip discovery)
                 if (!string.IsNullOrEmpty(_existingFolderSelectionViewModel.SelectedFolderPath))
                 {
                     // Set the selected folder as the template set for scanning
@@ -136,25 +128,23 @@ public class UpdateProjectWizardViewModel : WizardViewModelBase
 
                     _placeholderDiscoveryViewModel.SetSelectedTemplateSet(templateSetItem);
                     
-                    // Trigger placeholder scanning
+                    // Trigger placeholder scanning and then transfer to input step
                     Avalonia.Threading.Dispatcher.UIThread.Post(async () => {
                         await _placeholderDiscoveryViewModel.ScanPlaceholdersAsync();
+                        
+                        var discoveredPlaceholders = _placeholderDiscoveryViewModel.DiscoveredPlaceholders;
+                        
+                        // Filter out SOUBOR_PREFIX for update workflow as per requirements
+                        var filteredPlaceholders = discoveredPlaceholders
+                            .Where(p => p.Name != "SOUBOR_PREFIX")
+                            .ToList();
+                            
+                        _placeholderInputViewModel.SetDiscoveredPlaceholders(filteredPlaceholders);
                     });
                 }
                 break;
 
-            case 2: // Moving to Placeholder Input
-                var discoveredPlaceholders = _placeholderDiscoveryViewModel.DiscoveredPlaceholders;
-                
-                // Filter out SOUBOR_PREFIX for update workflow as per requirements
-                var filteredPlaceholders = discoveredPlaceholders
-                    .Where(p => p.Name != "SOUBOR_PREFIX")
-                    .ToList();
-                    
-                _placeholderInputViewModel.SetDiscoveredPlaceholders(filteredPlaceholders);
-                break;
-
-            case 3: // Moving to Processing
+            case 2: // Moving to Processing (now step 2 instead of 3)
                 if (!string.IsNullOrEmpty(_existingFolderSelectionViewModel.SelectedFolderPath))
                 {
                     // For update mode, source and target are the same (in-place processing)

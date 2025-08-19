@@ -25,7 +25,7 @@ public class NewProjectWizardViewModel : WizardViewModelBase
     {
     }
 
-    public override int TotalSteps => 5;
+    public override int TotalSteps => 4;
 
     public override string NextButtonText
     {
@@ -33,7 +33,7 @@ public class NewProjectWizardViewModel : WizardViewModelBase
         {
             return CurrentStep switch
             {
-                4 => "Generuj", // Step 4: Processing step
+                3 => "Generuj", // Step 3: Processing step (now step 4 - 1)
                 _ => "Další"
             };
         }
@@ -44,10 +44,9 @@ public class NewProjectWizardViewModel : WizardViewModelBase
         var stepList = new List<StepInfo>
         {
             new() { Title = "Vyberte sadu šablon", IsActive = true },        // Step 0: Template Selection
-            new() { Title = "Nalezené zástupné symboly" },                   // Step 1: Placeholder Discovery  
-            new() { Title = "Zadání hodnot zástupných symbolů" },            // Step 2: Placeholder Input  
-            new() { Title = "Výběr výstupní složky" },                       // Step 3: Output Folder Selection
-            new() { Title = "Zpracování a výsledky" }                        // Step 4: Processing Results
+            new() { Title = "Zadání hodnot zástupných symbolů" },            // Step 1: Placeholder Input (skip discovery)
+            new() { Title = "Výběr výstupní složky" },                       // Step 2: Output Folder Selection
+            new() { Title = "Zpracování a výsledky" }                        // Step 3: Processing Results
         };
         Steps = new ReadOnlyCollection<StepInfo>(stepList);
     }
@@ -86,11 +85,10 @@ public class NewProjectWizardViewModel : WizardViewModelBase
 
         StepViewModels = new List<StepViewModelBase>
         {
-            _templateSelectionViewModel,     // Step 0
-            _placeholderDiscoveryViewModel,  // Step 1
-            _placeholderInputViewModel,      // Step 2
-            _outputFolderSelectionViewModel, // Step 3
-            _processingResultsViewModel      // Step 4
+            _templateSelectionViewModel,     // Step 0: Template Selection
+            _placeholderInputViewModel,      // Step 1: Placeholder Input (skip discovery)
+            _outputFolderSelectionViewModel, // Step 2: Output Folder Selection
+            _processingResultsViewModel      // Step 3: Processing Results
         };
     }
 
@@ -101,22 +99,17 @@ public class NewProjectWizardViewModel : WizardViewModelBase
             DataContext = _templateSelectionViewModel
         };
 
-        var step1View = new Step2PlaceholderDiscoveryView
-        {
-            DataContext = _placeholderDiscoveryViewModel
-        };
-
-        var step2View = new Step3PlaceholderInputView
+        var step1View = new Step3PlaceholderInputView
         {
             DataContext = _placeholderInputViewModel
         };
 
-        var step3View = new Step4OutputSelectionView
+        var step2View = new Step4OutputSelectionView
         {
             DataContext = _outputFolderSelectionViewModel
         };
 
-        var step4View = new Step5ProcessingResultsView
+        var step3View = new Step5ProcessingResultsView
         {
             DataContext = _processingResultsViewModel
         };
@@ -124,10 +117,9 @@ public class NewProjectWizardViewModel : WizardViewModelBase
         StepViews = new List<UserControl>
         {
             step0View,  // Step 0: Template Selection
-            step1View,  // Step 1: Placeholder Discovery
-            step2View,  // Step 2: Placeholder Input
-            step3View,  // Step 3: Output Folder Selection
-            step4View   // Step 4: Processing Results
+            step1View,  // Step 1: Placeholder Input (skip discovery)
+            step2View,  // Step 2: Output Folder Selection
+            step3View   // Step 3: Processing Results
         };
     }
 
@@ -135,24 +127,22 @@ public class NewProjectWizardViewModel : WizardViewModelBase
     {
         switch (toStep)
         {
-            case 1: // Moving to Placeholder Discovery
+            case 1: // Moving to Placeholder Input (skip discovery)
                 if (_templateSelectionViewModel.SelectedTemplateSet != null)
                 {
+                    // Create a hidden placeholder discovery to get the placeholders
                     _placeholderDiscoveryViewModel.SetSelectedTemplateSet(_templateSelectionViewModel.SelectedTemplateSet);
                     
-                    // Trigger placeholder scanning
+                    // Trigger placeholder scanning and then transfer to input step
                     Avalonia.Threading.Dispatcher.UIThread.Post(async () => {
                         await _placeholderDiscoveryViewModel.ScanPlaceholdersAsync();
+                        var discoveredPlaceholders = _placeholderDiscoveryViewModel.DiscoveredPlaceholders;
+                        _placeholderInputViewModel.SetDiscoveredPlaceholders(discoveredPlaceholders);
                     });
                 }
                 break;
 
-            case 2: // Moving to Placeholder Input
-                var discoveredPlaceholders = _placeholderDiscoveryViewModel.DiscoveredPlaceholders;
-                _placeholderInputViewModel.SetDiscoveredPlaceholders(discoveredPlaceholders);
-                break;
-
-            case 4: // Moving to Processing
+            case 3: // Moving to Processing (now step 3 instead of 4)
                 if (_templateSelectionViewModel.SelectedTemplateSet != null && 
                     !string.IsNullOrEmpty(_outputFolderSelectionViewModel.SelectedFolderPath))
                 {

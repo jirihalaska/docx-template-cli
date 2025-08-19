@@ -29,9 +29,9 @@
             
             <!-- Wizard Header with Back to Mode Selection -->
             <Border Grid.Row="0" 
-                    Background="#f0f0f0" 
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" 
                     Padding="20,10"
-                    BorderBrush="#d0d0d0"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -56,7 +56,7 @@
                     <TextBlock Grid.Column="2"
                               Text="{Binding CurrentWizard.StepIndicatorText}"
                               VerticalAlignment="Center"
-                              Foreground="#666" />
+                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
                 </Grid>
             </Border>
             
@@ -67,8 +67,8 @@
             
             <!-- Wizard Navigation -->
             <Border Grid.Row="2"
-                    Background="#f9f9f9"
-                    BorderBrush="#d0d0d0"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="0,1,0,0"
                     Padding="20,15">
                 <Grid>

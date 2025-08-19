@@ -24,7 +24,7 @@
         
         <!-- Status bar -->
         <Border Grid.Row="1" 
-                Background="LightGray" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" 
                 Padding="10,5">
             <SelectableTextBlock Text="{Binding StatusText}" />
         </Border>

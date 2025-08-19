@@ -50,10 +50,27 @@ jobs:
       run: dotnet restore
       
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --configuration Release --no-restore --verbosity minimal
       
     - name: Run unit tests
       run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      
+    - name: Kill any remaining processes (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: powershell
+      run: |
+        # Kill any DocxTemplate processes that might be hanging
+        Get-Process | Where-Object {$_.ProcessName -like "*DocxTemplate*"} | Stop-Process -Force -ErrorAction SilentlyContinue
+        # Wait a moment for cleanup
+        Start-Sleep -Seconds 2
+        
+    - name: Kill any remaining processes (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # Kill any DocxTemplate processes that might be hanging
+        pkill -f "DocxTemplate" || true
+        # Wait a moment for cleanup
+        sleep 2
       
     - name: Test Czech character handling
       shell: bash
@@ -100,14 +117,22 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
-    - name: Create packages
+    - name: Create NuGet packages
       run: |
-        # Create NuGet packages
-        dotnet pack --configuration Release --output ./packages --no-restore
+        # Build only what's needed for NuGet packages, exclude UI project to avoid CLI build conflicts
+        dotnet pack src/DocxTemplate.Core/DocxTemplate.Core.csproj --configuration Release --output ./packages --verbosity minimal
+        dotnet pack src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj --configuration Release --output ./packages --verbosity minimal
+        dotnet pack src/DocxTemplate.CLI/DocxTemplate.CLI.csproj --configuration Release --output ./packages --verbosity minimal
         
-        # Create self-contained executables for Windows and macOS
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r win-x64 --self-contained -o ./publish/win-x64
-        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r osx-x64 --self-contained -o ./publish/osx-x64
+    - name: Create Windows executable
+      run: |
+        # Build CLI executable directly without UI project dependencies
+        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r win-x64 --self-contained -o ./publish/win-x64 --verbosity minimal
+        
+    - name: Create macOS executable  
+      run: |
+        # Build CLI executable directly without UI project dependencies  
+        dotnet publish src/DocxTemplate.CLI/DocxTemplate.CLI.csproj -c Release -r osx-x64 --self-contained -o ./publish/osx-x64 --verbosity minimal
         
     - name: Upload NuGet packages
       uses: actions/upload-artifact@v4

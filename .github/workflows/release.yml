@@ -252,6 +252,14 @@ jobs:
         cp "./dist/macos-arm64-gui/DocxTemplate.UI" "$APP_DIR/Contents/MacOS/$APP_NAME"
         chmod +x "$APP_DIR/Contents/MacOS/$APP_NAME"
         
+        # Copy required native libraries (Avalonia dependencies)
+        echo "📚 Copying required native libraries..."
+        cp "./dist/macos-arm64-gui"/*.dylib "$APP_DIR/Contents/MacOS/" 2>/dev/null || true
+        
+        # List what was copied for verification
+        echo "📦 App bundle contents:"
+        ls -la "$APP_DIR/Contents/MacOS/"
+        
         # Create Info.plist for the app bundle
         echo "📄 Creating Info.plist..."
         cat > "$APP_DIR/Contents/Info.plist" << EOF
@@ -314,6 +322,15 @@ jobs:
         else
             echo "❌ Missing Info.plist"
             exit 1
+        fi
+        
+        # Verify native libraries are present
+        DYLIB_COUNT=$(ls "$APP_DIR/Contents/MacOS/"*.dylib 2>/dev/null | wc -l)
+        if [ "$DYLIB_COUNT" -gt 0 ]; then
+            echo "✅ Found $DYLIB_COUNT native libraries"
+            ls "$APP_DIR/Contents/MacOS/"*.dylib
+        else
+            echo "⚠️ No native libraries found - app may not run properly"
         fi
         
         echo "✅ macOS App Bundle tests passed!"

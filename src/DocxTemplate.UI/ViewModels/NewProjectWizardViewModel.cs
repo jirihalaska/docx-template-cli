@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using DocxTemplate.UI.Models;
 using DocxTemplate.UI.Views.Steps;
 using Microsoft.Extensions.DependencyInjection;
+using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -33,7 +34,8 @@ public class NewProjectWizardViewModel : WizardViewModelBase
         {
             return CurrentStep switch
             {
-                3 => "Generuj", // Step 3: Processing step (now step 4 - 1)
+                3 when _processingResultsViewModel.IsProcessingComplete => "Konec", // Step 3: After processing is complete
+                3 => "Generuj", // Step 3: Before processing starts
                 _ => "Další"
             };
         }
@@ -82,6 +84,14 @@ public class NewProjectWizardViewModel : WizardViewModelBase
                 UpdateStepStates(CurrentStep);
             });
         };
+        
+        // Subscribe to processing completion to update button text
+        _processingResultsViewModel.WhenAnyValue(x => x.IsProcessingComplete)
+            .Subscribe(_ => {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                    this.RaisePropertyChanged(nameof(NextButtonText));
+                });
+            });
 
         StepViewModels = new List<StepViewModelBase>
         {
@@ -159,6 +169,21 @@ public class NewProjectWizardViewModel : WizardViewModelBase
                 }
                 break;
         }
+    }
+
+    protected override void GoToNextStep()
+    {
+        // If button shows "Konec" (End), close the application
+        if (NextButtonText == "Konec")
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                System.Environment.Exit(0);
+            });
+            return;
+        }
+        
+        // Otherwise, proceed with normal step navigation
+        base.GoToNextStep();
     }
 
     protected override void OnWizardCompleted()

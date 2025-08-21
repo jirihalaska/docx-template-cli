@@ -1,25 +1,25 @@
 # Technical Specification
-**DOCX Template CLI System v2.0**  
-*BMad-Compliant Technical Specification*  
-*Created: 2025-08-17*
+**DOCX Template Processing System**  
+*Core Services and Infrastructure Implementation*  
+*Updated: 2025-08-21*
 
 ---
 
 ## Technical Overview
 
-A command-line interface system for Word document template processing built on .NET 8.0 with Clean Architecture, designed for high performance, cross-platform compatibility, and future GUI integration.
+A Word document template processing system built on .NET 9 with Clean Architecture, featuring an Avalonia UI that directly integrates with Core and Infrastructure services for high performance and cross-platform compatibility.
 
 ---
 
 ## Technology Stack
 
 ### Core Technologies
-- **Runtime**: .NET 8.0 (LTS)
-- **Language**: C# 12 with nullable reference types
-- **CLI Framework**: System.CommandLine (2.0.0-beta4.22272.1)
+- **Runtime**: .NET 9.0
+- **Language**: C# 13 with nullable reference types
+- **UI Framework**: Avalonia UI 11.x with ReactiveUI
 - **Word Processing**: DocumentFormat.OpenXml (3.0.0)
-- **Testing**: xUnit 2.6, Moq 4.20, FluentAssertions 6.12
-- **Benchmarking**: BenchmarkDotNet 0.13
+- **Testing**: xUnit 2.6, Avalonia.Headless for UI tests
+- **Architecture**: Clean Architecture with direct service integration
 
 ### Development Tools
 - **IDE**: Visual Studio 2022 / VS Code / Rider

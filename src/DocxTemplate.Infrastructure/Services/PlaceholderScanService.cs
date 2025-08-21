@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Infrastructure.DocxProcessing;
 using Microsoft.Extensions.Logging;
 
 namespace DocxTemplate.Infrastructure.Services;
@@ -16,6 +16,7 @@ public class PlaceholderScanService : IPlaceholderScanService
 {
     private readonly ITemplateDiscoveryService _discoveryService;
     private readonly ILogger<PlaceholderScanService> _logger;
+    private readonly PlaceholderScanner _placeholderScanner;
 
     public PlaceholderScanService(
         ITemplateDiscoveryService discoveryService,
@@ -23,6 +24,10 @@ public class PlaceholderScanService : IPlaceholderScanService
     {
         _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Create a logger for the scanner using the factory pattern
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        _placeholderScanner = new PlaceholderScanner(loggerFactory.CreateLogger<PlaceholderScanner>());
     }
 
     /// <inheritdoc />
@@ -146,12 +151,46 @@ public class PlaceholderScanService : IPlaceholderScanService
         }
 
         // Create final placeholder objects with aggregated locations
-        var placeholderList = allPlaceholders.Select(kvp => new Placeholder
+        var placeholderList = allPlaceholders.Select(kvp =>
         {
-            Name = kvp.Key,
-            Pattern = pattern,
-            Locations = kvp.Value.AsReadOnly(),
-            TotalOccurrences = kvp.Value.Sum(l => l.Occurrences)
+            // Check if this is an image placeholder
+            if (kvp.Key.StartsWith("image:") && kvp.Key.Contains("|width:") && kvp.Key.Contains("|height:"))
+            {
+                // Parse image placeholder details
+                var imageMatch = Regex.Match(kvp.Key, @"image:([^|]+)\|width:(\d+)\|height:(\d+)");
+                if (imageMatch.Success)
+                {
+                    var imageName = imageMatch.Groups[1].Value;
+                    var width = int.Parse(imageMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    var height = int.Parse(imageMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    
+                    return new Placeholder
+                    {
+                        Name = imageName,
+                        Pattern = PlaceholderPatterns.ImagePlaceholderPattern,
+                        Locations = kvp.Value.AsReadOnly(),
+                        TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
+                        Type = PlaceholderType.Image,
+                        ImageProperties = new ImageProperties
+                        {
+                            ImageName = imageName,
+                            MaxWidth = width,
+                            MaxHeight = height
+                        }
+                    };
+                }
+            }
+            
+            // It's a text placeholder
+            return new Placeholder
+            {
+                Name = kvp.Key,
+                Pattern = pattern,
+                Locations = kvp.Value.AsReadOnly(),
+                TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
+                Type = PlaceholderType.Text,
+                ImageProperties = null
+            };
         }).ToList();
 
         // Put SOUBOR_PREFIX first if it exists, keep the rest in original order
@@ -357,12 +396,46 @@ public class PlaceholderScanService : IPlaceholderScanService
         }
 
         // Convert to final placeholder objects
-        var placeholderList = placeholders.Select(kvp => new Placeholder
+        var placeholderList = placeholders.Select(kvp =>
         {
-            Name = kvp.Key,
-            Pattern = pattern,
-            Locations = kvp.Value.AsReadOnly(),
-            TotalOccurrences = kvp.Value.Sum(l => l.Occurrences)
+            // Check if this is an image placeholder
+            if (kvp.Key.StartsWith("image:") && kvp.Key.Contains("|width:") && kvp.Key.Contains("|height:"))
+            {
+                // Parse image placeholder details
+                var imageMatch = Regex.Match(kvp.Key, @"image:([^|]+)\|width:(\d+)\|height:(\d+)");
+                if (imageMatch.Success)
+                {
+                    var imageName = imageMatch.Groups[1].Value;
+                    var width = int.Parse(imageMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    var height = int.Parse(imageMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    
+                    return new Placeholder
+                    {
+                        Name = imageName,
+                        Pattern = PlaceholderPatterns.ImagePlaceholderPattern,
+                        Locations = kvp.Value.AsReadOnly(),
+                        TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
+                        Type = PlaceholderType.Image,
+                        ImageProperties = new ImageProperties
+                        {
+                            ImageName = imageName,
+                            MaxWidth = width,
+                            MaxHeight = height
+                        }
+                    };
+                }
+            }
+            
+            // It's a text placeholder
+            return new Placeholder
+            {
+                Name = kvp.Key,
+                Pattern = pattern,
+                Locations = kvp.Value.AsReadOnly(),
+                TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
+                Type = PlaceholderType.Text,
+                ImageProperties = null
+            };
         }).ToList();
 
         // Put SOUBOR_PREFIX first if it exists, keep the rest in original order
@@ -394,87 +467,38 @@ public class PlaceholderScanService : IPlaceholderScanService
         Dictionary<string, List<PlaceholderLocation>> placeholders,
         CancellationToken cancellationToken)
     {
-        await Task.Run(() =>
+        // Use the new PlaceholderScanner for better detection of split placeholders
+        var scanResults = await _placeholderScanner.ScanDocumentElementAsync(element, filePath, section, cancellationToken);
+        
+        // Merge the results into the existing placeholders dictionary
+        foreach (var kvp in scanResults)
         {
-            // Get all text content from the element, handling split runs
-            var textContent = GetTextContent(element);
-            if (string.IsNullOrEmpty(textContent))
-                return;
-
-            // Extract placeholder names from the text
-            var placeholderNames = ExtractPlaceholderNames(textContent, pattern);
-
-            foreach (var name in placeholderNames)
+            if (!placeholders.ContainsKey(kvp.Key))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (!placeholders.ContainsKey(name))
+                placeholders[kvp.Key] = new List<PlaceholderLocation>();
+            }
+            
+            foreach (var location in kvp.Value)
+            {
+                // Check if we already have this location
+                var existingLocation = placeholders[kvp.Key].FirstOrDefault(l => 
+                    l.FilePath == location.FilePath && l.Context == location.Context);
+                
+                if (existingLocation != null)
                 {
-                    placeholders[name] = [];
+                    // Update the occurrence count
+                    var index = placeholders[kvp.Key].IndexOf(existingLocation);
+                    placeholders[kvp.Key][index] = existingLocation with 
+                    { 
+                        Occurrences = existingLocation.Occurrences + location.Occurrences 
+                    };
                 }
-
-                // Count occurrences of this placeholder in the text
-                var regex = new Regex(pattern.Replace(".*?", Regex.Escape(name)), RegexOptions.Compiled, TimeSpan.FromSeconds(1));
-                var matches = regex.Matches(textContent);
-
-                if (matches.Count > 0)
+                else
                 {
-                    var fileName = Path.GetFileName(filePath);
-                    placeholders[name].Add(new PlaceholderLocation
-                    {
-                        FileName = fileName,
-                        FilePath = filePath,
-                        Occurrences = matches.Count,
-                        Context = $"{section}: {GetContextAroundPlaceholder(textContent, name, 50)}"
-                    });
+                    placeholders[kvp.Key].Add(location);
                 }
             }
-        }, cancellationToken);
-    }
-
-    private string GetTextContent(OpenXmlElement element)
-    {
-        var texts = new List<string>();
-        
-        // Recursively collect all text content, handling text runs
-        CollectTextRecursive(element, texts);
-        
-        return string.Join(" ", texts.Where(t => !string.IsNullOrWhiteSpace(t)));
-    }
-
-    private void CollectTextRecursive(OpenXmlElement element, List<string> texts)
-    {
-        if (element is Text textElement)
-        {
-            texts.Add(textElement.Text);
         }
-        else
-        {
-            foreach (var child in element.Elements())
-            {
-                CollectTextRecursive(child, texts);
-            }
-        }
-    }
-
-    private string GetContextAroundPlaceholder(string text, string placeholderName, int contextLength)
-    {
-        var index = text.IndexOf(placeholderName, StringComparison.OrdinalIgnoreCase);
-        if (index == -1)
-            return string.Empty;
-
-        var start = Math.Max(0, index - contextLength);
-        var end = Math.Min(text.Length, index + placeholderName.Length + contextLength);
-        
-        var context = text.Substring(start, end - start);
-        
-        // Add ellipsis if we truncated
-        if (start > 0)
-            context = "..." + context;
-        if (end < text.Length)
-            context = context + "...";
-
-        return context.Trim();
     }
 
     private class ScanFileResult

@@ -1,13 +1,13 @@
 # Documentation Index
-**DOCX Template CLI System v2.0**  
-*BMad-Compliant Documentation Structure*  
-*Created: 2025-08-17*
+**DOCX Template Processing System**  
+*Avalonia UI with Direct Service Integration*  
+*Updated: 2025-08-21*
 
 ---
 
-## 📚 BMad Documentation Hierarchy
+## 📚 System Overview
 
-This repository follows the **BMad Method** for documentation organization, ensuring clear structure and traceability throughout the development lifecycle.
+A cross-platform (Windows/macOS) DOCX template processing application built with Avalonia UI that directly integrates with Core and Infrastructure services for efficient placeholder replacement and document generation.
 
 ---
 
@@ -16,12 +16,12 @@ This repository follows the **BMad Method** for documentation organization, ensu
 ### Product Definition
 - **[prd.md](prd.md)** - Product Requirements Document ✅
   - Complete PRD with goals, requirements, and success metrics
-  - *Status: BMad-compliant, ready for implementation*
+  - *Status: Implemented with Avalonia UI*
 
 ### Architecture
 - **[architecture.md](architecture.md)** - System Architecture ✅
-  - Clean Architecture design with full component breakdown
-  - *Status: BMad-compliant, greenfield design*
+  - Clean Architecture with direct UI → Core/Infrastructure integration
+  - *Status: Refactored, CLI layer removed from UI*
 
 ---
 
@@ -29,41 +29,56 @@ This repository follows the **BMad Method** for documentation organization, ensu
 
 ### Technical Specifications
 - **[technical-specification.md](technical-specification.md)** - Implementation Details ✅
-  - Detailed technical implementation with code examples
-  - *Status: BMad-compliant, ready for development*
+  - Core services and infrastructure implementation
+  - *Status: Implemented*
 
-### Implementation Planning
-- **[implementation-plan.md](implementation-plan.md)** - Development Roadmap ✅
-  - 4-week sprint plan with daily tasks
-  - *Status: BMad-compliant, executable plan*
+### UI Framework
+- **[ui-framework-analysis.md](ui-framework-analysis.md)** - Avalonia UI Selection ✅
+  - Cross-platform GUI framework analysis and selection
+  - *Status: Avalonia implemented*
+
+### Avalonia Best Practices
+- **[avalonia-best-practices.md](avalonia-best-practices.md)** - UI Guidelines ✅
+  - MVVM patterns and Avalonia-specific practices
+  - *Status: Applied in implementation*
 
 ---
 
-## 🚀 Work Items (Execution Level)
+## 🚀 Implementation Status
 
-### Active Development
-- **Sprint 1** (Week 1): Foundation & Core Services
-- **Sprint 2** (Week 2): CLI Commands & Basic Operations
-- **Sprint 3** (Week 3): Advanced Features & Pipeline
-- **Sprint 4** (Week 4): Testing & Release
+### Completed Features
+- ✅ **Core Architecture**: Domain models, services, and interfaces
+- ✅ **Infrastructure Layer**: DOCX processing with DocumentFormat.OpenXml
+- ✅ **Avalonia UI**: Wizard-based interface with Czech localization
+- ✅ **Direct Service Integration**: UI uses Core/Infrastructure directly (no CLI dependency)
+- ✅ **Template Processing**: Discovery, scanning, copying, and placeholder replacement
+- ✅ **File Prefix Support**: SOUBOR_PREFIX placeholder for dynamic file naming
+- ✅ **Czech Character Support**: Full Unicode support throughout pipeline
 
-### Future Work
-- **v2.1**: Configuration & Extensions
-- **v3.0**: GUI Application
-- **v4.0**: Cloud Integration
+### User Stories Archive
+- **[stories/](stories/)** - Completed implementation stories
+  - 01.xxx: Foundation and architecture setup
+  - 02.xxx: Core command implementations
+  - 03.xxx: Processing and error handling
+  - 04.xxx: Testing and optimization
+  - 05.xxx: Placeholder enhancements
+  - 06.xxx: Avalonia UI implementation
+  - 07.xxx: Integration and distribution
+  - 08.xxx: Advanced features
+  - 09.001: Architecture refactoring (CLI removal)
 
 ---
 
 ## 📊 Document Status
 
-| Document | Type | Status | Compliance |
-|----------|------|--------|------------|
-| PRD | Strategic | Complete | ✅ BMad |
-| Architecture | Strategic | Complete | ✅ BMad |
-| Technical Spec | Tactical | Complete | ✅ BMad |
-| Implementation Plan | Tactical | Complete | ✅ BMad |
-| User Guide | Operational | Planned | 📝 Future |
-| API Docs | Operational | Planned | 📝 Future |
+| Document | Type | Status | Notes |
+|----------|------|--------|-------|
+| PRD | Strategic | Complete | ✅ Implemented |
+| Architecture | Strategic | Updated | ✅ Direct service integration |
+| Technical Spec | Tactical | Complete | ✅ Core/Infrastructure |
+| UI Framework Analysis | Tactical | Complete | ✅ Avalonia selected |
+| Avalonia Best Practices | Operational | Complete | ✅ Applied |
+| User Stories | Execution | Archived | ✅ 09 epics completed |
 
 ---
 
@@ -107,10 +122,10 @@ This repository follows the **BMad Method** for documentation organization, ensu
 
 ## 🚦 Quick Start for Developers
 
-1. **Read First**: [PRD](prd.md) for understanding the "why"
-2. **Understand Design**: [Architecture](architecture.md) for the "what"  
-3. **Learn Details**: [Technical Spec](technical-specification.md) for the "how"
-4. **Execute Plan**: [Implementation Plan](implementation-plan.md) for the "when"
+1. **Understand System**: [Architecture](architecture.md) - Direct service integration design
+2. **UI Framework**: [Avalonia Best Practices](avalonia-best-practices.md) - MVVM patterns
+3. **Core Services**: [Technical Spec](technical-specification.md) - Service interfaces
+4. **Implementation History**: [stories/](stories/) - Completed work reference
 
 ---
 

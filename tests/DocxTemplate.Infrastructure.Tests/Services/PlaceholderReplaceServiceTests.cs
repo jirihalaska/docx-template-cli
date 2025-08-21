@@ -1,6 +1,7 @@
 using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
+using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,6 +15,7 @@ public class PlaceholderReplaceServiceTests
     private readonly Mock<ILogger<PlaceholderReplaceService>> _mockLogger;
     private readonly Mock<IErrorHandler> _mockErrorHandler;
     private readonly Mock<IFileSystemService> _mockFileSystemService;
+    private readonly Mock<IImageProcessor> _mockImageProcessor;
     private readonly PlaceholderReplaceService _service;
 
     public PlaceholderReplaceServiceTests()
@@ -21,11 +23,13 @@ public class PlaceholderReplaceServiceTests
         _mockLogger = new Mock<ILogger<PlaceholderReplaceService>>();
         _mockErrorHandler = new Mock<IErrorHandler>();
         _mockFileSystemService = new Mock<IFileSystemService>();
+        _mockImageProcessor = new Mock<IImageProcessor>();
         
         _service = new PlaceholderReplaceService(
             _mockLogger.Object,
             _mockErrorHandler.Object,
-            _mockFileSystemService.Object);
+            _mockFileSystemService.Object,
+            _mockImageProcessor.Object);
     }
 
     [Fact]
@@ -438,7 +442,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object));
+            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object));
     }
 
     [Fact]
@@ -446,7 +450,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object));
+            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _mockImageProcessor.Object));
     }
 
     [Fact]
@@ -454,7 +458,15 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!));
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _mockImageProcessor.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullImageProcessor_ThrowsArgumentNullException()
+    {
+        // act & assert
+        Assert.Throws<ArgumentNullException>(() => 
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!));
     }
 
     private static ReplacementMap CreateValidReplacementMap()

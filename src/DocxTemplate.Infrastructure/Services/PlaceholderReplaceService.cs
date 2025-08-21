@@ -2,11 +2,22 @@ using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Infrastructure.Images;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Drawing.Pictures;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text.RegularExpressions;
+
+using W = DocumentFormat.OpenXml.Wordprocessing;
+using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using A = DocumentFormat.OpenXml.Drawing;
+using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 
 namespace DocxTemplate.Infrastructure.Services;
 
@@ -18,16 +29,20 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     private readonly ILogger<PlaceholderReplaceService> _logger;
     private readonly IErrorHandler _errorHandler;
     private readonly IFileSystemService _fileSystemService;
+    private readonly IImageProcessor _imageProcessor;
     private static readonly Regex PlaceholderPattern = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
+    private static readonly Regex ImagePlaceholderPattern = new(PlaceholderPatterns.ImagePlaceholderPattern, RegexOptions.Compiled);
 
     public PlaceholderReplaceService(
         ILogger<PlaceholderReplaceService> logger,
         IErrorHandler errorHandler,
-        IFileSystemService fileSystemService)
+        IFileSystemService fileSystemService,
+        IImageProcessor imageProcessor)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
+        _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
     }
 
     /// <inheritdoc />
@@ -335,7 +350,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             var startTime = DateTime.UtcNow;
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
             var actualBackupDirectory = backupDirectory ??
-                Path.Combine(Path.GetDirectoryName(templateFiles[0].FullPath)!, $"backup_{timestamp}");
+                System.IO.Path.Combine(System.IO.Path.GetDirectoryName(templateFiles[0].FullPath)!, $"backup_{timestamp}");
 
             _fileSystemService.CreateDirectory(actualBackupDirectory);
 
@@ -350,8 +365,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
                 try
                 {
-                    var fileName = Path.GetFileName(templateFile.FullPath);
-                    var backupPath = Path.Combine(actualBackupDirectory, fileName);
+                    var fileName = System.IO.Path.GetFileName(templateFile.FullPath);
+                    var backupPath = System.IO.Path.Combine(actualBackupDirectory, fileName);
 
                     _fileSystemService.CopyFile(templateFile.FullPath, backupPath);
 
@@ -371,7 +386,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                     errors.Add(new BackupError
                     {
                         SourcePath = templateFile.FullPath,
-                        BackupPath = Path.Combine(actualBackupDirectory, Path.GetFileName(templateFile.FullPath)),
+                        BackupPath = System.IO.Path.Combine(actualBackupDirectory, System.IO.Path.GetFileName(templateFile.FullPath)),
                         Message = ex.Message,
                         ExceptionType = ex.GetType().Name
                     });
@@ -414,7 +429,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             try
             {
                 var fileName = _fileSystemService.GetFileName(filePath);
-                var relativePath = Path.GetRelativePath(folderPath, filePath);
+                var relativePath = System.IO.Path.GetRelativePath(folderPath, filePath);
                 var fileSize = _fileSystemService.GetFileSize(filePath);
                 var lastModified = _fileSystemService.GetLastWriteTime(filePath);
 
@@ -460,29 +475,28 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             throw new InvalidOperationException($"Document body not found in {filePath}");
         }
 
-        // Process all text elements in the document
-        var textElements = body.Descendants<Text>().ToList();
+        // Process paragraphs to handle both text and image placeholders
+        var paragraphs = body.Descendants<W.Paragraph>().ToList();
 
-        foreach (var textElement in textElements)
+        foreach (var paragraph in paragraphs)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            var originalText = textElement.Text;
-            var newText = PlaceholderPattern.Replace(originalText, match =>
-            {
-                var placeholderName = match.Groups[1].Value.Trim();
-                if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
-                {
-                    replacementCount++;
-                    return replacement;
-                }
-                return match.Value; // Keep original if no replacement found
-            });
+            replacementCount += ProcessParagraphReplacements(paragraph, replacementMap, wordDocument.MainDocumentPart!);
+        }
 
-            if (newText != originalText)
+        // Process table cells (similar logic but for tables)
+        var tableCells = body.Descendants<W.TableCell>().ToList();
+        foreach (var cell in tableCells)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                break;
+
+            var cellParagraphs = cell.Descendants<W.Paragraph>().ToList();
+            foreach (var paragraph in cellParagraphs)
             {
-                textElement.Text = newText;
+                replacementCount += ProcessParagraphReplacements(paragraph, replacementMap, wordDocument.MainDocumentPart!);
             }
         }
 
@@ -491,6 +505,183 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
         _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", replacementCount, filePath);
         return Task.FromResult(replacementCount);
+    }
+
+    private int ProcessParagraphReplacements(W.Paragraph paragraph, ReplacementMap replacementMap, MainDocumentPart mainPart)
+    {
+        var replacementCount = 0;
+        
+        // Reconstruct the full text to handle placeholders split across runs
+        var runs = paragraph.Descendants<W.Run>().ToList();
+        var fullText = string.Join("", runs.Select(r => r.InnerText));
+
+        if (string.IsNullOrWhiteSpace(fullText))
+            return 0;
+
+        // Check for image placeholders first (they take precedence)
+        var imageMatches = ImagePlaceholderPattern.Matches(fullText);
+        if (imageMatches.Count > 0)
+        {
+            foreach (Match match in imageMatches)
+            {
+                if (TryReplaceImagePlaceholder(paragraph, match, replacementMap, mainPart))
+                {
+                    replacementCount++;
+                }
+            }
+            return replacementCount;
+        }
+
+        // Process text placeholders
+        foreach (var run in runs)
+        {
+            var textElements = run.Descendants<W.Text>().ToList();
+            foreach (var textElement in textElements)
+            {
+                var originalText = textElement.Text;
+                var newText = PlaceholderPattern.Replace(originalText, match =>
+                {
+                    var placeholderName = match.Groups[1].Value.Trim();
+                    if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
+                    {
+                        replacementCount++;
+                        return replacement;
+                    }
+                    return match.Value; // Keep original if no replacement found
+                });
+
+                if (newText != originalText)
+                {
+                    textElement.Text = newText;
+                }
+            }
+        }
+
+        return replacementCount;
+    }
+
+    private bool TryReplaceImagePlaceholder(W.Paragraph paragraph, Match match, ReplacementMap replacementMap, MainDocumentPart mainPart)
+    {
+        try
+        {
+            var imageName = match.Groups[1].Value;
+            var width = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            var height = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+            
+            // Check if we have a mapping for this image placeholder
+            if (!replacementMap.Mappings.TryGetValue(imageName, out var imagePath) || 
+                string.IsNullOrWhiteSpace(imagePath) || 
+                !System.IO.File.Exists(imagePath))
+            {
+                _logger.LogWarning("Image file not found for placeholder {ImageName}: {ImagePath}", imageName, imagePath);
+                return false;
+            }
+
+            // Get image information
+            var imageInfo = _imageProcessor.GetImageInfo(imagePath);
+            
+            // Calculate display dimensions while preserving aspect ratio
+            var (displayWidth, displayHeight) = AspectRatioCalculator.CalculateDisplayDimensions(
+                imageInfo.Width, imageInfo.Height, width, height);
+
+            // Convert to EMUs
+            var widthEmus = UnitConverter.PixelsToEmus(displayWidth);
+            var heightEmus = UnitConverter.PixelsToEmus(displayHeight);
+
+            // Clear the paragraph and replace with image
+            paragraph.RemoveAllChildren();
+            
+            // Create a new run with the image
+            var imageRun = CreateImageRun(mainPart, imagePath, widthEmus, heightEmus);
+            paragraph.AppendChild(imageRun);
+
+            _logger.LogDebug("Replaced image placeholder {ImageName} with {ImagePath} ({Width}x{Height})", 
+                imageName, imagePath, displayWidth, displayHeight);
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to replace image placeholder {Match}", match.Value);
+            return false;
+        }
+    }
+
+    private W.Run CreateImageRun(MainDocumentPart mainPart, string imagePath, long widthEmus, long heightEmus)
+    {
+        // Read image data
+        var imageBytes = System.IO.File.ReadAllBytes(imagePath);
+        var contentType = ImageTypeDetector.GetImagePartContentType(imagePath);
+
+        // Add image part to document
+        var imagePart = mainPart.AddImagePart(ImagePartType.Png); // We'll use the correct type
+        using (var stream = new MemoryStream(imageBytes))
+        {
+            imagePart.FeedData(stream);
+        }
+
+        // Set the correct content type
+        var imagePartType = ImageTypeDetector.GetImagePartContentType(imagePath) switch
+        {
+            "image/png" => ImagePartType.Png,
+            "image/jpeg" => ImagePartType.Jpeg,
+            "image/gif" => ImagePartType.Gif,
+            "image/bmp" => ImagePartType.Bmp,
+            _ => ImagePartType.Png
+        };
+
+        // Remove the incorrectly typed part and add the correct one
+        mainPart.DeletePart(imagePart);
+        imagePart = mainPart.AddImagePart(imagePartType);
+        using (var stream = new MemoryStream(imageBytes))
+        {
+            imagePart.FeedData(stream);
+        }
+
+        // Get relationship ID
+        var relationshipId = mainPart.GetIdOfPart(imagePart);
+
+        // Create the Drawing element
+        var drawing = CreateImageDrawing(relationshipId, widthEmus, heightEmus);
+
+        // Create and return the run
+        var run = new W.Run();
+        run.AppendChild(drawing);
+        
+        return run;
+    }
+
+    private W.Drawing CreateImageDrawing(string relationshipId, long widthEmus, long heightEmus)
+    {
+        var drawing = new W.Drawing(
+            new DW.Inline(
+                new DW.Extent() { Cx = widthEmus, Cy = heightEmus },
+                new DW.EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
+                new DW.DocProperties() { Id = (uint)new Random().Next(1, 999999), Name = "Picture" },
+                new DW.NonVisualGraphicFrameDrawingProperties(
+                    new A.GraphicFrameLocks() { NoChangeAspect = true }),
+                new A.Graphic(
+                    new A.GraphicData(
+                        new PIC.Picture(
+                            new PIC.NonVisualPictureProperties(
+                                new PIC.NonVisualDrawingProperties() { Id = 0U, Name = "Image" },
+                                new PIC.NonVisualPictureDrawingProperties()),
+                            new PIC.BlipFill(
+                                new A.Blip() { Embed = relationshipId },
+                                new A.Stretch(new A.FillRectangle())),
+                            new PIC.ShapeProperties(
+                                new A.Transform2D(
+                                    new A.Offset() { X = 0L, Y = 0L },
+                                    new A.Extents() { Cx = widthEmus, Cy = heightEmus }),
+                                new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle }
+                            )
+                        )
+                    ) { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }
+                )
+            )
+        );
+        
+        return drawing;
     }
 
     private Task<FileReplacementPreview> CreateFilePreviewAsync(
@@ -507,7 +698,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
             if (body != null)
             {
-                var textElements = body.Descendants<Text>().ToList();
+                var textElements = body.Descendants<W.Text>().ToList();
                 var placeholderCounts = new Dictionary<string, int>();
 
                 foreach (var textElement in textElements)
@@ -627,10 +818,10 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     {
         await Task.Yield(); // Make method async
         
-        var directory = Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
-        var fileName = Path.GetFileName(originalPath);
-        var extension = Path.GetExtension(fileName);
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var directory = System.IO.Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
+        var fileName = System.IO.Path.GetFileName(originalPath);
+        var extension = System.IO.Path.GetExtension(fileName);
+        var fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fileName);
         
         // Sanitize prefix for file system compatibility
         var sanitizedPrefix = SanitizePrefix(prefix);
@@ -642,7 +833,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         
         // Create new filename with prefix
         var newFileName = $"{sanitizedPrefix}_{fileNameWithoutExtension}{extension}";
-        var newFilePath = Path.Combine(directory, newFileName);
+        var newFilePath = System.IO.Path.Combine(directory, newFileName);
         
         // Handle file conflicts by adding numeric suffix
         newFilePath = GetUniqueFilePath(newFilePath);
@@ -671,7 +862,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             return string.Empty;
         
         // Remove or replace invalid file name characters
-        var invalidChars = Path.GetInvalidFileNameChars();
+        var invalidChars = System.IO.Path.GetInvalidFileNameChars();
         var sanitized = prefix;
         
         foreach (var invalidChar in invalidChars)
@@ -709,9 +900,9 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         if (!_fileSystemService.FileExists(originalPath))
             return originalPath;
         
-        var directory = Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
-        var fileName = Path.GetFileNameWithoutExtension(originalPath);
-        var extension = Path.GetExtension(originalPath);
+        var directory = System.IO.Path.GetDirectoryName(originalPath) ?? throw new InvalidOperationException("Could not determine directory");
+        var fileName = System.IO.Path.GetFileNameWithoutExtension(originalPath);
+        var extension = System.IO.Path.GetExtension(originalPath);
         
         var counter = 1;
         string newPath;
@@ -719,7 +910,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         do
         {
             var newFileName = $"{fileName}({counter}){extension}";
-            newPath = Path.Combine(directory, newFileName);
+            newPath = System.IO.Path.Combine(directory, newFileName);
             counter++;
         } 
         while (_fileSystemService.FileExists(newPath) && counter < 1000); // Prevent infinite loop

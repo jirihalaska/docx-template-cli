@@ -32,6 +32,16 @@ public record Placeholder
     /// </summary>
     [Range(0, int.MaxValue, ErrorMessage = "Total occurrences must be non-negative")]
     public required int TotalOccurrences { get; init; }
+    
+    /// <summary>
+    /// Type of the placeholder (Text or Image)
+    /// </summary>
+    public PlaceholderType Type { get; init; } = PlaceholderType.Text;
+    
+    /// <summary>
+    /// Properties specific to image placeholders
+    /// </summary>
+    public ImageProperties? ImageProperties { get; init; }
 
     /// <summary>
     /// Constant for the file prefix system placeholder
@@ -82,7 +92,44 @@ public record Placeholder
         // Check that all locations have valid data
         if (Locations.Any(l => !l.IsValid()))
             return false;
+        
+        // Validate image properties if this is an image placeholder
+        if (Type == PlaceholderType.Image)
+        {
+            if (ImageProperties == null)
+                return false;
+            
+            if (ImageProperties.MaxWidth <= 0 || ImageProperties.MaxHeight <= 0)
+                return false;
+            
+            if (string.IsNullOrWhiteSpace(ImageProperties.ImageName))
+                return false;
+        }
 
         return true;
     }
+}
+
+/// <summary>
+/// Properties specific to image placeholders
+/// </summary>
+public record ImageProperties
+{
+    /// <summary>
+    /// Maximum width for the image in pixels
+    /// </summary>
+    [Range(1, int.MaxValue, ErrorMessage = "MaxWidth must be positive")]
+    public required int MaxWidth { get; init; }
+    
+    /// <summary>
+    /// Maximum height for the image in pixels
+    /// </summary>
+    [Range(1, int.MaxValue, ErrorMessage = "MaxHeight must be positive")]
+    public required int MaxHeight { get; init; }
+    
+    /// <summary>
+    /// Name identifier for the image placeholder
+    /// </summary>
+    [Required(ErrorMessage = "ImageName is required")]
+    public required string ImageName { get; init; }
 }

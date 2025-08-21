@@ -7,23 +7,24 @@
 
 ## System Architecture Overview
 
-This is a **greenfield implementation** using Clean Architecture principles with complete separation of concerns between business logic, infrastructure, and presentation layers.
+This is a **Clean Architecture implementation** with complete separation of concerns between business logic, infrastructure, and presentation layers.
 
 ### Architectural Style
 - **Clean Architecture** (Uncle Bob's Onion Architecture)
 - **Domain-Driven Design** (DDD) principles
-- **Command Query Responsibility Segregation** (CQRS) pattern
 - **Dependency Inversion** throughout
+- **Direct service integration** (UI → Core/Infrastructure)
 
 ### System Boundaries
 ```mermaid
 graph TB
-    CLI[CLI Layer] --> Core[Core Domain]
-    GUI[Future GUI] --> Core
-    API[Future API] --> Core
+    UI[Avalonia UI] --> Core[Core Domain]
+    UI --> Infrastructure[Infrastructure]
     Core --> Abstractions[Abstractions/Interfaces]
-    Infrastructure[Infrastructure] --> Abstractions
+    Infrastructure --> Abstractions
 ```
+
+**Key Change**: The UI now directly references Infrastructure and Core services, eliminating the CLI layer dependency for improved performance and simpler architecture.
 
 ---
 
@@ -92,35 +93,31 @@ DocxTemplate.Infrastructure/
 - External library integrations
 - Error recovery and retries
 
-#### 3. Presentation Layer (DocxTemplate.CLI)
-**Purpose**: User interaction and command orchestration
+#### 3. Presentation Layer (DocxTemplate.UI)
+**Purpose**: User interaction through Avalonia-based GUI
 
 ```csharp
-DocxTemplate.CLI/
-├── Commands/
-│   ├── DiscoverCommand.cs
-│   ├── ScanCommand.cs
-│   ├── CopyCommand.cs
-│   └── ReplaceCommand.cs
-├── Options/
-│   ├── GlobalOptions.cs
-│   └── CommandOptions.cs
-├── Output/
-│   ├── IOutputFormatter.cs
-│   ├── JsonFormatter.cs
-│   ├── TextFormatter.cs
-│   └── XmlFormatter.cs
-├── Pipeline/
-│   ├── PipelineProcessor.cs
-│   └── CommandChain.cs
+DocxTemplate.UI/
+├── ViewModels/
+│   ├── WizardViewModel.cs
+│   ├── TemplateSetSelectionViewModel.cs
+│   ├── PlaceholderDiscoveryViewModel.cs
+│   ├── PlaceholderInputViewModel.cs
+│   ├── OutputFolderSelectionViewModel.cs
+│   └── ProcessingResultsViewModel.cs
+├── Views/
+│   ├── MainWindow.axaml
+│   └── Steps/ (wizard steps)
+├── Services/
+│   └── TemplateSetDiscoveryService.cs
 └── Program.cs
 ```
 
 **Key Principles**:
-- Thin controllers (commands)
-- Output format abstraction
-- Pipeline support built-in
-- Dependency injection setup
+- MVVM architecture with ReactiveUI
+- Direct service injection from Core/Infrastructure
+- Czech localization throughout
+- Wizard-based workflow
 
 ---
 
@@ -131,32 +128,29 @@ DocxTemplate.CLI/
 1. List Sets → 2. Select Set → 3. Scan Set → 4. Copy Set → 5. Replace in Set
 ```
 
-### Command Execution Flow
+### UI Execution Flow
 ```
-User Input → CLI Parser → Command Handler → Core Service → Infrastructure → Result → Formatter → Output
-```
-
-### Pipeline Data Flow
-```
-Command1 Output (JSON) → Stdout → Stdin → Command2 Input Parser → Command2 Processing → Output
+User Interaction → ViewModel → Core Service → Infrastructure → Result → ViewModel Update → UI Update
 ```
 
-### Example: Complete Template Set Processing
-```csharp
-1. User: docx-template list-sets --templates ./templates
-   Output: [Contract_Templates, Invoice_Templates, Report_Templates]
+### Direct Service Integration
+```
+Before: UI → CLI Process → JSON → Core Services
+After:  UI → Core/Infrastructure Services (Direct Method Calls)
+```
 
-2. User: docx-template discover --templates ./templates --set Contract_Templates
-   Output: Found 15 templates in Contract_Templates
+### Example: Complete Template Set Processing (UI Workflow)
+```
+1. Template Selection: User selects "01 VZOR Užší řízení" from discovered template sets
 
-3. User: docx-template scan --templates ./templates --set Contract_Templates
-   Output: Found 25 unique placeholders across set
+2. Placeholder Discovery: UI scans templates and displays 25 unique placeholders
 
-4. User: docx-template copy --templates ./templates --set Contract_Templates --target ./output
-   Output: Copied to ./output/Contract_Templates_2025-08-17_143025/
+3. Value Input: User provides values for placeholders including SOUBOR_PREFIX
 
-5. User: docx-template replace --folder ./output/Contract_Templates_2025-08-17_143025 --map values.json
-   Output: Replaced 375 placeholders in 15 documents
+4. Output Selection: User chooses output directory
+
+5. Processing: UI copies templates and replaces placeholders, showing progress
+   Output: Processed 15 documents with Czech file naming (e.g., "2024_12_TestováníČeština_dokument.docx")
 ```
 
 ### Template Set Structure Example
@@ -400,16 +394,18 @@ public async Task ProcessHundredTemplates()
 
 ## Future Architecture Extensions
 
-### GUI Integration Points
+### Direct Service Integration
 ```csharp
-// Future GUI can use CLI as backend
-public class CliBackend : ITemplateBackend
+// UI directly uses Infrastructure services
+public class PlaceholderDiscoveryViewModel
 {
-    public async Task<Result> ExecuteCommandAsync(
-        string command, 
-        string[] args)
+    private readonly IPlaceholderScanService _scanService;
+    
+    public async Task DiscoverPlaceholdersAsync(string templatePath)
     {
-        return await CliWrapper.RunAsync(command, args);
+        var result = await _scanService.ScanAsync(templatePath);
+        // Direct domain model usage, no JSON parsing needed
+        UpdateUI(result.Placeholders);
     }
 }
 ```

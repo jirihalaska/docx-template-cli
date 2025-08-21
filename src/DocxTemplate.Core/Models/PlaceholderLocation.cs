@@ -39,6 +39,16 @@ public record PlaceholderLocation
     /// Optional character positions where the placeholder appears (if available)
     /// </summary>
     public IReadOnlyList<int>? CharacterPositions { get; init; }
+    
+    /// <summary>
+    /// Original placeholder syntax as found in the document
+    /// </summary>
+    public string? OriginalSyntax { get; init; }
+    
+    /// <summary>
+    /// Metadata specific to the placeholder type (e.g., image dimensions)
+    /// </summary>
+    public Dictionary<string, object>? Metadata { get; init; }
 
     /// <summary>
     /// Validates the location data

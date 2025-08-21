@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
+using DocxTemplate.Core.Models;
 using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
@@ -172,10 +176,18 @@ public class PlaceholderInputItemViewModel : ReactiveObject
 {
     private string _inputValue = string.Empty;
     private bool _isFilled;
+    private string _selectedImagePath = string.Empty;
 
     public PlaceholderInputItemViewModel(PlaceholderItemViewModel placeholderItem)
     {
         PlaceholderItem = placeholderItem ?? throw new ArgumentNullException(nameof(placeholderItem));
+        
+        // Initialize commands
+        SelectImageCommand = ReactiveCommand.CreateFromTask(SelectImageAsync, 
+            this.WhenAnyValue(x => x.IsImagePlaceholder));
+        ClearImageCommand = ReactiveCommand.Create(ClearImageSelection,
+            this.WhenAnyValue(x => x.IsImagePlaceholder, x => x.HasImageSelected, 
+                (isImage, hasImage) => isImage && hasImage));
         
         // Initialize the filled state based on current input value (should be empty initially)
         IsFilled = !string.IsNullOrWhiteSpace(_inputValue);
@@ -184,16 +196,34 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         this.WhenAnyValue(x => x.InputValue)
             .Subscribe(value => 
             {
-                var normalized = NormalizeWhitespace(value);
-                
-                // Always update IsFilled state first, based on the normalized value
-                IsFilled = !string.IsNullOrWhiteSpace(normalized);
-                
-                // Then normalize the input if needed (this might trigger the subscription again,
-                // but IsFilled is already set correctly above)
-                if (normalized != value)
+                if (!IsImagePlaceholder)
                 {
-                    InputValue = normalized;
+                    var normalized = NormalizeWhitespace(value);
+                    
+                    // Always update IsFilled state first, based on the normalized value
+                    IsFilled = !string.IsNullOrWhiteSpace(normalized);
+                    
+                    // Then normalize the input if needed (this might trigger the subscription again,
+                    // but IsFilled is already set correctly above)
+                    if (normalized != value)
+                    {
+                        InputValue = normalized;
+                    }
+                }
+            });
+            
+        // Subscribe to image path changes
+        this.WhenAnyValue(x => x.SelectedImagePath)
+            .Subscribe(imagePath =>
+            {
+                if (IsImagePlaceholder)
+                {
+                    IsFilled = !string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath);
+                    // For image placeholders, the input value is the file path
+                    if (IsFilled)
+                    {
+                        InputValue = imagePath;
+                    }
                 }
             });
     }
@@ -242,11 +272,152 @@ public class PlaceholderInputItemViewModel : ReactiveObject
     }
 
     /// <summary>
+    /// Indicates whether this is an image placeholder
+    /// </summary>
+    public bool IsImagePlaceholder => PlaceholderItem.Placeholder.Type == PlaceholderType.Image;
+
+    /// <summary>
+    /// Selected image file path for image placeholders
+    /// </summary>
+    public string SelectedImagePath
+    {
+        get => _selectedImagePath;
+        private set => this.RaiseAndSetIfChanged(ref _selectedImagePath, value);
+    }
+
+    /// <summary>
+    /// Indicates whether an image has been selected
+    /// </summary>
+    public bool HasImageSelected => !string.IsNullOrWhiteSpace(SelectedImagePath);
+
+    /// <summary>
+    /// Display name of the selected image file
+    /// </summary>
+    public string SelectedImageFileName => HasImageSelected ? Path.GetFileName(SelectedImagePath) : string.Empty;
+
+    /// <summary>
+    /// Command to select an image file
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> SelectImageCommand { get; }
+
+    /// <summary>
+    /// Command to clear the selected image
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> ClearImageCommand { get; }
+
+    /// <summary>
+    /// Maximum width for the image placeholder
+    /// </summary>
+    public int? MaxWidth => PlaceholderItem.Placeholder.ImageProperties?.MaxWidth;
+
+    /// <summary>
+    /// Maximum height for the image placeholder
+    /// </summary>
+    public int? MaxHeight => PlaceholderItem.Placeholder.ImageProperties?.MaxHeight;
+
+    /// <summary>
+    /// Image dimensions display text
+    /// </summary>
+    public string ImageDimensionsText => IsImagePlaceholder && MaxWidth.HasValue && MaxHeight.HasValue 
+        ? $"Maximální rozměry: {MaxWidth}×{MaxHeight} pixelů" 
+        : string.Empty;
+
+    /// <summary>
     /// Clears the input value and resets the filled state
     /// </summary>
     public void ClearValue()
     {
         InputValue = string.Empty;
+        if (IsImagePlaceholder)
+        {
+            SelectedImagePath = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Selects an image file using the system file picker
+    /// </summary>
+    private async Task SelectImageAsync()
+    {
+        try
+        {
+            var topLevel = Avalonia.Application.Current?.ApplicationLifetime switch
+            {
+                Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop => desktop.MainWindow,
+                _ => null
+            };
+
+            if (topLevel?.StorageProvider == null)
+                return;
+
+            var fileTypeFilters = new List<FilePickerFileType>
+            {
+                new("Image Files")
+                {
+                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp" },
+                    MimeTypes = new[] { "image/png", "image/jpeg", "image/gif", "image/bmp" }
+                },
+                FilePickerFileTypes.All
+            };
+
+            var result = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Vyberte obrázek",
+                AllowMultiple = false,
+                FileTypeFilter = fileTypeFilters
+            });
+
+            if (result?.Count > 0)
+            {
+                var selectedFile = result[0];
+                var localPath = selectedFile.TryGetLocalPath();
+                
+                if (!string.IsNullOrEmpty(localPath) && File.Exists(localPath))
+                {
+                    // Validate image file
+                    if (IsValidImageFile(localPath))
+                    {
+                        SelectedImagePath = localPath;
+                    }
+                    else
+                    {
+                        // TODO: Show error message to user
+                        // For now, just don't set the path
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // TODO: Log error and show user-friendly message
+            // For now, silently ignore
+        }
+    }
+
+    /// <summary>
+    /// Clears the selected image
+    /// </summary>
+    private void ClearImageSelection()
+    {
+        SelectedImagePath = string.Empty;
+        InputValue = string.Empty;
+    }
+
+    /// <summary>
+    /// Validates that the selected file is a supported image format
+    /// </summary>
+    private static bool IsValidImageFile(string filePath)
+    {
+        try
+        {
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            var supportedExtensions = new[] { ".png", ".jpg", ".jpeg", ".gif", ".bmp" };
+            return supportedExtensions.Contains(extension);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

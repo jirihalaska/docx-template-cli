@@ -6,6 +6,7 @@ using DocxTemplate.Core.Services;
 using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Infrastructure.Configuration;
 using DocxTemplate.Infrastructure.Services;
+using DocxTemplate.Infrastructure.Images;
 
 namespace DocxTemplate.Infrastructure.DependencyInjection;
 
@@ -30,6 +31,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlaceholderScanService, PlaceholderScanService>();
         services.AddScoped<ITemplateCopyService, TemplateCopyService>();
         services.AddScoped<IPlaceholderReplaceService, PlaceholderReplaceService>();
+
+        // Image Services
+        services.AddScoped<IImageProcessor, ImageProcessor>();
 
         // Error Handling
         services.AddScoped<IErrorHandler, ErrorHandler>();

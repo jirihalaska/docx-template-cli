@@ -91,13 +91,8 @@ public class PlaceholderScanService : IPlaceholderScanService
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var placeholders = await ScanSingleFileAsync(templateFile.FullPath, pattern, cancellationToken);
-                return new ScanFileResult
-                {
-                    FilePath = templateFile.FullPath,
-                    Placeholders = placeholders,
-                    Error = null
-                };
+                var result = await ScanSingleFileInternalAsync(templateFile.FullPath, pattern, cancellationToken);
+                return result;
             }
             catch (Exception ex)
             {
@@ -138,73 +133,20 @@ public class PlaceholderScanService : IPlaceholderScanService
             {
                 filesWithPlaceholders++;
 
-                foreach (var placeholder in result.Placeholders)
+                foreach (var kvp in result.Placeholders)
                 {
-                    if (!allPlaceholders.ContainsKey(placeholder.Name))
+                    if (!allPlaceholders.ContainsKey(kvp.Key))
                     {
-                        allPlaceholders[placeholder.Name] = [];
+                        allPlaceholders[kvp.Key] = [];
                     }
 
-                    allPlaceholders[placeholder.Name].AddRange(placeholder.Locations);
+                    allPlaceholders[kvp.Key].AddRange(kvp.Value);
                 }
             }
         }
 
         // Create final placeholder objects with aggregated locations
-        var placeholderList = allPlaceholders.Select(kvp =>
-        {
-            // Check if this is an image placeholder
-            if (kvp.Key.StartsWith("image:") && kvp.Key.Contains("|width:") && kvp.Key.Contains("|height:"))
-            {
-                // Parse image placeholder details
-                var imageMatch = Regex.Match(kvp.Key, @"image:([^|]+)\|width:(\d+)\|height:(\d+)");
-                if (imageMatch.Success)
-                {
-                    var imageName = imageMatch.Groups[1].Value;
-                    var width = int.Parse(imageMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    var height = int.Parse(imageMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    
-                    return new Placeholder
-                    {
-                        Name = imageName,
-                        Pattern = PlaceholderPatterns.ImagePlaceholderPattern,
-                        Locations = kvp.Value.AsReadOnly(),
-                        TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
-                        Type = PlaceholderType.Image,
-                        ImageProperties = new ImageProperties
-                        {
-                            ImageName = imageName,
-                            MaxWidth = width,
-                            MaxHeight = height
-                        }
-                    };
-                }
-            }
-            
-            // It's a text placeholder
-            return new Placeholder
-            {
-                Name = kvp.Key,
-                Pattern = pattern,
-                Locations = kvp.Value.AsReadOnly(),
-                TotalOccurrences = kvp.Value.Sum(l => l.Occurrences),
-                Type = PlaceholderType.Text,
-                ImageProperties = null
-            };
-        }).ToList();
-
-        // Put SOUBOR_PREFIX first if it exists, keep the rest in original order
-        var finalPlaceholders = new List<Placeholder>();
-        var prefixPlaceholder = placeholderList.FirstOrDefault(p => string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase));
-        if (prefixPlaceholder != null)
-        {
-            finalPlaceholders.Add(prefixPlaceholder);
-            finalPlaceholders.AddRange(placeholderList.Where(p => !string.Equals(p.Name, Placeholder.FilePrefixPlaceholder, StringComparison.OrdinalIgnoreCase)));
-        }
-        else
-        {
-            finalPlaceholders.AddRange(placeholderList);
-        }
+        var finalPlaceholders = ConvertToPlaceholders(allPlaceholders, pattern);
 
         var duration = DateTime.UtcNow - startTime;
 
@@ -233,7 +175,7 @@ public class PlaceholderScanService : IPlaceholderScanService
         try
         {
             var result = await ScanSingleFileInternalAsync(templatePath, pattern, cancellationToken);
-            return result.Placeholders;
+            return ConvertToPlaceholders(result.Placeholders, pattern);
         }
         catch (Exception ex) when (ex is not TemplateNotFoundException && ex is not InvalidPlaceholderPatternException)
         {
@@ -395,7 +337,60 @@ public class PlaceholderScanService : IPlaceholderScanService
             };
         }
 
-        // Convert to final placeholder objects
+        return new ScanFileResult
+        {
+            FilePath = templatePath,
+            Placeholders = placeholders,
+            Error = null
+        };
+    }
+
+    private async Task ScanDocumentPartAsync(
+        OpenXmlElement element,
+        string filePath,
+        string section,
+        string pattern,
+        Dictionary<string, List<PlaceholderLocation>> placeholders,
+        CancellationToken cancellationToken)
+    {
+        // Use the new PlaceholderScanner for better detection of split placeholders
+        var scanResults = await _placeholderScanner.ScanDocumentElementAsync(element, filePath, section, cancellationToken);
+        
+        // Merge the results into the existing placeholders dictionary
+        foreach (var kvp in scanResults)
+        {
+            if (!placeholders.ContainsKey(kvp.Key))
+            {
+                placeholders[kvp.Key] = new List<PlaceholderLocation>();
+            }
+            
+            foreach (var location in kvp.Value)
+            {
+                // Check if we already have this location
+                var existingLocation = placeholders[kvp.Key].FirstOrDefault(l => 
+                    l.FilePath == location.FilePath && l.Context == location.Context);
+                
+                if (existingLocation != null)
+                {
+                    // Update the occurrence count
+                    var index = placeholders[kvp.Key].IndexOf(existingLocation);
+                    placeholders[kvp.Key][index] = existingLocation with 
+                    { 
+                        Occurrences = existingLocation.Occurrences + location.Occurrences 
+                    };
+                }
+                else
+                {
+                    placeholders[kvp.Key].Add(location);
+                }
+            }
+        }
+    }
+
+    private static IReadOnlyList<Placeholder> ConvertToPlaceholders(
+        Dictionary<string, List<PlaceholderLocation>> placeholders, 
+        string pattern)
+    {
         var placeholderList = placeholders.Select(kvp =>
         {
             // Check if this is an image placeholder
@@ -451,60 +446,13 @@ public class PlaceholderScanService : IPlaceholderScanService
             finalPlaceholders.AddRange(placeholderList);
         }
 
-        return new ScanFileResult
-        {
-            FilePath = templatePath,
-            Placeholders = finalPlaceholders,
-            Error = null
-        };
-    }
-
-    private async Task ScanDocumentPartAsync(
-        OpenXmlElement element,
-        string filePath,
-        string section,
-        string pattern,
-        Dictionary<string, List<PlaceholderLocation>> placeholders,
-        CancellationToken cancellationToken)
-    {
-        // Use the new PlaceholderScanner for better detection of split placeholders
-        var scanResults = await _placeholderScanner.ScanDocumentElementAsync(element, filePath, section, cancellationToken);
-        
-        // Merge the results into the existing placeholders dictionary
-        foreach (var kvp in scanResults)
-        {
-            if (!placeholders.ContainsKey(kvp.Key))
-            {
-                placeholders[kvp.Key] = new List<PlaceholderLocation>();
-            }
-            
-            foreach (var location in kvp.Value)
-            {
-                // Check if we already have this location
-                var existingLocation = placeholders[kvp.Key].FirstOrDefault(l => 
-                    l.FilePath == location.FilePath && l.Context == location.Context);
-                
-                if (existingLocation != null)
-                {
-                    // Update the occurrence count
-                    var index = placeholders[kvp.Key].IndexOf(existingLocation);
-                    placeholders[kvp.Key][index] = existingLocation with 
-                    { 
-                        Occurrences = existingLocation.Occurrences + location.Occurrences 
-                    };
-                }
-                else
-                {
-                    placeholders[kvp.Key].Add(location);
-                }
-            }
-        }
+        return finalPlaceholders;
     }
 
     private class ScanFileResult
     {
         public required string FilePath { get; init; }
-        public required IReadOnlyList<Placeholder> Placeholders { get; init; }
+        public required Dictionary<string, List<PlaceholderLocation>> Placeholders { get; init; }
         public ScanError? Error { get; init; }
     }
 }

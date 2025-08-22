@@ -138,7 +138,7 @@
                       <Grid ColumnDefinitions="*,Auto,Auto">
                         <!-- Image File Path Display -->
                         <TextBox Grid.Column="0"
-                                 Text="{Binding SelectedImageFileName}"
+                                 Text="{Binding SelectedImagePath}"
                                  Watermark="Žádný obrázek nevybrán..."
                                  IsReadOnly="True"
                                  FontSize="13"

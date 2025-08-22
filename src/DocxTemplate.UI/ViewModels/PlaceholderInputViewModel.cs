@@ -186,8 +186,8 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         SelectImageCommand = ReactiveCommand.CreateFromTask(SelectImageAsync, 
             this.WhenAnyValue(x => x.IsImagePlaceholder));
         ClearImageCommand = ReactiveCommand.Create(ClearImageSelection,
-            this.WhenAnyValue(x => x.IsImagePlaceholder, x => x.HasImageSelected, 
-                (isImage, hasImage) => isImage && hasImage));
+            this.WhenAnyValue(x => x.IsImagePlaceholder, x => x.SelectedImagePath, 
+                (isImage, imagePath) => isImage && !string.IsNullOrWhiteSpace(imagePath)));
         
         // Initialize the filled state based on current input value (should be empty initially)
         IsFilled = !string.IsNullOrWhiteSpace(_inputValue);

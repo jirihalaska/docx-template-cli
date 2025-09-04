@@ -587,6 +587,294 @@ public class PlaceholderReplaceServiceTests
         Assert.DoesNotContain("{{image:LOGO|width:200|height:150}}", allText);
     }
 
+    [Fact]
+    public async Task ReplaceInFileAsync_ImageInHeader_ShouldUseHeaderPartNotMainPart()
+    {
+        // arrange
+        var testDocxPath = Path.Combine(Path.GetTempPath(), $"header_test_{Guid.NewGuid()}.docx");
+        var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
+        
+        // Create test image
+        await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
+        
+        try
+        {
+            // Create document with image placeholder in header
+            CreateTestDocumentWithHeaderImagePlaceholder(testDocxPath);
+            
+            var replacementMap = new ReplacementMap
+            {
+                Mappings = new Dictionary<string, string>
+                {
+                    { "logo", testImagePath }
+                }
+            };
+            
+            var imageInfo = new ImageInfo { Width = 100, Height = 100 };
+            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
+            
+            // act
+            var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
+            
+            // assert
+            Assert.True(result.IsSuccess);
+            Assert.True(result.ReplacementCount > 0);
+            
+            // Verify image was added to HeaderPart, not MainDocumentPart
+            VerifyImageInHeaderPart(testDocxPath);
+        }
+        finally
+        {
+            if (File.Exists(testImagePath)) File.Delete(testImagePath);
+            if (File.Exists(testDocxPath)) File.Delete(testDocxPath);
+        }
+    }
+
+    [Fact]
+    public async Task ReplaceInFileAsync_ImageInFooter_ShouldUseFooterPartNotMainPart()
+    {
+        // arrange
+        var testDocxPath = Path.Combine(Path.GetTempPath(), $"footer_test_{Guid.NewGuid()}.docx");
+        var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
+        
+        // Create test image
+        await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
+        
+        try
+        {
+            // Create document with image placeholder in footer
+            CreateTestDocumentWithFooterImagePlaceholder(testDocxPath);
+            
+            var replacementMap = new ReplacementMap
+            {
+                Mappings = new Dictionary<string, string>
+                {
+                    { "logo", testImagePath }
+                }
+            };
+            
+            var imageInfo = new ImageInfo { Width = 100, Height = 100 };
+            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
+            
+            // act
+            var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
+            
+            // assert
+            Assert.True(result.IsSuccess);
+            Assert.True(result.ReplacementCount > 0);
+            
+            // Verify image was added to FooterPart, not MainDocumentPart
+            VerifyImageInFooterPart(testDocxPath);
+        }
+        finally
+        {
+            if (File.Exists(testImagePath)) File.Delete(testImagePath);
+            if (File.Exists(testDocxPath)) File.Delete(testDocxPath);
+        }
+    }
+
+    [Fact]
+    public async Task ReplaceInFileAsync_SameImageInBodyAndHeader_ShouldAddToRespectiveParts()
+    {
+        // arrange
+        var testDocxPath = Path.Combine(Path.GetTempPath(), $"body_header_test_{Guid.NewGuid()}.docx");
+        var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
+        
+        // Create test image
+        await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
+        
+        try
+        {
+            // Create document with same image placeholder in both body and header
+            CreateTestDocumentWithBodyAndHeaderImagePlaceholder(testDocxPath);
+            
+            var replacementMap = new ReplacementMap
+            {
+                Mappings = new Dictionary<string, string>
+                {
+                    { "logo", testImagePath }
+                }
+            };
+            
+            var imageInfo = new ImageInfo { Width = 100, Height = 100 };
+            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
+            
+            // act
+            var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
+            
+            // assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, result.ReplacementCount); // One in body, one in header
+            
+            // Verify images were added to both MainDocumentPart and HeaderPart
+            VerifyImageInBothBodyAndHeader(testDocxPath);
+        }
+        finally
+        {
+            if (File.Exists(testImagePath)) File.Delete(testImagePath);
+            if (File.Exists(testDocxPath)) File.Delete(testDocxPath);
+        }
+    }
+
+    private static byte[] CreateSimplePngBytes()
+    {
+        // Create a minimal valid PNG (1x1 transparent pixel)
+        return new byte[]
+        {
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk header
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1 dimensions
+            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, // IHDR data + CRC
+            0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, // IDAT chunk header
+            0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, // IDAT data
+            0x0D, 0x0A, 0x2D, 0xB4, // IDAT CRC
+            0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 // IEND
+        };
+    }
+
+    private static void CreateTestDocumentWithHeaderImagePlaceholder(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+        var mainPart = doc.AddMainDocumentPart();
+        mainPart.Document = new Document(new Body());
+        
+        // Create header with image placeholder
+        var headerPart = mainPart.AddNewPart<HeaderPart>();
+        headerPart.Header = new Header(
+            new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
+        
+        // Reference the header in section properties
+        var sectionProps = new SectionProperties();
+        var headerReference = new HeaderReference()
+        {
+            Type = HeaderFooterValues.Default,
+            Id = mainPart.GetIdOfPart(headerPart)
+        };
+        sectionProps.AppendChild(headerReference);
+        mainPart.Document.Body.AppendChild(sectionProps);
+        
+        mainPart.Document.Save();
+    }
+    
+    private static void CreateTestDocumentWithFooterImagePlaceholder(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+        var mainPart = doc.AddMainDocumentPart();
+        mainPart.Document = new Document(new Body());
+        
+        // Create footer with image placeholder
+        var footerPart = mainPart.AddNewPart<FooterPart>();
+        footerPart.Footer = new Footer(
+            new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
+        
+        // Reference the footer in section properties
+        var sectionProps = new SectionProperties();
+        var footerReference = new FooterReference()
+        {
+            Type = HeaderFooterValues.Default,
+            Id = mainPart.GetIdOfPart(footerPart)
+        };
+        sectionProps.AppendChild(footerReference);
+        mainPart.Document.Body.AppendChild(sectionProps);
+        
+        mainPart.Document.Save();
+    }
+    
+    private static void CreateTestDocumentWithBodyAndHeaderImagePlaceholder(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+        var mainPart = doc.AddMainDocumentPart();
+        mainPart.Document = new Document(new Body());
+        
+        // Add image placeholder to body
+        var bodyParagraph = new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}")));
+        mainPart.Document.Body.AppendChild(bodyParagraph);
+        
+        // Create header with image placeholder
+        var headerPart = mainPart.AddNewPart<HeaderPart>();
+        headerPart.Header = new Header(
+            new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
+        
+        // Reference the header in section properties
+        var sectionProps = new SectionProperties();
+        var headerReference = new HeaderReference()
+        {
+            Type = HeaderFooterValues.Default,
+            Id = mainPart.GetIdOfPart(headerPart)
+        };
+        sectionProps.AppendChild(headerReference);
+        mainPart.Document.Body.AppendChild(sectionProps);
+        
+        mainPart.Document.Save();
+    }
+    
+    private static void VerifyImageInHeaderPart(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Open(docxPath, false);
+        var mainPart = doc.MainDocumentPart;
+        
+        // Verify HeaderPart has images
+        var headerPart = mainPart.HeaderParts.FirstOrDefault();
+        Assert.NotNull(headerPart);
+        Assert.NotEmpty(headerPart.ImageParts);
+        
+        // Verify MainDocumentPart does NOT have images (since placeholder was only in header)
+        Assert.Empty(mainPart.ImageParts);
+        
+        // Verify header contains Drawing element (replaced image)
+        var headerDrawing = headerPart.Header.Descendants<Drawing>().FirstOrDefault();
+        Assert.NotNull(headerDrawing);
+    }
+    
+    private static void VerifyImageInFooterPart(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Open(docxPath, false);
+        var mainPart = doc.MainDocumentPart;
+        
+        // Verify FooterPart has images
+        var footerPart = mainPart.FooterParts.FirstOrDefault();
+        Assert.NotNull(footerPart);
+        Assert.NotEmpty(footerPart.ImageParts);
+        
+        // Verify MainDocumentPart does NOT have images (since placeholder was only in footer)
+        Assert.Empty(mainPart.ImageParts);
+        
+        // Verify footer contains Drawing element (replaced image)
+        var footerDrawing = footerPart.Footer.Descendants<Drawing>().FirstOrDefault();
+        Assert.NotNull(footerDrawing);
+    }
+    
+    private static void VerifyImageInBothBodyAndHeader(string docxPath)
+    {
+        using var doc = WordprocessingDocument.Open(docxPath, false);
+        var mainPart = doc.MainDocumentPart;
+        
+        // Verify MainDocumentPart has images (body placeholder)
+        Assert.NotEmpty(mainPart.ImageParts);
+        
+        // Verify HeaderPart has images (header placeholder)
+        var headerPart = mainPart.HeaderParts.FirstOrDefault();
+        Assert.NotNull(headerPart);
+        Assert.NotEmpty(headerPart.ImageParts);
+        
+        // Verify body contains Drawing element
+        var bodyDrawing = mainPart.Document.Body.Descendants<Drawing>().FirstOrDefault();
+        Assert.NotNull(bodyDrawing);
+        
+        // Verify header contains Drawing element
+        var headerDrawing = headerPart.Header.Descendants<Drawing>().FirstOrDefault();
+        Assert.NotNull(headerDrawing);
+    }
+
     private static ReplacementMap CreateValidReplacementMap()
     {
         var mappings = new Dictionary<string, string>

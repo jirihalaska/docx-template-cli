@@ -16,13 +16,14 @@ public interface IDocumentPartProcessor
     /// This contains all paragraphs, tables, and other content in this document part.</param>
     /// <param name="section">Human-readable label for the document part being processed 
     /// (e.g., "Body", "Header0", "Footer1"). Used for logging and providing context in results.</param>
-    /// <param name="mainPart">The main document part containing references to all resources.
-    /// Required for operations like adding images, accessing styles, or creating relationships.</param>
+    /// <param name="documentPart">The specific document part being processed (MainDocumentPart for body,
+    /// HeaderPart for headers, FooterPart for footers). Required for operations like adding images,
+    /// as each part has its own relationship table for resources.</param>
     /// <param name="cancellationToken">Token for cooperative cancellation of long-running operations.</param>
     /// <returns>Task representing the asynchronous operation.</returns>
     Task ProcessAsync(
         OpenXmlElement element, 
         string section, 
-        MainDocumentPart mainPart, 
+        OpenXmlPart documentPart, 
         CancellationToken cancellationToken);
 }

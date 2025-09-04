@@ -30,7 +30,7 @@ internal class ScanDocumentPartProcessor : IDocumentPartProcessor
     public async Task ProcessAsync(
         OpenXmlElement element,
         string section,
-        MainDocumentPart mainPart,
+        OpenXmlPart documentPart,
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Scanning {Section} for placeholders", section);

@@ -51,7 +51,7 @@ public class DocumentTraverser
             await processor.ProcessAsync(
                 mainDocumentPart.Document.Body, 
                 "Body", 
-                mainDocumentPart, 
+                mainDocumentPart, // Body uses MainDocumentPart
                 cancellationToken);
         }
         
@@ -70,7 +70,7 @@ public class DocumentTraverser
                     await processor.ProcessAsync(
                         headerPart.Header, 
                         section, 
-                        mainDocumentPart, 
+                        headerPart, // Headers use their own HeaderPart for relationships
                         cancellationToken);
                 }
                 headerIndex++;
@@ -92,7 +92,7 @@ public class DocumentTraverser
                     await processor.ProcessAsync(
                         footerPart.Footer, 
                         section, 
-                        mainDocumentPart, 
+                        footerPart, // Footers use their own FooterPart for relationships
                         cancellationToken);
                 }
                 footerIndex++;

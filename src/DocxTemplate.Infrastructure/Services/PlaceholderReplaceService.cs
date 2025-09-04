@@ -492,7 +492,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         return totalReplacements;
     }
 
-    private int ProcessParagraphReplacements(W.Paragraph paragraph, ReplacementMap replacementMap, MainDocumentPart mainPart)
+    private int ProcessParagraphReplacements(W.Paragraph paragraph, ReplacementMap replacementMap, OpenXmlPart documentPart)
     {
         var replacementCount = 0;
         
@@ -509,7 +509,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         {
             foreach (Match match in imageMatches)
             {
-                if (TryReplaceImagePlaceholder(paragraph, match, replacementMap, mainPart))
+                if (TryReplaceImagePlaceholder(paragraph, match, replacementMap, documentPart))
                 {
                     replacementCount++;
                 }
@@ -545,7 +545,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         return replacementCount;
     }
 
-    private bool TryReplaceImagePlaceholder(W.Paragraph paragraph, Match match, ReplacementMap replacementMap, MainDocumentPart mainPart)
+    private bool TryReplaceImagePlaceholder(W.Paragraph paragraph, Match match, ReplacementMap replacementMap, OpenXmlPart documentPart)
     {
         try
         {
@@ -586,7 +586,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             }
             
             // Create a new run with the image
-            var imageRun = CreateImageRun(mainPart, imagePath, widthEmus, heightEmus);
+            var imageRun = CreateImageRun(documentPart, imagePath, widthEmus, heightEmus);
             paragraph.AppendChild(imageRun);
 
             _logger.LogDebug("Replaced image placeholder {ImageName} with {ImagePath} ({Width}x{Height})", 
@@ -601,20 +601,12 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         }
     }
 
-    private W.Run CreateImageRun(MainDocumentPart mainPart, string imagePath, long widthEmus, long heightEmus)
+    private W.Run CreateImageRun(OpenXmlPart documentPart, string imagePath, long widthEmus, long heightEmus)
     {
         // Read image data
         var imageBytes = System.IO.File.ReadAllBytes(imagePath);
-        var contentType = ImageTypeDetector.GetImagePartContentType(imagePath);
 
-        // Add image part to document
-        var imagePart = mainPart.AddImagePart(ImagePartType.Png); // We'll use the correct type
-        using (var stream = new MemoryStream(imageBytes))
-        {
-            imagePart.FeedData(stream);
-        }
-
-        // Set the correct content type
+        // Determine the correct image part type
         var imagePartType = ImageTypeDetector.GetImagePartContentType(imagePath) switch
         {
             "image/png" => ImagePartType.Png,
@@ -624,16 +616,23 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             _ => ImagePartType.Png
         };
 
-        // Remove the incorrectly typed part and add the correct one
-        mainPart.DeletePart(imagePart);
-        imagePart = mainPart.AddImagePart(imagePartType);
+        // Add image part to the appropriate document part
+        // Each part type (MainDocumentPart, HeaderPart, FooterPart) supports AddImagePart
+        ImagePart imagePart = documentPart switch
+        {
+            MainDocumentPart mainPart => mainPart.AddImagePart(imagePartType),
+            HeaderPart headerPart => headerPart.AddImagePart(imagePartType),
+            FooterPart footerPart => footerPart.AddImagePart(imagePartType),
+            _ => throw new NotSupportedException($"Document part type {documentPart.GetType().Name} does not support image parts")
+        };
+
         using (var stream = new MemoryStream(imageBytes))
         {
             imagePart.FeedData(stream);
         }
 
         // Get relationship ID
-        var relationshipId = mainPart.GetIdOfPart(imagePart);
+        var relationshipId = documentPart.GetIdOfPart(imagePart);
 
         // Create the Drawing element
         var drawing = CreateImageDrawing(relationshipId, widthEmus, heightEmus);

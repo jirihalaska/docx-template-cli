@@ -16,11 +16,11 @@ internal class ReplaceDocumentPartProcessor : IDocumentPartProcessor
     private int _totalReplacements;
     
     // Method reference from PlaceholderReplaceService for processing individual paragraphs
-    private readonly Func<Paragraph, ReplacementMap, MainDocumentPart, int> _processReplacements;
+    private readonly Func<Paragraph, ReplacementMap, OpenXmlPart, int> _processReplacements;
     
     public ReplaceDocumentPartProcessor(
         ReplacementMap replacementMap,
-        Func<Paragraph, ReplacementMap, MainDocumentPart, int> processReplacements,
+        Func<Paragraph, ReplacementMap, OpenXmlPart, int> processReplacements,
         ILogger<ReplaceDocumentPartProcessor> logger)
     {
         _replacementMap = replacementMap ?? throw new ArgumentNullException(nameof(replacementMap));
@@ -36,7 +36,7 @@ internal class ReplaceDocumentPartProcessor : IDocumentPartProcessor
     public async Task ProcessAsync(
         OpenXmlElement element,
         string section,
-        MainDocumentPart mainPart,
+        OpenXmlPart documentPart,
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Processing replacements in {Section}", section);
@@ -53,7 +53,8 @@ internal class ReplaceDocumentPartProcessor : IDocumentPartProcessor
             
             // Use existing replacement logic from PlaceholderReplaceService
             // This handles both text and image placeholders with alignment preservation
-            sectionReplacements += _processReplacements(paragraph, _replacementMap, mainPart);
+            // Now uses the correct document part (HeaderPart for headers, etc.)
+            sectionReplacements += _processReplacements(paragraph, _replacementMap, documentPart);
         }
         
         _totalReplacements += sectionReplacements;

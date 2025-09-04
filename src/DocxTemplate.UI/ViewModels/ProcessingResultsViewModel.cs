@@ -255,10 +255,15 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         try
         {
+            // Extract file prefix from placeholders (SOUBOR_PREFIX)
+            _placeholderValues.TryGetValue(Placeholder.FilePrefixPlaceholder, out var filePrefix);
+            
             var result = await _templateCopyService.CopyTemplatesAsync(
                 _templateSetPath,
                 OutputFolderPath,
                 preserveStructure: true,
+                overwrite: false,
+                filePrefix: filePrefix,
                 cancellationToken: _cancellationTokenSource?.Token ?? CancellationToken.None);
 
             await logFile.WriteLineAsync($"Copy operation completed successfully. Files copied: {result.FilesCount}, Total size: {result.TotalBytesCount} bytes");

@@ -43,7 +43,7 @@ public class CopyFolderStructureTests
 
         _mockFileSystemService.Setup(x => x.DirectoryExists(sourcePath)).Returns(true);
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
-        _mockDiscoveryService.Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, default))
+        _mockDiscoveryService.Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, default))
             .ReturnsAsync(templateFiles);
 
         // Set up file system mocks for source files (they should exist)
@@ -99,7 +99,7 @@ public class CopyFolderStructureTests
 
         _mockFileSystemService.Setup(x => x.DirectoryExists(sourcePath)).Returns(true);
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
-        _mockDiscoveryService.Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, default))
+        _mockDiscoveryService.Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, default))
             .ReturnsAsync(templateFiles);
 
         // Set up file system mocks for source files (they should exist)

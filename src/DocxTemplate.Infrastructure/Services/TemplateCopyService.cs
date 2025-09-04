@@ -32,6 +32,7 @@ public class TemplateCopyService : ITemplateCopyService
         string targetPath,
         bool preserveStructure = true,
         bool overwrite = false,
+        string? filePrefix = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))
@@ -48,7 +49,8 @@ public class TemplateCopyService : ITemplateCopyService
 
         try
         {
-            var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, recursive: true, cancellationToken);
+            // Discover ALL files, not just .docx files
+            var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, ["*.*"], recursive: true, cancellationToken);
             
             // When preserving structure, also copy empty directories
             if (preserveStructure)
@@ -56,7 +58,7 @@ public class TemplateCopyService : ITemplateCopyService
                 CopyEmptyDirectories(sourcePath, targetPath);
             }
             
-            return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, sourcePath, cancellationToken);
+            return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, filePrefix, sourcePath, cancellationToken);
         }
         catch (Exception ex) when (ex is not TemplateNotFoundException && ex is not FileAccessException)
         {
@@ -78,9 +80,10 @@ public class TemplateCopyService : ITemplateCopyService
         string targetPath,
         bool preserveStructure = true,
         bool overwrite = false,
+        string? filePrefix = null,
         CancellationToken cancellationToken = default)
     {
-        return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, null, cancellationToken);
+        return await CopyTemplatesAsync(templateFiles, targetPath, preserveStructure, overwrite, filePrefix, null, cancellationToken);
     }
 
     /// <summary>
@@ -91,6 +94,7 @@ public class TemplateCopyService : ITemplateCopyService
         string targetPath,
         bool preserveStructure,
         bool overwrite,
+        string? filePrefix,
         string? sourcePath,
         CancellationToken cancellationToken)
     {
@@ -149,7 +153,7 @@ public class TemplateCopyService : ITemplateCopyService
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var copiedFile = await CopyTemplateFileAsync(templateFile, targetPath, overwrite, preserveStructure, sourcePath, cancellationToken);
+                var copiedFile = await CopyTemplateFileAsync(templateFile, targetPath, overwrite, preserveStructure, filePrefix, sourcePath, cancellationToken);
                 copiedFiles.Add(copiedFile);
             }
             catch (Exception ex)
@@ -159,7 +163,7 @@ public class TemplateCopyService : ITemplateCopyService
                 errors.Add(new CopyError
                 {
                     SourcePath = templateFile.FullPath,
-                    TargetPath = GetTargetFilePath(templateFile, targetPath, preserveStructure, sourcePath),
+                    TargetPath = GetTargetFilePath(templateFile, targetPath, preserveStructure, filePrefix, sourcePath),
                     Message = ex.Message,
                     ExceptionType = ex.GetType().Name
                 });
@@ -191,7 +195,7 @@ public class TemplateCopyService : ITemplateCopyService
         bool overwrite = false,
         CancellationToken cancellationToken = default)
     {
-        return CopyTemplateFileAsync(sourceFile, targetPath, overwrite, preserveStructure: true, sourcePath: null, cancellationToken);
+        return CopyTemplateFileAsync(sourceFile, targetPath, overwrite, preserveStructure: true, filePrefix: null, sourcePath: null, cancellationToken);
     }
 
     /// <summary>
@@ -202,6 +206,7 @@ public class TemplateCopyService : ITemplateCopyService
         string targetPath,
         bool overwrite,
         bool preserveStructure,
+        string? filePrefix,
         string? sourcePath,
         CancellationToken cancellationToken)
     {
@@ -221,7 +226,7 @@ public class TemplateCopyService : ITemplateCopyService
         if (_fileSystemService.DirectoryExists(targetPath))
         {
             // targetPath is a directory, calculate path based on structure preservation
-            targetFilePath = GetTargetFilePath(sourceFile, targetPath, preserveStructure, sourcePath);
+            targetFilePath = GetTargetFilePath(sourceFile, targetPath, preserveStructure, filePrefix, sourcePath);
             var targetDir = Path.GetDirectoryName(targetFilePath);
             if (!string.IsNullOrEmpty(targetDir) && !_fileSystemService.DirectoryExists(targetDir))
             {
@@ -321,8 +326,8 @@ public class TemplateCopyService : ITemplateCopyService
                 return CopyValidationResult.Failure(sourcePath, targetPath, errors, validationDuration: DateTime.UtcNow - startTime);
             }
 
-            // Discover template files
-            var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, recursive: true, cancellationToken);
+            // Discover all files, not just .docx files
+            var templateFiles = await _discoveryService.DiscoverTemplatesAsync(sourcePath, ["*.*"], recursive: true, cancellationToken);
             
             if (templateFiles.Count == 0)
             {
@@ -352,7 +357,7 @@ public class TemplateCopyService : ITemplateCopyService
             int filesToOverwrite = 0;
             foreach (var templateFile in templateFiles)
             {
-                var targetFilePath = GetTargetFilePath(templateFile, targetPath, preserveStructure: true, sourcePath);
+                var targetFilePath = GetTargetFilePath(templateFile, targetPath, preserveStructure: true, filePrefix: null, sourcePath);
                 
                 if (_fileSystemService.FileExists(targetFilePath))
                 {
@@ -385,7 +390,7 @@ public class TemplateCopyService : ITemplateCopyService
             // Calculate space requirements
             var totalSize = templateFiles.Sum(f => f.SizeInBytes);
             var directoriesToCreate = templateFiles
-                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, sourcePath)))
+                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, filePrefix: null, sourcePath)))
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
                 .Count(d => !_fileSystemService.DirectoryExists(d!));
@@ -519,7 +524,7 @@ public class TemplateCopyService : ITemplateCopyService
 
             // Get all unique directory paths
             var directoriesToCreate = templateFiles
-                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, sourcePath)))
+                .Select(f => Path.GetDirectoryName(GetTargetFilePath(f, targetPath, preserveStructure: true, filePrefix: null, sourcePath)))
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
                 .Where(d => !_fileSystemService.DirectoryExists(d!))
@@ -588,26 +593,47 @@ public class TemplateCopyService : ITemplateCopyService
         }
     }
 
-    private string GetTargetFilePath(TemplateFile templateFile, string targetPath, bool preserveStructure, string? sourcePath = null)
+    private string GetTargetFilePath(TemplateFile templateFile, string targetPath, bool preserveStructure, string? filePrefix, string? sourcePath = null)
     {
+        string baseTargetPath;
+        
         if (preserveStructure)
         {
             // If we have a source path, include the source directory name to maintain top-level folder structure
             if (!string.IsNullOrEmpty(sourcePath))
             {
                 var sourceDirectoryName = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                return Path.Combine(targetPath, sourceDirectoryName, templateFile.RelativePath);
+                baseTargetPath = Path.Combine(targetPath, sourceDirectoryName, templateFile.RelativePath);
             }
             else
             {
                 // Fallback to original behavior when source path is not available
-                return Path.Combine(targetPath, templateFile.RelativePath);
+                baseTargetPath = Path.Combine(targetPath, templateFile.RelativePath);
             }
         }
         else
         {
-            return Path.Combine(targetPath, templateFile.FileName);
+            baseTargetPath = Path.Combine(targetPath, templateFile.FileName);
         }
+        
+        // Apply file prefix if provided
+        if (!string.IsNullOrWhiteSpace(filePrefix))
+        {
+            var sanitizedPrefix = SanitizePrefix(filePrefix);
+            if (!string.IsNullOrWhiteSpace(sanitizedPrefix))
+            {
+                var directory = Path.GetDirectoryName(baseTargetPath) ?? string.Empty;
+                var fileName = Path.GetFileName(baseTargetPath);
+                var extension = Path.GetExtension(fileName);
+                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+                
+                // Create new filename with prefix
+                var newFileName = $"{sanitizedPrefix}_{fileNameWithoutExtension}{extension}";
+                return Path.Combine(directory, newFileName);
+            }
+        }
+        
+        return baseTargetPath;
     }
 
     private static string FormatBytes(long bytes)
@@ -625,5 +651,39 @@ public class TemplateCopyService : ITemplateCopyService
         }
         
         return $"{size:0.#} {sizes[order]}";
+    }
+    
+    private static string SanitizePrefix(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+            return string.Empty;
+        
+        // Remove or replace invalid file name characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = prefix;
+        
+        foreach (var invalidChar in invalidChars)
+        {
+            sanitized = sanitized.Replace(invalidChar, '_');
+        }
+        
+        // Additional sanitization for common problematic characters
+        sanitized = sanitized
+            .Replace(":", "_")
+            .Replace("*", "_")
+            .Replace("?", "_")
+            .Replace("\"", "_")
+            .Replace("<", "_")
+            .Replace(">", "_")
+            .Replace("|", "_");
+        
+        // Trim whitespace and limit length
+        sanitized = sanitized.Trim();
+        if (sanitized.Length > 50) // Reasonable limit to avoid long paths
+        {
+            sanitized = sanitized.Substring(0, 50).Trim();
+        }
+        
+        return sanitized;
     }
 }

@@ -66,6 +66,22 @@ public class HappyPathE2ETest : E2ETestBase
 
         TestOutput.WriteLine($"Using template set: {targetTemplateSet.Name} at {targetTemplateSet.Path}");
 
+        // Assert template set properties
+        Assert.NotNull(targetTemplateSet);
+        Assert.NotEmpty(targetTemplateSet.Name);
+        Assert.NotEmpty(targetTemplateSet.Path);
+        Assert.True(Directory.Exists(targetTemplateSet.Path), $"Template set path should exist: {targetTemplateSet.Path}");
+        Assert.True(targetTemplateSet.FileCount > 0, $"Template set should contain files, found: {targetTemplateSet.FileCount}");
+        
+        // Verify the template set contains expected files (excluding hidden files starting with ".")
+        var allFiles = Directory.GetFiles(targetTemplateSet.Path, "*.*", SearchOption.AllDirectories);
+        var actualFiles = allFiles.Where(f => !Path.GetFileName(f).StartsWith(".")).ToArray();
+        // Note: Template set FileCount is based on .docx files only, while we now copy all non-hidden files
+        TestOutput.WriteLine($"Template set reports: {targetTemplateSet.FileCount} files, actual files found (excluding hidden): {actualFiles.Length}, total including hidden: {allFiles.Length}");
+        Assert.True(actualFiles.Length >= targetTemplateSet.FileCount, $"Should have at least as many files as reported: expected >= {targetTemplateSet.FileCount}, found {actualFiles.Length}");
+        Assert.True(actualFiles.Length > 0, "Should contain at least some files");
+        TestOutput.WriteLine($"✓ Template set validation: {actualFiles.Length} visible files found in {targetTemplateSet.Name}");
+
         // Step 2: Discover and validate placeholders
         TestOutput.WriteLine("\n=== Step 2: Placeholder Discovery ===");
         var scanService = services.GetRequiredService<IPlaceholderScanService>();
@@ -91,7 +107,22 @@ public class HappyPathE2ETest : E2ETestBase
             TestOutput.WriteLine($"✓ SOUBOR_PREFIX correctly appears first in placeholder list");
         }
 
-        TestOutput.WriteLine($"✓ Placeholder discovery successful: {scanResult.Placeholders.Count} unique placeholders");
+        // Assert placeholder scan results
+        Assert.NotNull(scanResult);
+        Assert.NotEmpty(scanResult.Placeholders);
+        Assert.True(scanResult.TotalFilesScanned > 0, $"Should have scanned files, found: {scanResult.TotalFilesScanned}");
+        Assert.True(scanResult.TotalOccurrences > 0, $"Should have found placeholder occurrences, found: {scanResult.TotalOccurrences}");
+        Assert.True(scanResult.IsSuccessful, "Scan should be successful without errors");
+        
+        // Verify placeholder structure
+        foreach (var placeholder in scanResult.Placeholders)
+        {
+            Assert.NotEmpty(placeholder.Name);
+            Assert.NotEmpty(placeholder.Locations);
+            Assert.True(placeholder.TotalOccurrences > 0);
+        }
+        
+        TestOutput.WriteLine($"✓ Placeholder discovery validation: {scanResult.Placeholders.Count} placeholders, {scanResult.TotalFilesScanned} files scanned, {scanResult.TotalOccurrences} total occurrences");
 
         // Step 3: Copy templates preserving folder structure
         TestOutput.WriteLine("\n=== Step 3: Template Copy Operation ===");
@@ -99,32 +130,69 @@ public class HappyPathE2ETest : E2ETestBase
         var copyResult = await copyService.CopyTemplatesAsync(
             targetTemplateSet.Path,
             TestOutputDirectory,
-            preserveStructure: true);
+            preserveStructure: true,
+            overwrite: false,
+            filePrefix: CzechTestValues["SOUBOR_PREFIX"]);
 
         TestOutput.WriteLine($"Copy result: {copyResult.FilesCount} files copied to {TestOutputDirectory}");
 
         var targetPath = Path.Combine(TestOutputDirectory, Path.GetFileName(targetTemplateSet.Path));
         TestOutput.WriteLine($"Target path for replacement: {targetPath}");
 
-        // Verify files were copied with correct structure
+        // Assert copy operation results
+        Assert.NotNull(copyResult);
+        Assert.True(copyResult.FilesCount > 0, $"Should have copied files, found: {copyResult.FilesCount}");
+        Assert.True(copyResult.TotalBytesCount > 0, $"Should have copied data, found: {copyResult.TotalBytesCount} bytes");
+        
+        // Assert target directory structure
         Assert.True(Directory.Exists(targetPath), "Target directory should exist after copy");
-        var copiedFiles = Directory.GetFiles(targetPath, "*.docx", SearchOption.AllDirectories);
-
-        TestOutput.WriteLine($"Copied files: {copiedFiles.Length}");
-        foreach (var file in copiedFiles.Take(5))
+        
+        // Get all copied files (ALL file types, excluding hidden files starting with ".")
+        var allFilesIncludingHidden = Directory.GetFiles(targetPath, "*.*", SearchOption.AllDirectories);
+        var allCopiedFiles = allFilesIncludingHidden.Where(f => !Path.GetFileName(f).StartsWith(".")).ToArray();
+        var copiedDocxFiles = Directory.GetFiles(targetPath, "*.docx", SearchOption.AllDirectories);
+        var copiedDirectories = Directory.GetDirectories(targetPath, "*", SearchOption.AllDirectories);
+        
+        TestOutput.WriteLine($"Copy verification: {allCopiedFiles.Length} visible files, {copiedDocxFiles.Length} .docx files, {copiedDirectories.Length} directories");
+        
+        // Assert file counts match (should match visible files only)
+        Assert.Equal(copyResult.FilesCount, allCopiedFiles.Length);
+        Assert.True(copiedDocxFiles.Length > 0, "At least one DOCX file should be copied");
+        
+        // Verify ALL visible files have the prefix applied
+        var prefixValue = CzechTestValues["SOUBOR_PREFIX"];
+        var prefixedFiles = allCopiedFiles.Where(f => Path.GetFileName(f).StartsWith($"{prefixValue}_")).ToArray();
+        Assert.Equal(allCopiedFiles.Length, prefixedFiles.Length);
+        TestOutput.WriteLine($"✓ File prefix verification: {prefixedFiles.Length}/{allCopiedFiles.Length} visible files have prefix '{prefixValue}_'");
+        
+        // List exact file names with their prefixes for debugging
+        TestOutput.WriteLine("Copied files with prefixes:");
+        foreach (var file in allCopiedFiles.Take(10))
         {
-            TestOutput.WriteLine($"  - {Path.GetRelativePath(targetPath, file)}");
+            var fileName = Path.GetFileName(file);
+            var relativePath = Path.GetRelativePath(targetPath, file);
+            TestOutput.WriteLine($"  ✓ {relativePath} -> {fileName}");
+            Assert.True(fileName.StartsWith($"{prefixValue}_"), $"File should have prefix: {fileName}");
         }
-
-        Assert.True(copiedFiles.Length > 0, "At least one DOCX file should be copied");
-        TestOutput.WriteLine($"✓ Template copy successful: {copiedFiles.Length} files with preserved structure");
+        
+        // Verify empty folders are preserved
+        var originalDirectories = Directory.GetDirectories(targetTemplateSet.Path, "*", SearchOption.AllDirectories);
+        TestOutput.WriteLine($"Directory structure: {originalDirectories.Length} original -> {copiedDirectories.Length} copied");
+        
+        foreach (var originalDir in originalDirectories)
+        {
+            var relativeDirPath = Path.GetRelativePath(targetTemplateSet.Path, originalDir);
+            var expectedCopiedDir = Path.Combine(targetPath, relativeDirPath);
+            Assert.True(Directory.Exists(expectedCopiedDir), $"Directory should be preserved: {relativeDirPath}");
+        }
+        
+        TestOutput.WriteLine($"✓ Template copy validation complete: {allCopiedFiles.Length} files, {copiedDirectories.Length} directories preserved, all files prefixed");
 
         // Step 4: Create Czech replacement mappings
         TestOutput.WriteLine("\n=== Step 4: Czech Character Placeholder Mapping ===");
 
         // Create mappings using Czech test values for found placeholders
         var replacementMap = new Dictionary<string, string>();
-        var foundPlaceholderNames = scanResult.Placeholders.Select(p => p.Name).ToHashSet();
         
         // Get the path to the LOGO.png for image placeholders
         var logoPath = Path.Combine(templatesPath, "LOGO.png");
@@ -177,46 +245,50 @@ public class HappyPathE2ETest : E2ETestBase
 
         TestOutput.WriteLine($"Replace result: {replaceResult.FilesProcessed} files processed, {replaceResult.TotalReplacements} total replacements");
 
-        // Verify replacement was successful
-        Assert.True(replaceResult.FilesProcessed > 0, "At least one file should be processed");
-        Assert.True(replaceResult.TotalReplacements > 0, "At least one replacement should be made");
-
+        // Assert replacement operation results
+        Assert.NotNull(replaceResult);
+        Assert.True(replaceResult.FilesProcessed > 0, $"Should have processed files, found: {replaceResult.FilesProcessed}");
+        Assert.True(replaceResult.TotalReplacements > 0, $"Should have made replacements, found: {replaceResult.TotalReplacements}");
+        Assert.True(replaceResult.FilesProcessed <= copiedDocxFiles.Length, $"Should not process more files than available .docx files");
+        
+        // Verify only .docx files were processed (not ALL files)
+        TestOutput.WriteLine($"Replacement scope validation: processed {replaceResult.FilesProcessed} files vs {copiedDocxFiles.Length} .docx files vs {allCopiedFiles.Length} total files");
+        
+        // Verify no errors occurred
         if (replaceResult.HasErrors)
         {
-            TestOutput.WriteLine("Replacement errors:");
+            TestOutput.WriteLine("❌ Replacement errors detected:");
             foreach (var error in replaceResult.AllErrors)
             {
                 TestOutput.WriteLine($"  - {error}");
             }
-            Assert.False(replaceResult.HasErrors, "Replacement should not have errors");
+            Assert.False(replaceResult.HasErrors, $"Replacement should not have errors, found: {string.Join(", ", replaceResult.AllErrors)}");
         }
-
-        TestOutput.WriteLine($"✓ Replacement successful: {replaceResult.FilesProcessed} files, {replaceResult.TotalReplacements} replacements");
+        
+        // Verify that replacement ratio is reasonable
+        var avgReplacementsPerFile = (double)replaceResult.TotalReplacements / replaceResult.FilesProcessed;
+        Assert.True(avgReplacementsPerFile > 0, $"Should have reasonable replacement ratio, found: {avgReplacementsPerFile:F2} replacements per file");
+        
+        TestOutput.WriteLine($"✓ Replacement validation: {replaceResult.FilesProcessed} files processed, {replaceResult.TotalReplacements} replacements ({avgReplacementsPerFile:F2} avg per file)");
 
         // Step 6: Verify SOUBOR_PREFIX file renaming functionality
         TestOutput.WriteLine("\n=== Step 6: SOUBOR_PREFIX File Renaming Verification ===");
-        var prefixValue = replacementMap.ContainsKey("SOUBOR_PREFIX") ? replacementMap["SOUBOR_PREFIX"] : null;
+        // The prefix is applied during copy operation, not replacement, so get it from CzechTestValues
+        var expectedPrefix = CzechTestValues["SOUBOR_PREFIX"];
 
-        if (!string.IsNullOrEmpty(prefixValue))
+        TestOutput.WriteLine($"Checking file prefix application: '{expectedPrefix}'");
+        var finalProcessedFiles = Directory.GetFiles(targetPath, "*.*", SearchOption.AllDirectories); // Check ALL files, not just .docx
+        var finalPrefixedFiles = finalProcessedFiles.Where(f => Path.GetFileName(f).StartsWith($"{expectedPrefix}_")).ToList();
+        
+        TestOutput.WriteLine($"Found {finalPrefixedFiles.Count} files with prefix out of {finalProcessedFiles.Length} total files");
+        foreach (var prefixedFile in finalPrefixedFiles.Take(5))
         {
-            TestOutput.WriteLine($"Checking file prefix application: '{prefixValue}'");
-            var processedFiles = Directory.GetFiles(targetPath, "*.docx", SearchOption.AllDirectories);
-            var prefixedFiles = processedFiles.Where(f => Path.GetFileName(f).StartsWith($"{prefixValue}_")).ToList();
-            Assert.Equal(processedFiles.Length, prefixedFiles.Count);
-            TestOutput.WriteLine($"Found {prefixedFiles.Count} files with prefix out of {processedFiles.Length} total files");
-            foreach (var prefixedFile in prefixedFiles.Take(5))
-            {
-                var fileName = Path.GetFileName(prefixedFile);
-                TestOutput.WriteLine($"  ✓ Prefixed file: {fileName}");
-            }
+            var fileName = Path.GetFileName(prefixedFile);
+            TestOutput.WriteLine($"  ✓ Prefixed file: {fileName}");
+        }
 
-            Assert.True(prefixedFiles.Count > 0, $"At least one file should have the prefix '{prefixValue}_'");
-            TestOutput.WriteLine($"✓ SOUBOR_PREFIX functionality verified: {prefixedFiles.Count} files properly prefixed");
-        }
-        else
-        {
-            TestOutput.WriteLine("⚠ SOUBOR_PREFIX not found in replacement mappings, skipping file prefix validation");
-        }
+        Assert.True(finalPrefixedFiles.Count > 0, $"At least one file should have the prefix '{expectedPrefix}_'");
+        TestOutput.WriteLine($"✓ SOUBOR_PREFIX functionality verified: {finalPrefixedFiles.Count} files properly prefixed");
 
         // Step 7: Verify complete placeholder replacement
         TestOutput.WriteLine("\n=== Step 7: Replacement Verification ===");
@@ -306,12 +378,83 @@ public class HappyPathE2ETest : E2ETestBase
             TestOutput.WriteLine($"  ✓ Directory preserved: {dir}");
         }
 
-        // Step 10: Generate comprehensive test report
-        TestOutput.WriteLine("\n=== Step 10: Test Completion Summary ===");
-        var prefixedFilesCount = !string.IsNullOrEmpty(prefixValue)
-            ? Directory.GetFiles(targetPath, "*.docx", SearchOption.AllDirectories)
-                .Count(f => Path.GetFileName(f).StartsWith($"{prefixValue}_"))
-            : 0;
+        // Step 10: Comprehensive Final Structure Validation
+        TestOutput.WriteLine("\n=== Step 10: Final Output Structure Validation ===");
+        
+        // Generate expected files dynamically from original template structure
+        var originalDocxFiles = Directory.GetFiles(targetTemplateSet.Path, "*.docx", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(targetTemplateSet.Path, f))
+            .OrderBy(f => f)
+            .ToArray();
+        
+        var expectedFiles = originalDocxFiles
+            .Select(f => {
+                var dir = Path.GetDirectoryName(f) ?? "";
+                var fileName = Path.GetFileName(f);
+                var prefixedFileName = $"{prefixValue}_{fileName}";
+                return Path.Combine(dir, prefixedFileName).Replace("\\", "/"); // Normalize separators
+            })
+            .OrderBy(f => f)
+            .ToArray();
+        
+        // Define expected empty directories that should be preserved (.gitkeep directories)
+        var expectedEmptyDirectories = new[]
+        {
+            "10. Smlouva",
+            "2. Zahájení řízení", 
+            "4. Doručené ŽoÚ",
+            "6. Objasnění ŽoÚ",
+            "8. Doručené nabídky"
+        };
+        
+        TestOutput.WriteLine($"Validating exact output structure: {expectedFiles.Length} files + {expectedEmptyDirectories.Length} empty directories");
+        
+        // Verify each expected file exists with correct prefix 
+        foreach (var expectedFile in expectedFiles)
+        {
+            var fullPath = Path.Combine(targetPath, expectedFile);
+            Assert.True(File.Exists(fullPath), $"Expected prefixed file should exist: {expectedFile}");
+            
+            // Verify file has correct prefix
+            var fileName = Path.GetFileName(expectedFile);
+            Assert.True(fileName.StartsWith($"{prefixValue}_"), $"File should have prefix '{prefixValue}_': {fileName}");
+            TestOutput.WriteLine($"  ✓ File: {expectedFile}");
+        }
+        
+        // Verify each expected empty directory exists and is preserved
+        foreach (var expectedDir in expectedEmptyDirectories)
+        {
+            var fullDirPath = Path.Combine(targetPath, expectedDir);
+            Assert.True(Directory.Exists(fullDirPath), $"Expected empty directory should exist: {expectedDir}");
+            
+            // Verify directory is actually empty (excluding hidden files)
+            var filesInDir = Directory.GetFiles(fullDirPath, "*.*", SearchOption.AllDirectories)
+                .Where(f => !Path.GetFileName(f).StartsWith("."))
+                .ToArray();
+            Assert.Empty(filesInDir);
+            TestOutput.WriteLine($"  ✓ Empty Directory: {expectedDir}");
+        }
+        
+        // Verify file count and structure integrity (but avoid exact string matching due to Unicode normalization issues)
+        var finalActualFiles = Directory.GetFiles(targetPath, "*.*", SearchOption.AllDirectories)
+            .Where(f => !Path.GetFileName(f).StartsWith("."))
+            .ToArray();
+        
+        TestOutput.WriteLine($"Structure validation: {expectedFiles.Length} expected files, {finalActualFiles.Length} actual files");
+        Assert.Equal(expectedFiles.Length, finalActualFiles.Length);
+        
+        // Verify all actual files have the correct prefix
+        foreach (var actualFile in finalActualFiles)
+        {
+            var fileName = Path.GetFileName(actualFile);
+            Assert.True(fileName.StartsWith($"{prefixValue}_"), $"All files should have prefix '{prefixValue}_': {fileName}");
+        }
+        
+        TestOutput.WriteLine($"✓ Final structure validation complete: {expectedFiles.Length} files and {expectedEmptyDirectories.Length} empty directories exactly as expected");
+        
+        // Step 11: Generate comprehensive test report
+        TestOutput.WriteLine("\n=== Step 11: Test Completion Summary ===");
+        var prefixedFilesCount = finalActualFiles.Length; // All files are prefixed
 
         await CreateTestParametersFile(new
         {
@@ -319,7 +462,7 @@ public class HappyPathE2ETest : E2ETestBase
             TemplateSet = targetTemplateSet.Name,
             PlaceholdersDiscovered = scanResult.Placeholders.Count,
             CzechReplacementMappings = replacementMap,
-            SouborPrefixValue = prefixValue ?? "Not provided",
+            SouborPrefixValue = prefixValue,
             PrefixedFilesCount = prefixedFilesCount,
             FilesProcessed = replaceResult.FilesProcessed,
             TotalReplacements = replaceResult.TotalReplacements,
@@ -334,10 +477,7 @@ public class HappyPathE2ETest : E2ETestBase
         TestOutput.WriteLine($"  - {replaceResult.FilesProcessed} files processed");
         TestOutput.WriteLine($"  - {replaceResult.TotalReplacements} total replacements");
         TestOutput.WriteLine($"  - {replacementMap.Count} Czech character mappings applied");
-        if (!string.IsNullOrEmpty(prefixValue))
-        {
-            TestOutput.WriteLine($"  - SOUBOR_PREFIX '{prefixValue}' applied to {prefixedFilesCount} files");
-        }
+        TestOutput.WriteLine($"  - SOUBOR_PREFIX '{prefixValue}' applied to {prefixedFilesCount} files");
         TestOutput.WriteLine($"  - Folder structure preserved with {copiedStructure.Count} directories");
         TestOutput.WriteLine($"Test output available at: {Path.GetFullPath(TestOutputDirectory)}");
     }

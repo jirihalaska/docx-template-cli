@@ -16,6 +16,7 @@ public interface ITemplateCopyService
     /// <param name="targetPath">Target directory path where templates will be copied</param>
     /// <param name="preserveStructure">Whether to maintain directory structure in target</param>
     /// <param name="overwrite">Whether to overwrite existing files in target</param>
+    /// <param name="filePrefix">Optional prefix to add to all copied file names</param>
     /// <param name="cancellationToken">Cancellation token for operation cancellation</param>
     /// <returns>Copy operation result with statistics and file details</returns>
     /// <exception cref="TemplateNotFoundException">Thrown when source path doesn't exist</exception>
@@ -26,6 +27,7 @@ public interface ITemplateCopyService
         string targetPath,
         bool preserveStructure = true,
         bool overwrite = false,
+        string? filePrefix = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -35,6 +37,7 @@ public interface ITemplateCopyService
     /// <param name="targetPath">Target directory path where files will be copied</param>
     /// <param name="preserveStructure">Whether to maintain directory structure in target</param>
     /// <param name="overwrite">Whether to overwrite existing files in target</param>
+    /// <param name="filePrefix">Optional prefix to add to all copied file names</param>
     /// <param name="cancellationToken">Cancellation token for operation cancellation</param>
     /// <returns>Copy operation result with statistics and file details</returns>
     /// <exception cref="FileAccessException">Thrown when files cannot be accessed or copied</exception>
@@ -44,6 +47,7 @@ public interface ITemplateCopyService
         string targetPath,
         bool preserveStructure = true,
         bool overwrite = false,
+        string? filePrefix = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

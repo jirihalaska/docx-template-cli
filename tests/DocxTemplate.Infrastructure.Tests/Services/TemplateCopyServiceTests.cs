@@ -111,7 +111,7 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.CopyFile("/source/test.docx", expectedTargetPath, It.IsAny<bool>()));
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateFiles);
 
         // act
@@ -315,7 +315,7 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(false);
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateFiles);
 
         // act
@@ -354,7 +354,7 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.FileExists(expectedTargetPath)).Returns(true);
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateFiles);
 
         // act
@@ -468,7 +468,7 @@ public class TemplateCopyServiceTests
         _mockFileSystemService.Setup(x => x.DirectoryExists(targetPath)).Returns(true);
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateFiles);
 
         // act
@@ -510,7 +510,7 @@ public class TemplateCopyServiceTests
             .Throws(new IOException("Disk full"));
 
         _mockDiscoveryService
-            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, true, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DiscoverTemplatesAsync(sourcePath, It.Is<IReadOnlyList<string>>(patterns => patterns.Contains("*.*")), true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(templateFiles);
 
         // act

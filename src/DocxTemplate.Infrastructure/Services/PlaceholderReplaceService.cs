@@ -517,32 +517,145 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             return replacementCount;
         }
 
-        // Process text placeholders
-        foreach (var run in runs)
+        // Find all text placeholders in the full text
+        var placeholderMatches = PlaceholderPattern.Matches(fullText);
+        
+        if (placeholderMatches.Count > 0)
         {
-            var textElements = run.Descendants<W.Text>().ToList();
-            foreach (var textElement in textElements)
+            // Process placeholders in reverse order to maintain text positions
+            var matchList = placeholderMatches.Cast<Match>().OrderByDescending(m => m.Index).ToList();
+            
+            foreach (var match in matchList)
             {
-                var originalText = textElement.Text;
-                var newText = PlaceholderPattern.Replace(originalText, match =>
+                var placeholderName = match.Groups[1].Value.Trim();
+                if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
                 {
-                    var placeholderName = match.Groups[1].Value.Trim();
-                    if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
+                    // Replace the placeholder in the reconstructed text and update the runs
+                    if (ReplaceTextAcrossRuns(paragraph, match.Index, match.Length, replacement))
                     {
                         replacementCount++;
-                        return replacement;
                     }
-                    return match.Value; // Keep original if no replacement found
-                });
-
-                if (newText != originalText)
+                }
+            }
+        }
+        else
+        {
+            // Fallback: Process individual text elements for placeholders that might not be detected
+            // due to complex formatting within the placeholder text
+            foreach (var run in runs)
+            {
+                var textElements = run.Descendants<W.Text>().ToList();
+                foreach (var textElement in textElements)
                 {
-                    textElement.Text = newText;
+                    var originalText = textElement.Text;
+                    var newText = PlaceholderPattern.Replace(originalText, match =>
+                    {
+                        var placeholderName = match.Groups[1].Value.Trim();
+                        if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
+                        {
+                            replacementCount++;
+                            return replacement;
+                        }
+                        return match.Value; // Keep original if no replacement found
+                    });
+
+                    if (newText != originalText)
+                    {
+                        textElement.Text = newText;
+                    }
                 }
             }
         }
 
         return replacementCount;
+    }
+
+    /// <summary>
+    /// Replaces text across multiple runs by finding the correct character positions
+    /// and updating the appropriate text elements.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing the runs</param>
+    /// <param name="startIndex">Start index of the text to replace in the full paragraph text</param>
+    /// <param name="length">Length of the text to replace</param>
+    /// <param name="replacement">The replacement text</param>
+    /// <returns>True if replacement was successful</returns>
+    private bool ReplaceTextAcrossRuns(W.Paragraph paragraph, int startIndex, int length, string replacement)
+    {
+        var runs = paragraph.Descendants<W.Run>().ToList();
+        var textElements = new List<(W.Text textElement, W.Run parentRun, int startPos, int endPos)>();
+        
+        // Build a map of text elements with their positions in the full text
+        var currentPos = 0;
+        foreach (var run in runs)
+        {
+            var texts = run.Descendants<W.Text>().ToList();
+            foreach (var text in texts)
+            {
+                var textLength = text.Text?.Length ?? 0;
+                textElements.Add((text, run, currentPos, currentPos + textLength));
+                currentPos += textLength;
+            }
+        }
+        
+        var endIndex = startIndex + length;
+        var affectedElements = textElements.Where(te => 
+            te.startPos < endIndex && te.endPos > startIndex).ToList();
+            
+        if (affectedElements.Count == 0)
+            return false;
+
+        try
+        {
+            // Process affected text elements
+            for (int i = 0; i < affectedElements.Count; i++)
+            {
+                var (textElement, parentRun, elemStartPos, elemEndPos) = affectedElements[i];
+                
+                var textStart = Math.Max(0, startIndex - elemStartPos);
+                var textEnd = Math.Min(textElement.Text?.Length ?? 0, endIndex - elemStartPos);
+                
+                var originalText = textElement.Text ?? string.Empty;
+                string newText;
+                
+                if (i == 0 && affectedElements.Count == 1)
+                {
+                    // Single element case - replace within the element
+                    newText = originalText.Substring(0, textStart) + 
+                             replacement + 
+                             originalText.Substring(textEnd);
+                }
+                else if (i == 0)
+                {
+                    // First element - keep text before placeholder, add replacement
+                    newText = originalText.Substring(0, textStart) + replacement;
+                }
+                else if (i == affectedElements.Count - 1)
+                {
+                    // Last element - keep text after placeholder
+                    newText = originalText.Substring(textEnd);
+                }
+                else
+                {
+                    // Middle element - remove all text (it's part of the placeholder)
+                    newText = string.Empty;
+                }
+                
+                textElement.Text = newText;
+                
+                // Remove empty text elements to clean up the document
+                if (string.IsNullOrEmpty(newText))
+                {
+                    textElement.Remove();
+                }
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to replace text across runs for placeholder at position {StartIndex}", startIndex);
+            return false;
+        }
     }
 
     private bool TryReplaceImagePlaceholder(W.Paragraph paragraph, Match match, ReplacementMap replacementMap, OpenXmlPart documentPart)

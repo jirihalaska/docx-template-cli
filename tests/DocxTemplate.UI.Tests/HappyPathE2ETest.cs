@@ -125,22 +125,35 @@ public class HappyPathE2ETest : E2ETestBase
         // Create mappings using Czech test values for found placeholders
         var replacementMap = new Dictionary<string, string>();
         var foundPlaceholderNames = scanResult.Placeholders.Select(p => p.Name).ToHashSet();
-
-        foreach (var kvp in CzechTestValues)
+        
+        // Get the path to the LOGO.png for image placeholders
+        var logoPath = Path.Combine(templatesPath, "LOGO.png");
+        if (!File.Exists(logoPath))
         {
-            if (foundPlaceholderNames.Contains(kvp.Key))
-            {
-                replacementMap[kvp.Key] = kvp.Value;
-                TestOutput.WriteLine($"  ✓ {kvp.Key} -> {kvp.Value}");
-            }
+            TestOutput.WriteLine($"Warning: LOGO.png not found at {logoPath}, using fallback");
+            // Try to find it relative to the test assembly
+            logoPath = Path.GetFullPath("templates/LOGO.png");
         }
 
-        // If we don't have matches with our Czech test data, use the first few placeholders
-        if (replacementMap.Count == 0)
+        // Process all discovered placeholders
+        foreach (var placeholder in scanResult.Placeholders)
         {
-            TestOutput.WriteLine("No matching placeholders found for Czech test data, using first available placeholders:");
-            foreach (var placeholder in scanResult.Placeholders.Take(5))
+            // Check if it's an image placeholder
+            if (placeholder.Type == PlaceholderType.Image)
             {
+                // Map image placeholders to the actual image file
+                replacementMap[placeholder.Name] = logoPath;
+                TestOutput.WriteLine($"  ✓ {placeholder.Name} -> {logoPath} (IMAGE)");
+            }
+            else if (CzechTestValues.ContainsKey(placeholder.Name))
+            {
+                // Use Czech test values for known text placeholders
+                replacementMap[placeholder.Name] = CzechTestValues[placeholder.Name];
+                TestOutput.WriteLine($"  ✓ {placeholder.Name} -> {CzechTestValues[placeholder.Name]}");
+            }
+            else if (replacementMap.Count < 5)
+            {
+                // Generate Czech test values for other text placeholders (limit to 5)
                 var czechValue = $"TestovacíHodnota_{placeholder.Name}_ČeskéZnaky_ěščřžýáí";
                 replacementMap[placeholder.Name] = czechValue;
                 TestOutput.WriteLine($"  + {placeholder.Name} -> {czechValue}");
@@ -379,6 +392,13 @@ public class HappyPathE2ETest : E2ETestBase
         
         foreach (var placeholder in placeholdersToProcessInitially)
         {
+            // Skip image placeholders in partial processing - save them for update workflow
+            if (placeholder.Type == PlaceholderType.Image)
+            {
+                TestOutput.WriteLine($"  Skipping image placeholder {placeholder.Name} for update workflow test");
+                continue;
+            }
+            
             if (CzechTestValues.ContainsKey(placeholder.Name))
             {
                 partialReplacementMap[placeholder.Name] = CzechTestValues[placeholder.Name];
@@ -439,10 +459,24 @@ public class HappyPathE2ETest : E2ETestBase
         // Step 4: Complete remaining placeholders (Update workflow completion)
         TestOutput.WriteLine("\n=== Step 4: Complete Remaining Placeholders ===");
         
+        // Get the path to the LOGO.png for image placeholders
+        var logoPath = Path.Combine(templatesPath, "LOGO.png");
+        if (!File.Exists(logoPath))
+        {
+            TestOutput.WriteLine($"Warning: LOGO.png not found at {logoPath}, using fallback");
+            logoPath = Path.GetFullPath("templates/LOGO.png");
+        }
+        
         var completionReplacementMap = new Dictionary<string, string>();
         foreach (var placeholder in updateScanResult.Placeholders)
         {
-            if (CzechTestValues.ContainsKey(placeholder.Name))
+            // Handle image placeholders
+            if (placeholder.Type == PlaceholderType.Image)
+            {
+                completionReplacementMap[placeholder.Name] = logoPath;
+                TestOutput.WriteLine($"  Mapping image placeholder {placeholder.Name} -> {logoPath}");
+            }
+            else if (CzechTestValues.ContainsKey(placeholder.Name))
             {
                 completionReplacementMap[placeholder.Name] = CzechTestValues[placeholder.Name];
             }

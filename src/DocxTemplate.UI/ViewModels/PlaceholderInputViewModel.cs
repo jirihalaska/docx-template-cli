@@ -151,7 +151,7 @@ public class PlaceholderInputViewModel : StepViewModelBase
     {
         return PlaceholderInputs
             .Where(p => p.IsFilled)
-            .ToDictionary(p => p.PlaceholderName, p => p.InputValue);
+            .ToDictionary(p => p.PlaceholderName, p => p.GetNormalizedValue());
     }
 
     /// <summary>
@@ -192,23 +192,15 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         // Initialize the filled state based on current input value (should be empty initially)
         IsFilled = !string.IsNullOrWhiteSpace(_inputValue);
         
-        // Subscribe to input value changes for automatic whitespace normalization
+        // Subscribe to input value changes for IsFilled state tracking
+        // Note: Removed automatic whitespace normalization to prevent interference with normal text editing
         this.WhenAnyValue(x => x.InputValue)
             .Subscribe(value => 
             {
                 if (!IsImagePlaceholder)
                 {
-                    var normalized = NormalizeWhitespace(value);
-                    
-                    // Always update IsFilled state first, based on the normalized value
-                    IsFilled = !string.IsNullOrWhiteSpace(normalized);
-                    
-                    // Then normalize the input if needed (this might trigger the subscription again,
-                    // but IsFilled is already set correctly above)
-                    if (normalized != value)
-                    {
-                        InputValue = normalized;
-                    }
+                    // Only update IsFilled state - no normalization during typing
+                    IsFilled = !string.IsNullOrWhiteSpace(value?.Trim());
                 }
             });
             
@@ -332,6 +324,20 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         {
             SelectedImagePath = string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Gets the normalized value for final replacement (whitespace normalization applied)
+    /// </summary>
+    /// <returns>Normalized input value suitable for document replacement</returns>
+    public string GetNormalizedValue()
+    {
+        if (IsImagePlaceholder)
+        {
+            return InputValue; // Image paths should not be normalized
+        }
+        
+        return NormalizeWhitespace(InputValue);
     }
 
     /// <summary>

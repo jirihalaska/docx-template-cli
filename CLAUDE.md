@@ -9,36 +9,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build the solution
 dotnet build
 
-# Run tests (when implemented)
+# Run all tests
 dotnet test
+
+# Run specific test projects
+dotnet test tests/DocxTemplate.Core.Tests
+dotnet test tests/DocxTemplate.Infrastructure.Tests
+dotnet test tests/DocxTemplate.UI.Tests
+dotnet test tests/DocxTemplate.EndToEnd.Tests
 
 # Run a specific test with XUnit filter
 dotnet test --filter "FullyQualifiedName~TestClassName.TestMethodName"
 ```
 
-### CLI Development
+### GUI Development
 ```bash
-# Run the CLI during development
-dotnet run --project src/DocxTemplate.CLI
+# Run the GUI during development
+dotnet run --project src/DocxTemplate.UI
 
-# Build and install as global tool
-dotnet pack
-dotnet tool install --global --add-source ./nupkg DocxTemplate.CLI
+# Build GUI for current platform
+dotnet build src/DocxTemplate.UI -c Release
 ```
 
 ### Publishing
 
-#### CLI Only (Traditional)
-```bash
-# Create self-contained CLI executables
-dotnet publish src/DocxTemplate.CLI -c Release -r win-x64 --self-contained
-dotnet publish src/DocxTemplate.CLI -c Release -r osx-x64 --self-contained
-dotnet publish src/DocxTemplate.CLI -c Release -r linux-x64 --self-contained
-```
-
 #### GUI Application (Self-Contained)
 ```bash
-# Create self-contained GUI applications with embedded CLI
+# Create self-contained GUI applications
 dotnet publish src/DocxTemplate.UI -c Release -r win-x64 --self-contained -p:SkipCliBuild=true
 dotnet publish src/DocxTemplate.UI -c Release -r osx-arm64 --self-contained -p:SkipCliBuild=true
 dotnet publish src/DocxTemplate.UI -c Release -r linux-x64 --self-contained -p:SkipCliBuild=true
@@ -46,10 +43,7 @@ dotnet publish src/DocxTemplate.UI -c Release -r linux-x64 --self-contained -p:S
 
 #### Complete Release Build (Recommended)
 ```bash
-# Build both CLI and GUI together for all platforms
-./scripts/build-release.sh
-
-# Or build just GUI for current platform (with app bundle on macOS)
+# Build GUI for current platform (with app bundle on macOS)
 ./scripts/publish-gui.sh
 
 # Build GUI for specific platform
@@ -81,10 +75,10 @@ dotnet publish src/DocxTemplate.UI -c Release -r linux-x64 --self-contained -p:S
 
 ## Architecture
 
-This is a clean, modular .NET 9 command-line application for Word document template processing with placeholder replacement, following these architectural principles:
+This is a clean, modular .NET 9 GUI application for Word document template processing with placeholder replacement, including image placeholders.
 
 ### Three-Layer Architecture
-1. **DocxTemplate.CLI** - Command-line interface layer, handles user interaction and command parsing
+1. **DocxTemplate.UI** - Avalonia-based GUI application with MVVM pattern
 2. **DocxTemplate.Core** - Business logic layer with service interfaces and domain models
 3. **DocxTemplate.Infrastructure** - Implementation layer for file I/O and Word document processing
 
@@ -92,7 +86,7 @@ This is a clean, modular .NET 9 command-line application for Word document templ
 - `ITemplateDiscoveryService` - Discovers .docx files in specified directories
 - `IPlaceholderScanService` - Scans documents for placeholder patterns (default: `{{.*?}}`)
 - `ITemplateCopyService` - Copies templates to target directories
-- `IPlaceholderReplaceService` - Replaces placeholders with values from JSON mapping
+- `IPlaceholderReplaceService` - Replaces text and image placeholders with values from JSON mapping
 - `ITemplateSetService` - Manages sets of templates as a collection
 
 ### Domain Models
@@ -100,20 +94,21 @@ This is a clean, modular .NET 9 command-line application for Word document templ
 - `PlaceholderScanResult` - Contains discovered placeholders and scan statistics
 - `Placeholder` - Represents a unique placeholder with its locations
 - `PlaceholderLocation` - Tracks where placeholders appear in templates
+- `PlaceholderReplaceResult` - Result of placeholder replacement operation
 
-### Implementation Status
-CLI commands are implemented and functional:
-- `discover` - Find DOCX files in directories
-- `scan` - Find placeholders in DOCX files using regex patterns  
-- `copy` - Copy templates with performance metrics
-- `list-sets` - List template sets (directories)
-
-All commands support JSON output format for programmatic use.
+### Key Features
+- Text placeholder replacement: `{{PLACEHOLDER_NAME}}`
+- Image placeholder replacement: Detects and replaces image placeholders
+- Support for headers, footers, and document body
+- Batch processing of multiple templates
+- JSON-based placeholder mapping
 
 ## Testing Conventions
 - Unit tests use XUnit framework
 - Use lowercase arrange, act, assert comments in tests
 - Execute specific tests using `--filter` parameter
+- FluentAssertions for test assertions
+- Moq for mocking dependencies
 
 ### Executable Testing
 ```bash
@@ -129,13 +124,44 @@ All commands support JSON output format for programmatic use.
 
 # CI automatically tests platform-native executables:
 # - Windows runner: Tests win-x64 using PowerShell
-# - macOS runner: Tests osx-arm64 using bash
+# - macOS runner: Tests osx-arm64 using bash (currently disabled)
 # See .github/workflows/ci.yml for automated testing
 ```
 
-## CLI Documentation Maintenance
-**IMPORTANT**: When making changes to CLI commands, you MUST update the documentation:
-- File: `docs/cli-reference.md`
-- Update command parameters, output schemas, and behavior
-- Test actual CLI output and update examples
-- The documentation must reflect the current CLI implementation exactly
+## UI Framework
+- **Avalonia UI 11.3.4**: Cross-platform .NET UI framework
+- **ReactiveUI**: MVVM framework for reactive programming
+- **Fluent Theme**: Modern, consistent UI design
+- **Dependency Injection**: Microsoft.Extensions.DependencyInjection for IoC
+
+## Placeholder Replacement
+### Text Placeholders
+- Pattern: `{{PLACEHOLDER_NAME}}`
+- Case-insensitive matching
+- Supports nested placeholders in tables and lists
+- Preserves formatting of surrounding text
+
+### Image Placeholders  
+- Automatically detects image placeholders in documents
+- Replaces with specified image files from mapping
+- Maintains image dimensions and positioning
+- Supports images in headers, footers, and body
+
+### Mapping File Format
+```json
+{
+  "placeholders": {
+    "{{COMPANY_NAME}}": "Acme Corp",
+    "{{PROJECT_NAME}}": "Template System",
+    "{{DATE}}": "2025-08-17",
+    "{{LOGO}}": "path/to/logo.png",
+    "{{SIGNATURE}}": "path/to/signature.jpg"
+  }
+}
+```
+
+## Important Notes
+- The standalone CLI project has been removed (commit 278bfe4)
+- CLI functionality is now provided through pre-built executables distributed with the GUI
+- The UI project includes templates folder that gets copied during build
+- All document processing is done through the Infrastructure layer using DocumentFormat.OpenXml

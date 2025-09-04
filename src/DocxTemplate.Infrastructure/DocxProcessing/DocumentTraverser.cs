@@ -44,18 +44,7 @@ public class DocumentTraverser
             throw new InvalidOperationException($"Document has no main document part: {filePath}");
         }
         
-        // Process main document body
-        if (mainDocumentPart.Document?.Body != null)
-        {
-            _logger.LogDebug("Processing document body");
-            await processor.ProcessAsync(
-                mainDocumentPart.Document.Body, 
-                "Body", 
-                mainDocumentPart, // Body uses MainDocumentPart
-                cancellationToken);
-        }
-        
-        // Process all headers (documents can have multiple for odd/even pages, first page, etc.)
+        // Process all headers first (documents can have multiple for odd/even pages, first page, etc.)
         if (mainDocumentPart.HeaderParts != null)
         {
             int headerIndex = 0;
@@ -75,6 +64,17 @@ public class DocumentTraverser
                 }
                 headerIndex++;
             }
+        }
+        
+        // Process main document body
+        if (mainDocumentPart.Document?.Body != null)
+        {
+            _logger.LogDebug("Processing document body");
+            await processor.ProcessAsync(
+                mainDocumentPart.Document.Body, 
+                "Body", 
+                mainDocumentPart, // Body uses MainDocumentPart
+                cancellationToken);
         }
         
         // Process all footers

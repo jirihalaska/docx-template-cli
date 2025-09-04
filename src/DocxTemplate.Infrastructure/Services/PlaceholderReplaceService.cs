@@ -588,8 +588,17 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             var widthEmus = UnitConverter.PixelsToEmus(displayWidth);
             var heightEmus = UnitConverter.PixelsToEmus(displayHeight);
 
-            // Clear the paragraph and replace with image
+            // Preserve existing paragraph properties (including alignment)
+            var existingParagraphProperties = paragraph.GetFirstChild<W.ParagraphProperties>()?.CloneNode(true) as W.ParagraphProperties;
+            
+            // Clear all content from the paragraph
             paragraph.RemoveAllChildren();
+            
+            // Restore paragraph properties if they existed
+            if (existingParagraphProperties != null)
+            {
+                paragraph.PrependChild(existingParagraphProperties);
+            }
             
             // Create a new run with the image
             var imageRun = CreateImageRun(mainPart, imagePath, widthEmus, heightEmus);

@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.IO;
 using Xunit;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocxTemplate.Infrastructure.Tests.Services;
 
@@ -467,6 +469,109 @@ public class PlaceholderReplaceServiceTests
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
             new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!));
+    }
+
+    [Fact]
+    public async Task TryReplaceImagePlaceholder_PreservesAlignment_WhenReplacingImageWithValidPath()
+    {
+        // arrange
+        var testImagePath = Path.Combine(Path.GetTempPath(), "test_image.png");
+        var testDocxPath = Path.Combine(Path.GetTempPath(), "test_document.docx");
+        
+        // Create a test image file
+        await File.WriteAllBytesAsync(testImagePath, [137, 80, 78, 71, 13, 10, 26, 10]); // PNG header
+        
+        try
+        {
+            // Create test document with center-aligned image placeholder
+            CreateTestDocumentWithCenterAlignedImagePlaceholder(testDocxPath);
+            
+            var imageInfo = new ImageInfo { Width = 100, Height = 100 };
+            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
+            
+            var replacementMap = new ReplacementMap
+            {
+                Mappings = new Dictionary<string, string>
+                {
+                    { "LOGO", testImagePath }
+                }
+            };
+            
+            // act
+            var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
+            
+            // assert
+            Assert.True(result.IsSuccess);
+            Assert.True(result.ReplacementCount > 0);
+            
+            // Verify that the image was inserted and alignment was preserved
+            VerifyImageReplacementPreservesAlignment(testDocxPath);
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(testImagePath)) File.Delete(testImagePath);
+            if (File.Exists(testDocxPath)) File.Delete(testDocxPath);
+        }
+    }
+    
+    private static void CreateTestDocumentWithCenterAlignedImagePlaceholder(string docxPath)
+    {
+        using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+        var mainPart = doc.AddMainDocumentPart();
+        var document = new DocumentFormat.OpenXml.Wordprocessing.Document();
+        var body = new DocumentFormat.OpenXml.Wordprocessing.Body();
+        
+        // Create a paragraph with center alignment and image placeholder
+        var paragraph = new DocumentFormat.OpenXml.Wordprocessing.Paragraph();
+        
+        // Add paragraph properties with center justification
+        var paragraphProperties = new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties();
+        var justification = new DocumentFormat.OpenXml.Wordprocessing.Justification()
+        {
+            Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
+        };
+        paragraphProperties.Append(justification);
+        paragraph.Append(paragraphProperties);
+        
+        // Add run with image placeholder text
+        var run = new DocumentFormat.OpenXml.Wordprocessing.Run();
+        var text = new DocumentFormat.OpenXml.Wordprocessing.Text("{{image:LOGO|width:200|height:150}}");
+        run.Append(text);
+        paragraph.Append(run);
+        
+        body.Append(paragraph);
+        document.Append(body);
+        mainPart.Document = document;
+        mainPart.Document.Save();
+    }
+    
+    private static void VerifyImageReplacementPreservesAlignment(string docxPath)
+    {
+        using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(docxPath, false);
+        var body = doc.MainDocumentPart?.Document?.Body;
+        Assert.NotNull(body);
+        
+        var paragraphs = body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>().ToList();
+        Assert.NotEmpty(paragraphs);
+        
+        // Find the paragraph that should contain the replaced image
+        var imageParagraph = paragraphs.FirstOrDefault(p => p.Descendants<DocumentFormat.OpenXml.Wordprocessing.Drawing>().Any());
+        Assert.NotNull(imageParagraph);
+        
+        // Verify that the paragraph properties with center justification are still there
+        var paragraphProperties = imageParagraph.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties>();
+        Assert.NotNull(paragraphProperties);
+        
+        var justification = paragraphProperties.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.Justification>();
+        Assert.NotNull(justification);
+        Assert.Equal(DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center, justification.Val?.Value);
+        
+        // Verify that there's no placeholder text remaining
+        var allText = string.Join("", imageParagraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>().Select(t => t.Text));
+        Assert.DoesNotContain("{{image:LOGO|width:200|height:150}}", allText);
     }
 
     private static ReplacementMap CreateValidReplacementMap()

@@ -30,6 +30,7 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
     private readonly IErrorHandler _errorHandler;
     private readonly IFileSystemService _fileSystemService;
     private readonly IImageProcessor _imageProcessor;
+    private readonly DocumentTraverser _documentTraverser;
     private static readonly Regex PlaceholderPattern = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
     private static readonly Regex ImagePlaceholderPattern = new(PlaceholderPatterns.ImagePlaceholderPattern, RegexOptions.Compiled);
 
@@ -37,12 +38,14 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         ILogger<PlaceholderReplaceService> logger,
         IErrorHandler errorHandler,
         IFileSystemService fileSystemService,
-        IImageProcessor imageProcessor)
+        IImageProcessor imageProcessor,
+        DocumentTraverser documentTraverser)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
+        _documentTraverser = documentTraverser ?? throw new ArgumentNullException(nameof(documentTraverser));
     }
 
     /// <inheritdoc />
@@ -460,51 +463,33 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         return backupPath;
     }
 
-    private Task<int> ProcessDocumentReplacementsAsync(
+    private async Task<int> ProcessDocumentReplacementsAsync(
         string filePath,
         ReplacementMap replacementMap,
         CancellationToken cancellationToken)
     {
-        var replacementCount = 0;
+        // Create logger for the processor
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var processorLogger = loggerFactory.CreateLogger<ReplaceDocumentPartProcessor>();
 
-        using var wordDocument = WordprocessingDocument.Open(filePath, true);
-        var body = wordDocument.MainDocumentPart?.Document?.Body;
+        // Create replace processor with required dependencies
+        var replaceProcessor = new ReplaceDocumentPartProcessor(
+            replacementMap,
+            ProcessParagraphReplacements,
+            processorLogger);
 
-        if (body == null)
-        {
-            throw new InvalidOperationException($"Document body not found in {filePath}");
-        }
+        // Use DocumentTraverser to traverse all document parts uniformly
+        // This will now process body, headers, AND footers (fixes the bug!)
+        await _documentTraverser.TraverseDocumentAsync(
+            filePath,
+            isReadOnly: false,
+            replaceProcessor,
+            cancellationToken);
 
-        // Process paragraphs to handle both text and image placeholders
-        var paragraphs = body.Descendants<W.Paragraph>().ToList();
-
-        foreach (var paragraph in paragraphs)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-
-            replacementCount += ProcessParagraphReplacements(paragraph, replacementMap, wordDocument.MainDocumentPart!);
-        }
-
-        // Process table cells (similar logic but for tables)
-        var tableCells = body.Descendants<W.TableCell>().ToList();
-        foreach (var cell in tableCells)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-
-            var cellParagraphs = cell.Descendants<W.Paragraph>().ToList();
-            foreach (var paragraph in cellParagraphs)
-            {
-                replacementCount += ProcessParagraphReplacements(paragraph, replacementMap, wordDocument.MainDocumentPart!);
-            }
-        }
-
-        // Save the document
-        wordDocument.MainDocumentPart?.Document?.Save();
-
-        _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", replacementCount, filePath);
-        return Task.FromResult(replacementCount);
+        var totalReplacements = replaceProcessor.TotalReplacements;
+        _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", totalReplacements, filePath);
+        
+        return totalReplacements;
     }
 
     private int ProcessParagraphReplacements(W.Paragraph paragraph, ReplacementMap replacementMap, MainDocumentPart mainPart)

@@ -3,6 +3,7 @@ using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Services;
+using DocxTemplate.Infrastructure.DocxProcessing;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.IO;
@@ -18,6 +19,7 @@ public class PlaceholderReplaceServiceTests
     private readonly Mock<IErrorHandler> _mockErrorHandler;
     private readonly Mock<IFileSystemService> _mockFileSystemService;
     private readonly Mock<IImageProcessor> _mockImageProcessor;
+    private readonly Mock<DocumentTraverser> _mockDocumentTraverser;
     private readonly PlaceholderReplaceService _service;
 
     public PlaceholderReplaceServiceTests()
@@ -26,12 +28,15 @@ public class PlaceholderReplaceServiceTests
         _mockErrorHandler = new Mock<IErrorHandler>();
         _mockFileSystemService = new Mock<IFileSystemService>();
         _mockImageProcessor = new Mock<IImageProcessor>();
+        var mockTraverserLogger = new Mock<ILogger<DocumentTraverser>>();
+        _mockDocumentTraverser = new Mock<DocumentTraverser>(mockTraverserLogger.Object);
         
         _service = new PlaceholderReplaceService(
             _mockLogger.Object,
             _mockErrorHandler.Object,
             _mockFileSystemService.Object,
-            _mockImageProcessor.Object);
+            _mockImageProcessor.Object,
+            _mockDocumentTraverser.Object);
     }
 
     [Fact]
@@ -444,7 +449,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object));
+            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
     }
 
     [Fact]
@@ -452,7 +457,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _mockImageProcessor.Object));
+            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
     }
 
     [Fact]
@@ -460,7 +465,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _mockImageProcessor.Object));
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
     }
 
     [Fact]
@@ -468,7 +473,15 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!));
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!, _mockDocumentTraverser.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullDocumentTraverser_ThrowsArgumentNullException()
+    {
+        // act & assert
+        Assert.Throws<ArgumentNullException>(() => 
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object, null!));
     }
 
     [Fact]

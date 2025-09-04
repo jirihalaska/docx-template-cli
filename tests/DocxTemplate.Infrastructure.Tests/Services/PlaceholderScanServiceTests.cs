@@ -3,6 +3,7 @@ using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Services;
+using DocxTemplate.Infrastructure.DocxProcessing;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -13,27 +14,37 @@ public class PlaceholderScanServiceTests
 {
     private readonly Mock<ITemplateDiscoveryService> _mockDiscoveryService;
     private readonly Mock<ILogger<PlaceholderScanService>> _mockLogger;
+    private readonly Mock<DocumentTraverser> _mockDocumentTraverser;
     private readonly PlaceholderScanService _service;
 
     public PlaceholderScanServiceTests()
     {
         _mockDiscoveryService = new Mock<ITemplateDiscoveryService>();
         _mockLogger = new Mock<ILogger<PlaceholderScanService>>();
-        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object);
+        var mockTraverserLogger = new Mock<ILogger<DocumentTraverser>>();
+        _mockDocumentTraverser = new Mock<DocumentTraverser>(mockTraverserLogger.Object);
+        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object);
     }
 
     [Fact]
     public void Constructor_WithNullDiscoveryService_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object, _mockDocumentTraverser.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!, _mockDocumentTraverser.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullDocumentTraverser_ThrowsArgumentNullException()
+    {
+        // arrange, act & assert
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, null!));
     }
 
     [Theory]

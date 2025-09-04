@@ -7,6 +7,7 @@ using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Infrastructure.Configuration;
 using DocxTemplate.Infrastructure.Services;
 using DocxTemplate.Infrastructure.Images;
+using DocxTemplate.Infrastructure.DocxProcessing;
 
 namespace DocxTemplate.Infrastructure.DependencyInjection;
 
@@ -25,6 +26,9 @@ public static class ServiceCollectionExtensions
         // File System Services
         services.AddSingleton<IFileSystemService, FileSystemService>();
         
+        // Document Processing
+        services.AddScoped<DocumentTraverser>();
+
         // Template Services
         services.AddScoped<ITemplateSetService, TemplateSetDiscoveryService>();
         services.AddScoped<ITemplateDiscoveryService, TemplateDiscoveryService>();

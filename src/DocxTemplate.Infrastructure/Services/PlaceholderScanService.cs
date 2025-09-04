@@ -17,13 +17,16 @@ public class PlaceholderScanService : IPlaceholderScanService
     private readonly ITemplateDiscoveryService _discoveryService;
     private readonly ILogger<PlaceholderScanService> _logger;
     private readonly PlaceholderScanner _placeholderScanner;
+    private readonly DocumentTraverser _documentTraverser;
 
     public PlaceholderScanService(
         ITemplateDiscoveryService discoveryService,
-        ILogger<PlaceholderScanService> logger)
+        ILogger<PlaceholderScanService> logger,
+        DocumentTraverser documentTraverser)
     {
         _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _documentTraverser = documentTraverser ?? throw new ArgumentNullException(nameof(documentTraverser));
         
         // Create a logger for the scanner using the factory pattern
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -283,44 +286,20 @@ public class PlaceholderScanService : IPlaceholderScanService
 
         try
         {
-            using var document = WordprocessingDocument.Open(templatePath, false);
-            var mainDocumentPart = document.MainDocumentPart;
+            // Create scan processor with required dependencies
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var scanProcessor = new ScanDocumentPartProcessor(
+                _placeholderScanner,
+                templatePath,
+                placeholders,
+                loggerFactory.CreateLogger<ScanDocumentPartProcessor>());
 
-            if (mainDocumentPart?.Document?.Body != null)
-            {
-                // Scan main document body
-                await ScanDocumentPartAsync(mainDocumentPart.Document.Body, templatePath, "Body", pattern, placeholders, cancellationToken);
-            }
-
-            // Scan headers
-            if (mainDocumentPart?.HeaderParts != null)
-            {
-                int headerIndex = 0;
-                foreach (var headerPart in mainDocumentPart.HeaderParts)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (headerPart.Header != null)
-                    {
-                        await ScanDocumentPartAsync(headerPart.Header, templatePath, $"Header{headerIndex}", pattern, placeholders, cancellationToken);
-                    }
-                    headerIndex++;
-                }
-            }
-
-            // Scan footers
-            if (mainDocumentPart?.FooterParts != null)
-            {
-                int footerIndex = 0;
-                foreach (var footerPart in mainDocumentPart.FooterParts)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (footerPart.Footer != null)
-                    {
-                        await ScanDocumentPartAsync(footerPart.Footer, templatePath, $"Footer{footerIndex}", pattern, placeholders, cancellationToken);
-                    }
-                    footerIndex++;
-                }
-            }
+            // Use DocumentTraverser to traverse all document parts uniformly
+            await _documentTraverser.TraverseDocumentAsync(
+                templatePath,
+                isReadOnly: true,
+                scanProcessor,
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -345,47 +324,6 @@ public class PlaceholderScanService : IPlaceholderScanService
         };
     }
 
-    private async Task ScanDocumentPartAsync(
-        OpenXmlElement element,
-        string filePath,
-        string section,
-        string pattern,
-        Dictionary<string, List<PlaceholderLocation>> placeholders,
-        CancellationToken cancellationToken)
-    {
-        // Use the new PlaceholderScanner for better detection of split placeholders
-        var scanResults = await _placeholderScanner.ScanDocumentElementAsync(element, filePath, section, cancellationToken);
-        
-        // Merge the results into the existing placeholders dictionary
-        foreach (var kvp in scanResults)
-        {
-            if (!placeholders.ContainsKey(kvp.Key))
-            {
-                placeholders[kvp.Key] = new List<PlaceholderLocation>();
-            }
-            
-            foreach (var location in kvp.Value)
-            {
-                // Check if we already have this location
-                var existingLocation = placeholders[kvp.Key].FirstOrDefault(l => 
-                    l.FilePath == location.FilePath && l.Context == location.Context);
-                
-                if (existingLocation != null)
-                {
-                    // Update the occurrence count
-                    var index = placeholders[kvp.Key].IndexOf(existingLocation);
-                    placeholders[kvp.Key][index] = existingLocation with 
-                    { 
-                        Occurrences = existingLocation.Occurrences + location.Occurrences 
-                    };
-                }
-                else
-                {
-                    placeholders[kvp.Key].Add(location);
-                }
-            }
-        }
-    }
 
     private static IReadOnlyList<Placeholder> ConvertToPlaceholders(
         Dictionary<string, List<PlaceholderLocation>> placeholders, 

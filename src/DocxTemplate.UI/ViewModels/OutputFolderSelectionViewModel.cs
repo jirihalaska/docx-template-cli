@@ -4,6 +4,7 @@ using System.Reactive;
 using System.Threading.Tasks;
 using ReactiveUI;
 using Avalonia.Platform.Storage;
+using DocxTemplate.Core.Services;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -15,9 +16,11 @@ public class OutputFolderSelectionViewModel : StepViewModelBase
     private string? _selectedFolderPath;
     private string? _validationMessage;
     private bool _isSelectingFolder;
+    private readonly IUserPreferencesService? _userPreferencesService;
 
-    public OutputFolderSelectionViewModel()
+    public OutputFolderSelectionViewModel(IUserPreferencesService? userPreferencesService = null)
     {
+        _userPreferencesService = userPreferencesService;
         SelectFolderCommand = ReactiveCommand.CreateFromTask(SelectFolderAsync);
         
         // Subscribe to property changes to update validation
@@ -105,12 +108,39 @@ public class OutputFolderSelectionViewModel : StepViewModelBase
                 AllowMultiple = false
             };
 
+            // Set suggested start location if available
+            if (_userPreferencesService != null)
+            {
+                var lastUsedDirectory = await _userPreferencesService.GetLastUsedOutputDirectoryAsync();
+                if (!string.IsNullOrEmpty(lastUsedDirectory) && Directory.Exists(lastUsedDirectory))
+                {
+                    try
+                    {
+                        var storageFolder = await mainWindow.StorageProvider.TryGetFolderFromPathAsync(lastUsedDirectory);
+                        if (storageFolder != null)
+                        {
+                            options.SuggestedStartLocation = storageFolder;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore errors when setting suggested location
+                    }
+                }
+            }
+
             var result = await mainWindow.StorageProvider.OpenFolderPickerAsync(options);
             
             if (result?.Count > 0)
             {
                 var selectedFolder = result[0];
                 SelectedFolderPath = selectedFolder.Path.LocalPath;
+
+                // Save the directory for next time
+                if (_userPreferencesService != null && !string.IsNullOrEmpty(SelectedFolderPath))
+                {
+                    await _userPreferencesService.SetLastUsedOutputDirectoryAsync(SelectedFolderPath);
+                }
             }
         }
         catch (Exception ex)

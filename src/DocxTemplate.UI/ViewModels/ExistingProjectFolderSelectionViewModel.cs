@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using ReactiveUI;
 using Avalonia.Platform.Storage;
+using DocxTemplate.Core.Services;
 
 namespace DocxTemplate.UI.ViewModels;
 
@@ -19,9 +20,11 @@ public class ExistingProjectFolderSelectionViewModel : StepViewModelBase
     private string? _validationMessage;
     private bool _isSelectingFolder;
     private int _docxFileCount;
+    private readonly IUserPreferencesService? _userPreferencesService;
 
-    public ExistingProjectFolderSelectionViewModel()
+    public ExistingProjectFolderSelectionViewModel(IUserPreferencesService? userPreferencesService = null)
     {
+        _userPreferencesService = userPreferencesService;
         SelectFolderCommand = ReactiveCommand.CreateFromTask(SelectFolderAsync);
         
         // Subscribe to property changes to update validation, but skip the initial null value
@@ -160,16 +163,45 @@ public class ExistingProjectFolderSelectionViewModel : StepViewModelBase
 
             var storage = topLevel.MainWindow.StorageProvider;
 
-            var result = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var options = new FolderPickerOpenOptions
             {
                 Title = "Vyberte složku s částečně zpracovanými šablonami",
                 AllowMultiple = false
-            });
+            };
+
+            // Set suggested start location if available
+            if (_userPreferencesService != null)
+            {
+                var lastUsedDirectory = await _userPreferencesService.GetLastUsedProjectDirectoryAsync();
+                if (!string.IsNullOrEmpty(lastUsedDirectory) && Directory.Exists(lastUsedDirectory))
+                {
+                    try
+                    {
+                        var storageFolder = await storage.TryGetFolderFromPathAsync(lastUsedDirectory);
+                        if (storageFolder != null)
+                        {
+                            options.SuggestedStartLocation = storageFolder;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore errors when setting suggested location
+                    }
+                }
+            }
+
+            var result = await storage.OpenFolderPickerAsync(options);
 
             if (result.Count > 0)
             {
                 SelectedFolderPath = result[0].Path.LocalPath;
                 this.RaisePropertyChanged(nameof(DocxFileCountText));
+
+                // Save the directory for next time
+                if (_userPreferencesService != null && !string.IsNullOrEmpty(SelectedFolderPath))
+                {
+                    await _userPreferencesService.SetLastUsedProjectDirectoryAsync(SelectedFolderPath);
+                }
             }
         }
         catch (Exception ex)

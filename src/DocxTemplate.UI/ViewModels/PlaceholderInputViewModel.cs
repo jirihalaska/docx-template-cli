@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using DocxTemplate.Core.Models;
+using DocxTemplate.Core.Services;
 using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
@@ -20,9 +21,11 @@ public class PlaceholderInputViewModel : StepViewModelBase
 {
     private ObservableCollection<PlaceholderInputItemViewModel> _placeholderInputs;
     private int _filledPlaceholdersCount;
+    private readonly IUserPreferencesService? _userPreferencesService;
 
-    public PlaceholderInputViewModel()
+    public PlaceholderInputViewModel(IUserPreferencesService? userPreferencesService = null)
     {
+        _userPreferencesService = userPreferencesService;
         _placeholderInputs = new ObservableCollection<PlaceholderInputItemViewModel>();
         
         ClearAllCommand = ReactiveCommand.Create(ClearAllInputs);
@@ -101,7 +104,7 @@ public class PlaceholderInputViewModel : StepViewModelBase
         // Create input items for each discovered placeholder  
         // Maintain same order as Step 2 (no additional sorting)
         var inputItems = discoveredPlaceholders
-            .Select(placeholder => new PlaceholderInputItemViewModel(placeholder))
+            .Select(placeholder => new PlaceholderInputItemViewModel(placeholder, _userPreferencesService))
             .ToList();
 
         // Subscribe to value changes for completion tracking
@@ -177,10 +180,12 @@ public class PlaceholderInputItemViewModel : ReactiveObject
     private string _inputValue = string.Empty;
     private bool _isFilled;
     private string _selectedImagePath = string.Empty;
+    private readonly IUserPreferencesService? _userPreferencesService;
 
-    public PlaceholderInputItemViewModel(PlaceholderItemViewModel placeholderItem)
+    public PlaceholderInputItemViewModel(PlaceholderItemViewModel placeholderItem, IUserPreferencesService? userPreferencesService = null)
     {
         PlaceholderItem = placeholderItem ?? throw new ArgumentNullException(nameof(placeholderItem));
+        _userPreferencesService = userPreferencesService;
         
         // Initialize commands
         SelectImageCommand = ReactiveCommand.CreateFromTask(SelectImageAsync, 
@@ -366,12 +371,36 @@ public class PlaceholderInputItemViewModel : ReactiveObject
                 FilePickerFileTypes.All
             };
 
-            var result = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            // Get last used image directory for initial location
+            var options = new FilePickerOpenOptions
             {
                 Title = "Vyberte obrázek",
                 AllowMultiple = false,
                 FileTypeFilter = fileTypeFilters
-            });
+            };
+
+            // Set suggested start location if available
+            if (_userPreferencesService != null)
+            {
+                var lastUsedDirectory = await _userPreferencesService.GetLastUsedImageDirectoryAsync();
+                if (!string.IsNullOrEmpty(lastUsedDirectory) && Directory.Exists(lastUsedDirectory))
+                {
+                    try
+                    {
+                        var storageFolder = await topLevel.StorageProvider.TryGetFolderFromPathAsync(lastUsedDirectory);
+                        if (storageFolder != null)
+                        {
+                            options.SuggestedStartLocation = storageFolder;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore errors when setting suggested location
+                    }
+                }
+            }
+
+            var result = await topLevel.StorageProvider.OpenFilePickerAsync(options);
 
             if (result?.Count > 0)
             {
@@ -384,6 +413,16 @@ public class PlaceholderInputItemViewModel : ReactiveObject
                     if (IsValidImageFile(localPath))
                     {
                         SelectedImagePath = localPath;
+
+                        // Save the directory for next time
+                        if (_userPreferencesService != null)
+                        {
+                            var directory = Path.GetDirectoryName(localPath);
+                            if (!string.IsNullOrEmpty(directory))
+                            {
+                                await _userPreferencesService.SetLastUsedImageDirectoryAsync(directory);
+                            }
+                        }
                     }
                     else
                     {

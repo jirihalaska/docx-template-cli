@@ -36,6 +36,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITemplateCopyService, TemplateCopyService>();
         services.AddScoped<IPlaceholderReplaceService, PlaceholderReplaceService>();
 
+        // User Preferences
+        services.AddSingleton<IUserPreferencesService, UserPreferencesService>();
+
         // Image Services
         services.AddScoped<IImageProcessor, ImageProcessor>();
 

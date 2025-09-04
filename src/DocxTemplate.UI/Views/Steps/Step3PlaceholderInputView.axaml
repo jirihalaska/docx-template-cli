@@ -18,7 +18,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
       
       <!-- Step Title -->
-      <SelectableTextBlock Grid.Row="0"
+      <TextBlock Grid.Row="0"
                  Text="Zadání hodnot zástupných symbolů"
                  FontSize="24"
                  FontWeight="Bold"
@@ -26,7 +26,7 @@
                  Margin="0,0,0,10" />
       
       <!-- Step Description -->
-      <SelectableTextBlock Grid.Row="1"
+      <TextBlock Grid.Row="1"
                  Text="Zadejte hodnoty pro nalezené zástupné symboly."
                  FontSize="14"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -41,7 +41,7 @@
               Padding="12,8"
               Margin="0,0,0,15">
         <Grid ColumnDefinitions="*,Auto">
-          <SelectableTextBlock Grid.Column="0"
+          <TextBlock Grid.Column="0"
                      Text="{Binding CompletionSummary}"
                      FontWeight="SemiBold"
                      VerticalAlignment="Center" />
@@ -62,16 +62,16 @@
               BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
               BorderThickness="1,1,1,0">
         <Grid ColumnDefinitions="2*,3*,Auto">
-          <SelectableTextBlock Grid.Column="0" 
+          <TextBlock Grid.Column="0" 
                      Text="Zástupný symbol"
                      FontWeight="SemiBold"
                      FontSize="13" />
-          <SelectableTextBlock Grid.Column="1" 
+          <TextBlock Grid.Column="1" 
                      Text="Hodnota"
                      FontWeight="SemiBold"
                      FontSize="13"
                      Margin="12,0,0,0" />
-          <SelectableTextBlock Grid.Column="2" 
+          <TextBlock Grid.Column="2" 
                      Text="Výskyty"
                      FontWeight="SemiBold"
                      FontSize="13"
@@ -107,14 +107,14 @@
                             Height="16"
                             VerticalAlignment="Center"
                             Margin="0,0,8,0">
-                      <SelectableTextBlock Text="!"
+                      <TextBlock Text="!"
                                  Foreground="White"
                                  FontSize="10"
                                  FontWeight="Bold"
                                  HorizontalAlignment="Center"
                                  VerticalAlignment="Center" />
                     </Border>
-                    <SelectableTextBlock Text="{Binding DisplayLabel}"
+                    <TextBlock Text="{Binding DisplayLabel}"
                                FontSize="13"
                                VerticalAlignment="Center"
                                TextWrapping="Wrap" />
@@ -131,7 +131,8 @@
                              Padding="8,4"
                              VerticalAlignment="Center"
                              VerticalContentAlignment="Center"
-                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                             IsTabStop="True" />
                     
                     <!-- Image Selection for Image Placeholders -->
                     <StackPanel IsVisible="{Binding IsImagePlaceholder}" Orientation="Vertical" Spacing="4">
@@ -146,7 +147,8 @@
                                  Padding="8,4"
                                  VerticalAlignment="Center"
                                  VerticalContentAlignment="Center"
-                                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+                                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                 IsTabStop="False" />
                         
                         <!-- Select Image Button -->
                         <Button Grid.Column="1"
@@ -156,7 +158,8 @@
                                 Padding="8,4"
                                 MinHeight="28"
                                 Margin="4,0,0,0"
-                                VerticalAlignment="Center" />
+                                VerticalAlignment="Center"
+                                IsTabStop="True" />
                         
                         <!-- Clear Image Button -->
                         <Button Grid.Column="2"
@@ -169,11 +172,12 @@
                                 MinWidth="28"
                                 Margin="4,0,0,0"
                                 VerticalAlignment="Center"
-                                ToolTip.Tip="Vymazat vybraný obrázek" />
+                                ToolTip.Tip="Vymazat vybraný obrázek"
+                                IsTabStop="True" />
                       </Grid>
                       
                       <!-- Image Dimensions Info -->
-                      <SelectableTextBlock Text="{Binding ImageDimensionsText}"
+                      <TextBlock Text="{Binding ImageDimensionsText}"
                                  FontSize="11"
                                  FontStyle="Italic"
                                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -182,7 +186,7 @@
                   </Grid>
                   
                   <!-- Occurrence Count -->
-                  <SelectableTextBlock Grid.Column="2"
+                  <TextBlock Grid.Column="2"
                              Text="{Binding OccurrenceCount}"
                              FontSize="12"
                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -213,14 +217,14 @@
                   Height="20"
                   VerticalAlignment="Top"
                   Margin="0,0,10,0">
-            <SelectableTextBlock Text="!"
+            <TextBlock Text="!"
                        Foreground="White"
                        FontSize="12"
                        FontWeight="Bold"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
           </Border>
-          <SelectableTextBlock Grid.Column="1"
+          <TextBlock Grid.Column="1"
                      Text="{Binding UnfilledWarningText}"
                      TextWrapping="Wrap"
                      FontSize="13"
@@ -229,7 +233,7 @@
       </Border>
       
       <!-- Instructions -->
-      <SelectableTextBlock Grid.Row="6"
+      <TextBlock Grid.Row="6"
                  Text="Můžete pokračovat i s nevyplněnými zástupnými symboly. Použijte tlačítko 'Zpět' pro návrat k předchozímu kroku."
                  FontSize="12"
                  FontStyle="Italic"

@@ -212,7 +212,11 @@ public class FileComparisonRegressionTests
             var fileName = Path.GetFileName(normalized);
             if (fileName.Contains("placeholder") || fileName.Contains("test") || fileName.Contains("values"))
             {
-                normalized = Path.Combine(Path.GetDirectoryName(normalized) ?? "", "values.json");
+                var directory = Path.GetDirectoryName(normalized) ?? "";
+                // Use forward slashes for consistent cross-platform comparison
+                normalized = string.IsNullOrEmpty(directory) 
+                    ? "values.json" 
+                    : $"{directory.Replace('\\', '/')}/values.json";
             }
         }
         

@@ -12,10 +12,15 @@ namespace DocxTemplate.Infrastructure.DocxProcessing;
 public class PlaceholderScanner
 {
     private readonly ILogger<PlaceholderScanner> _logger;
+    private readonly PlaceholderProcessor _processor;
     
     public PlaceholderScanner(ILogger<PlaceholderScanner> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Create processor with its own logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        _processor = new PlaceholderProcessor(loggerFactory.CreateLogger<PlaceholderProcessor>());
     }
     
     /// <summary>
@@ -46,12 +51,12 @@ public class PlaceholderScanner
                     {
                         processedParagraphs.Add(paragraph); // Mark as processed
                         
-                        var fullText = ReconstructParagraphText(paragraph);
+                        var fullText = _processor.ReconstructParagraphText(paragraph);
                         if (string.IsNullOrWhiteSpace(fullText))
                             continue;
                         
-                        ScanForImagePlaceholders(fullText, filePath, $"{section} (Table)", placeholders);
-                        ScanForTextPlaceholders(fullText, filePath, $"{section} (Table)", placeholders);
+                        var matches = _processor.FindAllPlaceholders(fullText, filePath, $"{section} (Table)");
+                        ProcessPlaceholderMatches(matches, placeholders);
                     }
                 }
             }
@@ -67,15 +72,15 @@ public class PlaceholderScanner
                 if (processedParagraphs.Contains(paragraph))
                     continue;
                 
-                // Reconstruct the full paragraph text to handle split placeholders
-                var fullText = ReconstructParagraphText(paragraph);
+                // Use unified processor to reconstruct text and find placeholders
+                var fullText = _processor.ReconstructParagraphText(paragraph);
                 
                 if (string.IsNullOrWhiteSpace(fullText))
                     continue;
                 
-                // Scan for both image and text placeholders
-                ScanForImagePlaceholders(fullText, filePath, section, placeholders);
-                ScanForTextPlaceholders(fullText, filePath, section, placeholders);
+                // Use unified processor to find all placeholders
+                var matches = _processor.FindAllPlaceholders(fullText, filePath, section);
+                ProcessPlaceholderMatches(matches, placeholders);
             }
         }, cancellationToken);
         
@@ -83,175 +88,58 @@ public class PlaceholderScanner
     }
     
     /// <summary>
-    /// Reconstructs the full text of a paragraph by joining all text runs
+    /// Processes placeholder matches found by the unified processor and adds them to the results dictionary
     /// </summary>
-    /// <remarks>
-    /// Critical: Word splits placeholders across multiple runs. This method reconstructs
-    /// the complete text to detect placeholders that span multiple runs.
-    /// </remarks>
+    private void ProcessPlaceholderMatches(
+        List<PlaceholderMatch> matches,
+        Dictionary<string, List<PlaceholderLocation>> placeholders)
+    {
+        foreach (var match in matches)
+        {
+            if (!placeholders.ContainsKey(match.PlaceholderKey))
+            {
+                placeholders[match.PlaceholderKey] = new List<PlaceholderLocation>();
+            }
+            
+            // Check if we already have this location
+            var existingLocation = placeholders[match.PlaceholderKey].FirstOrDefault(l => 
+                l.FilePath == match.FilePath && l.Context?.Contains(match.Section) == true);
+            
+            if (existingLocation != null)
+            {
+                // Increment the occurrence count
+                var index = placeholders[match.PlaceholderKey].IndexOf(existingLocation);
+                placeholders[match.PlaceholderKey][index] = existingLocation with 
+                { 
+                    Occurrences = existingLocation.Occurrences + 1 
+                };
+            }
+            else
+            {
+                // Add new location
+                var fileName = Path.GetFileName(match.FilePath);
+                placeholders[match.PlaceholderKey].Add(new PlaceholderLocation
+                {
+                    FileName = fileName,
+                    FilePath = match.FilePath,
+                    Occurrences = 1,
+                    Context = $"{match.Section}: {match.Context}"
+                });
+            }
+            
+            var logMessage = match.Type == PlaceholderType.Image 
+                ? $"Found image placeholder: {match.PlaceholderName}"
+                : $"Found text placeholder: {match.PlaceholderName}";
+            _logger.LogDebug("{Message} in {File}", logMessage, Path.GetFileName(match.FilePath));
+        }
+    }
+
+    /// <summary>
+    /// Reconstructs the full text of a paragraph by joining all text runs.
+    /// Delegates to the unified processor for consistency.
+    /// </summary>
     public string ReconstructParagraphText(Paragraph paragraph)
     {
-        if (paragraph == null)
-            return string.Empty;
-        
-        var runs = paragraph.Descendants<Run>().ToList();
-        var textParts = new List<string>();
-        
-        foreach (var run in runs)
-        {
-            var texts = run.Descendants<Text>().ToList();
-            foreach (var text in texts)
-            {
-                if (text.Text != null)
-                {
-                    textParts.Add(text.Text);
-                }
-            }
-        }
-        
-        return string.Join("", textParts);
-    }
-    
-    /// <summary>
-    /// Scans text for image placeholders
-    /// </summary>
-    private void ScanForImagePlaceholders(
-        string text,
-        string filePath,
-        string section,
-        Dictionary<string, List<PlaceholderLocation>> placeholders)
-    {
-        var regex = new Regex(PlaceholderPatterns.ImagePlaceholderPattern, RegexOptions.Compiled);
-        var matches = regex.Matches(text);
-        
-        foreach (Match match in matches)
-        {
-            if (!match.Success)
-                continue;
-            
-            var imageName = match.Groups[1].Value;
-            var width = match.Groups[2].Value;
-            var height = match.Groups[3].Value;
-            
-            // Create a key that includes the dimensions for uniqueness
-            var key = $"image:{imageName}|width:{width}|height:{height}";
-            
-            if (!placeholders.ContainsKey(key))
-            {
-                placeholders[key] = new List<PlaceholderLocation>();
-            }
-            
-            // Check if we already have this location
-            var existingLocation = placeholders[key].FirstOrDefault(l => 
-                l.FilePath == filePath && l.Context?.Contains(section) == true);
-            
-            if (existingLocation != null)
-            {
-                // Increment the occurrence count
-                var index = placeholders[key].IndexOf(existingLocation);
-                placeholders[key][index] = existingLocation with 
-                { 
-                    Occurrences = existingLocation.Occurrences + 1 
-                };
-            }
-            else
-            {
-                // Add new location
-                var fileName = Path.GetFileName(filePath);
-                placeholders[key].Add(new PlaceholderLocation
-                {
-                    FileName = fileName,
-                    FilePath = filePath,
-                    Occurrences = 1,
-                    Context = $"{section}: {GetContextAroundPlaceholder(text, match.Value, 50)}"
-                });
-            }
-            
-            _logger.LogDebug("Found image placeholder: {Name} with dimensions {Width}x{Height} in {File}",
-                imageName, width, height, Path.GetFileName(filePath));
-        }
-    }
-    
-    /// <summary>
-    /// Scans text for text placeholders (excluding image placeholders)
-    /// </summary>
-    private void ScanForTextPlaceholders(
-        string text,
-        string filePath,
-        string section,
-        Dictionary<string, List<PlaceholderLocation>> placeholders)
-    {
-        // First, remove all image placeholders from the text to avoid double detection
-        var textWithoutImages = Regex.Replace(text, PlaceholderPatterns.ImagePlaceholderPattern, "");
-        
-        // Now scan for text placeholders
-        var regex = new Regex(PlaceholderPatterns.TextPlaceholderPattern, RegexOptions.Compiled);
-        var matches = regex.Matches(textWithoutImages);
-        
-        foreach (Match match in matches)
-        {
-            if (!match.Success)
-                continue;
-            
-            // Extract the placeholder name
-            var name = match.Groups[1].Value.Trim();
-            
-            if (string.IsNullOrWhiteSpace(name))
-                continue;
-            
-            if (!placeholders.ContainsKey(name))
-            {
-                placeholders[name] = new List<PlaceholderLocation>();
-            }
-            
-            // Check if we already have this location
-            var existingLocation = placeholders[name].FirstOrDefault(l => 
-                l.FilePath == filePath && l.Context?.Contains(section) == true);
-            
-            if (existingLocation != null)
-            {
-                // Increment the occurrence count
-                var index = placeholders[name].IndexOf(existingLocation);
-                placeholders[name][index] = existingLocation with 
-                { 
-                    Occurrences = existingLocation.Occurrences + 1 
-                };
-            }
-            else
-            {
-                // Add new location
-                var fileName = Path.GetFileName(filePath);
-                placeholders[name].Add(new PlaceholderLocation
-                {
-                    FileName = fileName,
-                    FilePath = filePath,
-                    Occurrences = 1,
-                    Context = $"{section}: {GetContextAroundPlaceholder(text, match.Value, 50)}"
-                });
-            }
-            
-            _logger.LogDebug("Found text placeholder: {Name} in {File}",
-                name, Path.GetFileName(filePath));
-        }
-    }
-    
-    private string GetContextAroundPlaceholder(string text, string placeholderValue, int contextLength)
-    {
-        var index = text.IndexOf(placeholderValue, StringComparison.Ordinal);
-        if (index == -1)
-            return string.Empty;
-
-        var start = Math.Max(0, index - contextLength);
-        var end = Math.Min(text.Length, index + placeholderValue.Length + contextLength);
-        
-        var context = text.Substring(start, end - start);
-        
-        // Add ellipsis if we truncated
-        if (start > 0)
-            context = "..." + context;
-        if (end < text.Length)
-            context = context + "...";
-
-        return context.Trim();
+        return _processor.ReconstructParagraphText(paragraph);
     }
 }

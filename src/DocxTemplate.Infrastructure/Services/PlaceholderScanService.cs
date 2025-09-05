@@ -22,7 +22,8 @@ public class PlaceholderScanService : IPlaceholderScanService
     public PlaceholderScanService(
         ITemplateDiscoveryService discoveryService,
         ILogger<PlaceholderScanService> logger,
-        DocumentTraverser documentTraverser)
+        DocumentTraverser documentTraverser,
+        PlaceholderReplacementEngine replacementEngine)
     {
         _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -30,7 +31,7 @@ public class PlaceholderScanService : IPlaceholderScanService
         
         // Create a logger for the scanner using the factory pattern
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        _placeholderScanner = new PlaceholderScanner(loggerFactory.CreateLogger<PlaceholderScanner>());
+        _placeholderScanner = new PlaceholderScanner(loggerFactory.CreateLogger<PlaceholderScanner>(), replacementEngine);
     }
 
     /// <inheritdoc />

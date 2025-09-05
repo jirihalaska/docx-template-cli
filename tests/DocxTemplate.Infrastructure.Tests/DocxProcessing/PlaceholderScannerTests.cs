@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,12 +13,16 @@ public class PlaceholderScannerTests : IDisposable
 {
     private readonly PlaceholderScanner _scanner;
     private readonly Mock<ILogger<PlaceholderScanner>> _loggerMock;
+    private readonly Mock<PlaceholderReplacementEngine> _replacementEngineMock;
     private readonly string _tempFilePath;
 
     public PlaceholderScannerTests()
     {
         _loggerMock = new Mock<ILogger<PlaceholderScanner>>();
-        _scanner = new PlaceholderScanner(_loggerMock.Object);
+        _replacementEngineMock = new Mock<PlaceholderReplacementEngine>(
+            Mock.Of<ILogger<PlaceholderReplacementEngine>>(),
+            Mock.Of<IImageProcessor>());
+        _scanner = new PlaceholderScanner(_loggerMock.Object, _replacementEngineMock.Object);
         _tempFilePath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.docx");
     }
 

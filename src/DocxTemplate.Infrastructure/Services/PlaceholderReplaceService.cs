@@ -3,54 +3,32 @@ using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.DocxProcessing;
-using DocxTemplate.Infrastructure.Images;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.Drawing.Pictures;
-using DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
-using System.Text.RegularExpressions;
-
-using W = DocumentFormat.OpenXml.Wordprocessing;
-using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using A = DocumentFormat.OpenXml.Drawing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 
 namespace DocxTemplate.Infrastructure.Services;
 
 /// <summary>
-/// Service for replacing placeholders in Word documents with actual values
+/// Service for replacing placeholders in Word documents with actual values.
+/// Now uses the unified PlaceholderReplacementEngine for all processing operations.
 /// </summary>
 public class PlaceholderReplaceService : IPlaceholderReplaceService
 {
     private readonly ILogger<PlaceholderReplaceService> _logger;
     private readonly IErrorHandler _errorHandler;
     private readonly IFileSystemService _fileSystemService;
-    private readonly IImageProcessor _imageProcessor;
-    private readonly DocumentTraverser _documentTraverser;
-    private readonly PlaceholderProcessor _processor;
-    private static readonly Regex PlaceholderPattern = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
-    private static readonly Regex ImagePlaceholderPattern = new(PlaceholderPatterns.ImagePlaceholderPattern, RegexOptions.Compiled);
+    private readonly PlaceholderReplacementEngine _replacementEngine;
 
     public PlaceholderReplaceService(
         ILogger<PlaceholderReplaceService> logger,
         IErrorHandler errorHandler,
         IFileSystemService fileSystemService,
-        IImageProcessor imageProcessor,
-        DocumentTraverser documentTraverser)
+        PlaceholderReplacementEngine replacementEngine)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         _fileSystemService = fileSystemService ?? throw new ArgumentNullException(nameof(fileSystemService));
-        _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
-        _documentTraverser = documentTraverser ?? throw new ArgumentNullException(nameof(documentTraverser));
-        
-        // Create processor with its own logger
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        _processor = new PlaceholderProcessor(loggerFactory.CreateLogger<PlaceholderProcessor>());
+        _replacementEngine = replacementEngine ?? throw new ArgumentNullException(nameof(replacementEngine));
     }
 
     /// <inheritdoc />
@@ -171,7 +149,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 backupPath = await CreateFileBackupAsync(templatePath, cancellationToken);
             }
 
-            var replacementCount = await ProcessDocumentReplacementsAsync(templatePath, replacementMap, cancellationToken);
+            var result = await _replacementEngine.ProcessDocumentAsync(templatePath, ProcessingMode.Replace, replacementMap, cancellationToken);
+            var replacementCount = result.ReplacementsPerformed;
             
             // File prefix is now handled by TemplateCopyService during copy operation
             var finalFilePath = templatePath;
@@ -463,333 +442,62 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         return backupPath;
     }
 
-    private async Task<int> ProcessDocumentReplacementsAsync(
+
+    private async Task<FileReplacementPreview> CreateFilePreviewAsync(
         string filePath,
         ReplacementMap replacementMap,
         CancellationToken cancellationToken)
     {
-        // Create logger for the processor
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var processorLogger = loggerFactory.CreateLogger<ReplaceDocumentPartProcessor>();
-
-        // Create replace processor with required dependencies
-        var replaceProcessor = new ReplaceDocumentPartProcessor(
-            replacementMap,
-            ProcessParagraphReplacements,
-            processorLogger);
-
-        // Use DocumentTraverser to traverse all document parts uniformly
-        // This will now process body, headers, AND footers (fixes the bug!)
-        await _documentTraverser.TraverseDocumentAsync(
-            filePath,
-            isReadOnly: false,
-            replaceProcessor,
-            cancellationToken);
-
-        var totalReplacements = replaceProcessor.TotalReplacements;
-        _logger.LogDebug("Replaced {Count} placeholders in {FilePath}", totalReplacements, filePath);
-        
-        return totalReplacements;
-    }
-
-    private int ProcessParagraphReplacements(W.Paragraph paragraph, ReplacementMap replacementMap, OpenXmlPart documentPart)
-    {
-        var replacementCount = 0;
-        
-        // Use unified processor to reconstruct text and find placeholders
-        var fullText = _processor.ReconstructParagraphText(paragraph);
-        if (string.IsNullOrWhiteSpace(fullText))
-            return 0;
-
-        var matches = _processor.FindAllPlaceholders(fullText, documentPart.Uri?.ToString() ?? "document", "paragraph");
-        
-        // Handle image placeholders first (they take precedence)
-        var imageMatches = matches.Where(m => m.Type == PlaceholderType.Image).ToList();
-        if (imageMatches.Count > 0)
-        {
-            foreach (var match in imageMatches)
-            {
-                // Convert back to regex match for compatibility with existing image replacement logic
-                var regexMatch = ImagePlaceholderPattern.Match(match.FullMatch);
-                if (TryReplaceImagePlaceholder(paragraph, regexMatch, replacementMap, documentPart))
-                {
-                    replacementCount++;
-                }
-            }
-            return replacementCount;
-        }
-
-        // Handle text placeholders using unified logic
-        var textMatches = matches.Where(m => m.Type == PlaceholderType.Text).ToList();
-        if (textMatches.Count > 0)
-        {
-            // Process placeholders in reverse order to maintain text positions
-            var sortedMatches = textMatches.OrderByDescending(m => m.StartIndex).ToList();
-            
-            foreach (var match in sortedMatches)
-            {
-                if (replacementMap.Mappings.TryGetValue(match.PlaceholderName, out var replacement))
-                {
-                    // IMPORTANT: Rebuild text element map for each replacement
-                    // This is necessary because each replacement changes the document structure
-                    // and invalidates the position mapping for subsequent replacements
-                    var textElements = _processor.BuildTextElementMap(paragraph);
-                    
-                    // Re-find the placeholder in the current document state
-                    var currentFullText = _processor.ReconstructParagraphText(paragraph);
-                    var currentMatches = _processor.FindAllPlaceholders(currentFullText, documentPart.Uri?.ToString() ?? "document", "paragraph")
-                        .Where(m => m.Type == PlaceholderType.Text && 
-                               string.Equals(m.PlaceholderName, match.PlaceholderName, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    
-                    if (currentMatches.Count > 0)
-                    {
-                        // Use the first match (there should typically be only one at this point)
-                        var currentMatch = currentMatches.First();
-                        
-                        // Use unified processor for replacement across elements
-                        if (_processor.ReplaceTextAcrossElements(textElements, currentMatch.StartIndex, currentMatch.Length, replacement))
-                        {
-                            replacementCount++;
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Fallback: Process individual text elements for placeholders that might not be detected
-            // due to complex formatting within the placeholder text
-            var runs = paragraph.Descendants<W.Run>().ToList();
-            foreach (var run in runs)
-            {
-                var textElements = run.Descendants<W.Text>().ToList();
-                foreach (var textElement in textElements)
-                {
-                    var originalText = textElement.Text;
-                    var newText = PlaceholderPattern.Replace(originalText, match =>
-                    {
-                        var placeholderName = match.Groups[1].Value.Trim();
-                        if (replacementMap.Mappings.TryGetValue(placeholderName, out var replacement))
-                        {
-                            replacementCount++;
-                            return replacement;
-                        }
-                        return match.Value; // Keep original if no replacement found
-                    });
-
-                    if (newText != originalText)
-                    {
-                        textElement.Text = newText;
-                    }
-                }
-            }
-        }
-
-        return replacementCount;
-    }
-
-
-    private bool TryReplaceImagePlaceholder(W.Paragraph paragraph, Match match, ReplacementMap replacementMap, OpenXmlPart documentPart)
-    {
         try
         {
-            var imageName = match.Groups[1].Value;
-            var width = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
-            var height = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
-            
-            // Check if we have a mapping for this image placeholder
-            if (!replacementMap.Mappings.TryGetValue(imageName, out var imagePath) || 
-                string.IsNullOrWhiteSpace(imagePath) || 
-                !System.IO.File.Exists(imagePath))
+            // Use the replacement engine to scan for placeholders
+            var scanResult = await _replacementEngine.ProcessDocumentAsync(
+                filePath, 
+                ProcessingMode.Scan, 
+                null, // No replacement map needed for scanning
+                cancellationToken);
+
+            var placeholderCounts = scanResult.DiscoveredPlaceholders
+                .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+            var replacementDetails = placeholderCounts.Select(kvp =>
             {
-                _logger.LogWarning("Image file not found for placeholder {ImageName}: {ImagePath}", imageName, imagePath);
-                return false;
-            }
+                var placeholderName = kvp.Key;
+                var count = kvp.Value;
+                var hasReplacement = replacementMap.Mappings.TryGetValue(placeholderName, out var replacement);
 
-            // Get image information
-            var imageInfo = _imageProcessor.GetImageInfo(imagePath);
-            
-            // Calculate display dimensions while preserving aspect ratio
-            var (displayWidth, displayHeight) = AspectRatioCalculator.CalculateDisplayDimensions(
-                imageInfo.Width, imageInfo.Height, width, height);
-
-            // Convert to EMUs
-            var widthEmus = UnitConverter.PixelsToEmus(displayWidth);
-            var heightEmus = UnitConverter.PixelsToEmus(displayHeight);
-
-            // Preserve existing paragraph properties (including alignment)
-            var existingParagraphProperties = paragraph.GetFirstChild<W.ParagraphProperties>()?.CloneNode(true) as W.ParagraphProperties;
-            
-            // Clear all content from the paragraph
-            paragraph.RemoveAllChildren();
-            
-            // Restore paragraph properties if they existed
-            if (existingParagraphProperties != null)
-            {
-                paragraph.PrependChild(existingParagraphProperties);
-            }
-            
-            // Create a new run with the image
-            var imageRun = CreateImageRun(documentPart, imagePath, widthEmus, heightEmus);
-            paragraph.AppendChild(imageRun);
-
-            _logger.LogDebug("Replaced image placeholder {ImageName} with {ImagePath} ({Width}x{Height})", 
-                imageName, imagePath, displayWidth, displayHeight);
-            
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to replace image placeholder {Match}", match.Value);
-            return false;
-        }
-    }
-
-    private W.Run CreateImageRun(OpenXmlPart documentPart, string imagePath, long widthEmus, long heightEmus)
-    {
-        // Read image data
-        var imageBytes = System.IO.File.ReadAllBytes(imagePath);
-
-        // Determine the correct image part type
-        var imagePartType = ImageTypeDetector.GetImagePartContentType(imagePath) switch
-        {
-            "image/png" => ImagePartType.Png,
-            "image/jpeg" => ImagePartType.Jpeg,
-            "image/gif" => ImagePartType.Gif,
-            "image/bmp" => ImagePartType.Bmp,
-            _ => ImagePartType.Png
-        };
-
-        // Add image part to the appropriate document part
-        // Each part type (MainDocumentPart, HeaderPart, FooterPart) supports AddImagePart
-        ImagePart imagePart = documentPart switch
-        {
-            MainDocumentPart mainPart => mainPart.AddImagePart(imagePartType),
-            HeaderPart headerPart => headerPart.AddImagePart(imagePartType),
-            FooterPart footerPart => footerPart.AddImagePart(imagePartType),
-            _ => throw new NotSupportedException($"Document part type {documentPart.GetType().Name} does not support image parts")
-        };
-
-        using (var stream = new MemoryStream(imageBytes))
-        {
-            imagePart.FeedData(stream);
-        }
-
-        // Get relationship ID
-        var relationshipId = documentPart.GetIdOfPart(imagePart);
-
-        // Create the Drawing element
-        var drawing = CreateImageDrawing(relationshipId, widthEmus, heightEmus);
-
-        // Create and return the run
-        var run = new W.Run();
-        run.AppendChild(drawing);
-        
-        return run;
-    }
-
-    private W.Drawing CreateImageDrawing(string relationshipId, long widthEmus, long heightEmus)
-    {
-        var drawing = new W.Drawing(
-            new DW.Inline(
-                new DW.Extent() { Cx = widthEmus, Cy = heightEmus },
-                new DW.EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
-                new DW.DocProperties() { Id = (uint)new Random().Next(1, 999999), Name = "Picture" },
-                new DW.NonVisualGraphicFrameDrawingProperties(
-                    new A.GraphicFrameLocks() { NoChangeAspect = true }),
-                new A.Graphic(
-                    new A.GraphicData(
-                        new PIC.Picture(
-                            new PIC.NonVisualPictureProperties(
-                                new PIC.NonVisualDrawingProperties() { Id = 0U, Name = "Image" },
-                                new PIC.NonVisualPictureDrawingProperties()),
-                            new PIC.BlipFill(
-                                new A.Blip() { Embed = relationshipId },
-                                new A.Stretch(new A.FillRectangle())),
-                            new PIC.ShapeProperties(
-                                new A.Transform2D(
-                                    new A.Offset() { X = 0L, Y = 0L },
-                                    new A.Extents() { Cx = widthEmus, Cy = heightEmus }),
-                                new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle }
-                            )
-                        )
-                    ) { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }
-                )
-            )
-        );
-        
-        return drawing;
-    }
-
-    private Task<FileReplacementPreview> CreateFilePreviewAsync(
-        string filePath,
-        ReplacementMap replacementMap,
-        CancellationToken cancellationToken)
-    {
-        var replacementDetails = new List<ReplacementDetail>();
-
-        try
-        {
-            using var wordDocument = WordprocessingDocument.Open(filePath, false); // Read-only
-            var body = wordDocument.MainDocumentPart?.Document?.Body;
-
-            if (body != null)
-            {
-                var textElements = body.Descendants<W.Text>().ToList();
-                var placeholderCounts = new Dictionary<string, int>();
-
-                foreach (var textElement in textElements)
+                return new ReplacementDetail
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    PlaceholderName = placeholderName,
+                    CurrentValue = $"{{{{{placeholderName}}}}}",
+                    NewValue = replacement ?? string.Empty,
+                    OccurrenceCount = count
+                };
+            }).ToList();
 
-                    var matches = PlaceholderPattern.Matches(textElement.Text);
-                    foreach (Match match in matches)
-                    {
-                        var placeholderName = match.Groups[1].Value.Trim();
-                        placeholderCounts[placeholderName] = placeholderCounts.GetValueOrDefault(placeholderName, 0) + 1;
-                    }
-                }
+            var totalReplacements = replacementDetails.Where(r => !string.IsNullOrEmpty(r.NewValue)).Sum(r => r.OccurrenceCount);
 
-                foreach (var kvp in placeholderCounts)
-                {
-                    var placeholderName = kvp.Key;
-                    var count = kvp.Value;
-                    var hasReplacement = replacementMap.Mappings.TryGetValue(placeholderName, out var replacement);
-
-                    replacementDetails.Add(new ReplacementDetail
-                    {
-                        PlaceholderName = placeholderName,
-                        CurrentValue = $"{{{{{placeholderName}}}}}",
-                        NewValue = replacement ?? string.Empty,
-                        OccurrenceCount = count
-                    });
-                }
-            }
+            return new FileReplacementPreview
+            {
+                FilePath = filePath,
+                ReplacementCount = totalReplacements,
+                CanProcess = true,
+                ReplacementDetails = replacementDetails
+            };
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to preview file: {FilePath}", filePath);
-            return Task.FromResult(new FileReplacementPreview
+            return new FileReplacementPreview
             {
                 FilePath = filePath,
                 ReplacementCount = 0,
                 CanProcess = false,
                 ErrorMessage = ex.Message,
                 ReplacementDetails = []
-            });
+            };
         }
-
-        var totalReplacements = replacementDetails.Where(r => !string.IsNullOrEmpty(r.NewValue)).Sum(r => r.OccurrenceCount);
-
-        return Task.FromResult(new FileReplacementPreview
-        {
-            FilePath = filePath,
-            ReplacementCount = totalReplacements,
-            CanProcess = true,
-            ReplacementDetails = replacementDetails
-        });
     }
 
     /// <inheritdoc />
@@ -805,7 +513,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
 
         try
         {
-            var replacementCount = await ProcessDocumentReplacementsAsync(templateFile.FullPath, replacementMap, cancellationToken);
+            var result = await _replacementEngine.ProcessDocumentAsync(templateFile.FullPath, ProcessingMode.Replace, replacementMap, cancellationToken);
+            var replacementCount = result.ReplacementsPerformed;
 
             // File prefix is now handled by TemplateCopyService during copy operation
             var finalFilePath = templateFile.FullPath;

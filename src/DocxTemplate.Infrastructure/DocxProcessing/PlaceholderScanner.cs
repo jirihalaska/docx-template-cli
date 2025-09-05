@@ -7,20 +7,18 @@ using Microsoft.Extensions.Logging;
 namespace DocxTemplate.Infrastructure.DocxProcessing;
 
 /// <summary>
-/// Scanner for detecting placeholders in Word documents, handling text run splitting
+/// Scanner for detecting placeholders in Word documents, handling text run splitting.
+/// Now uses the unified PlaceholderReplacementEngine for scanning operations.
 /// </summary>
 public class PlaceholderScanner
 {
     private readonly ILogger<PlaceholderScanner> _logger;
-    private readonly PlaceholderProcessor _processor;
+    private readonly PlaceholderReplacementEngine _replacementEngine;
     
-    public PlaceholderScanner(ILogger<PlaceholderScanner> logger)
+    public PlaceholderScanner(ILogger<PlaceholderScanner> logger, PlaceholderReplacementEngine replacementEngine)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
-        // Create processor with its own logger
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        _processor = new PlaceholderProcessor(loggerFactory.CreateLogger<PlaceholderProcessor>());
+        _replacementEngine = replacementEngine ?? throw new ArgumentNullException(nameof(replacementEngine));
     }
     
     /// <summary>
@@ -51,12 +49,11 @@ public class PlaceholderScanner
                     {
                         processedParagraphs.Add(paragraph); // Mark as processed
                         
-                        var fullText = _processor.ReconstructParagraphText(paragraph);
-                        if (string.IsNullOrWhiteSpace(fullText))
+                        var paragraphResult = _replacementEngine.ProcessParagraph(paragraph, ProcessingMode.Scan);
+                        if (paragraphResult.DiscoveredPlaceholders.Count == 0)
                             continue;
                         
-                        var matches = _processor.FindAllPlaceholders(fullText, filePath, $"{section} (Table)");
-                        ProcessPlaceholderMatches(matches, placeholders);
+                        ProcessDiscoveredPlaceholders(paragraphResult.DiscoveredPlaceholders, filePath, $"{section} (Table)", placeholders);
                     }
                 }
             }
@@ -72,15 +69,13 @@ public class PlaceholderScanner
                 if (processedParagraphs.Contains(paragraph))
                     continue;
                 
-                // Use unified processor to reconstruct text and find placeholders
-                var fullText = _processor.ReconstructParagraphText(paragraph);
+                // Use the replacement engine to scan this paragraph
+                var paragraphResult = _replacementEngine.ProcessParagraph(paragraph, ProcessingMode.Scan);
                 
-                if (string.IsNullOrWhiteSpace(fullText))
+                if (paragraphResult.DiscoveredPlaceholders.Count == 0)
                     continue;
                 
-                // Use unified processor to find all placeholders
-                var matches = _processor.FindAllPlaceholders(fullText, filePath, section);
-                ProcessPlaceholderMatches(matches, placeholders);
+                ProcessDiscoveredPlaceholders(paragraphResult.DiscoveredPlaceholders, filePath, section, placeholders);
             }
         }, cancellationToken);
         
@@ -88,28 +83,32 @@ public class PlaceholderScanner
     }
     
     /// <summary>
-    /// Processes placeholder matches found by the unified processor and adds them to the results dictionary
+    /// Processes discovered placeholders from the replacement engine and adds them to the results dictionary
     /// </summary>
-    private void ProcessPlaceholderMatches(
-        List<PlaceholderMatch> matches,
+    private void ProcessDiscoveredPlaceholders(
+        List<DiscoveredPlaceholder> discoveredPlaceholders,
+        string filePath,
+        string section,
         Dictionary<string, List<PlaceholderLocation>> placeholders)
     {
-        foreach (var match in matches)
+        foreach (var discovered in discoveredPlaceholders)
         {
-            if (!placeholders.ContainsKey(match.PlaceholderKey))
+            var placeholderKey = discovered.Name;
+                
+            if (!placeholders.ContainsKey(placeholderKey))
             {
-                placeholders[match.PlaceholderKey] = new List<PlaceholderLocation>();
+                placeholders[placeholderKey] = new List<PlaceholderLocation>();
             }
             
             // Check if we already have this location
-            var existingLocation = placeholders[match.PlaceholderKey].FirstOrDefault(l => 
-                l.FilePath == match.FilePath && l.Context?.Contains(match.Section) == true);
+            var existingLocation = placeholders[placeholderKey].FirstOrDefault(l => 
+                l.FilePath == discovered.FilePath && l.Context?.Contains(section) == true);
             
             if (existingLocation != null)
             {
                 // Increment the occurrence count
-                var index = placeholders[match.PlaceholderKey].IndexOf(existingLocation);
-                placeholders[match.PlaceholderKey][index] = existingLocation with 
+                var index = placeholders[placeholderKey].IndexOf(existingLocation);
+                placeholders[placeholderKey][index] = existingLocation with 
                 { 
                     Occurrences = existingLocation.Occurrences + 1 
                 };
@@ -117,29 +116,48 @@ public class PlaceholderScanner
             else
             {
                 // Add new location
-                var fileName = Path.GetFileName(match.FilePath);
-                placeholders[match.PlaceholderKey].Add(new PlaceholderLocation
+                var fileName = Path.GetFileName(discovered.FilePath);
+                placeholders[placeholderKey].Add(new PlaceholderLocation
                 {
                     FileName = fileName,
-                    FilePath = match.FilePath,
+                    FilePath = discovered.FilePath,
                     Occurrences = 1,
-                    Context = $"{match.Section}: {match.Context}"
+                    Context = $"{section}: {discovered.Context}"
                 });
             }
             
-            var logMessage = match.Type == PlaceholderType.Image 
-                ? $"Found image placeholder: {match.PlaceholderName}"
-                : $"Found text placeholder: {match.PlaceholderName}";
-            _logger.LogDebug("{Message} in {File}", logMessage, Path.GetFileName(match.FilePath));
+            var logMessage = discovered.Type == PlaceholderType.Image 
+                ? $"Found image placeholder: {discovered.Name}"
+                : $"Found text placeholder: {discovered.Name}";
+            _logger.LogDebug("{Message} in {File}", logMessage, Path.GetFileName(discovered.FilePath));
         }
     }
 
     /// <summary>
     /// Reconstructs the full text of a paragraph by joining all text runs.
-    /// Delegates to the unified processor for consistency.
+    /// This functionality is now handled internally by the PlaceholderReplacementEngine.
+    /// This method is kept for backward compatibility but delegates to basic text joining.
     /// </summary>
     public string ReconstructParagraphText(Paragraph paragraph)
     {
-        return _processor.ReconstructParagraphText(paragraph);
+        if (paragraph == null)
+            return string.Empty;
+        
+        var runs = paragraph.Descendants<Run>().ToList();
+        var textParts = new List<string>();
+        
+        foreach (var run in runs)
+        {
+            var texts = run.Descendants<Text>().ToList();
+            foreach (var text in texts)
+            {
+                if (text.Text != null)
+                {
+                    textParts.Add(text.Text);
+                }
+            }
+        }
+        
+        return string.Join("", textParts);
     }
 }

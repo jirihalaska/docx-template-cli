@@ -15,6 +15,7 @@ public class PlaceholderScanServiceTests
     private readonly Mock<ITemplateDiscoveryService> _mockDiscoveryService;
     private readonly Mock<ILogger<PlaceholderScanService>> _mockLogger;
     private readonly Mock<DocumentTraverser> _mockDocumentTraverser;
+    private readonly Mock<PlaceholderReplacementEngine> _mockReplacementEngine;
     private readonly PlaceholderScanService _service;
 
     public PlaceholderScanServiceTests()
@@ -23,28 +24,38 @@ public class PlaceholderScanServiceTests
         _mockLogger = new Mock<ILogger<PlaceholderScanService>>();
         var mockTraverserLogger = new Mock<ILogger<DocumentTraverser>>();
         _mockDocumentTraverser = new Mock<DocumentTraverser>(mockTraverserLogger.Object);
-        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object);
+        _mockReplacementEngine = new Mock<PlaceholderReplacementEngine>(
+            Mock.Of<ILogger<PlaceholderReplacementEngine>>(),
+            Mock.Of<IImageProcessor>());
+        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object, _mockReplacementEngine.Object);
     }
 
     [Fact]
     public void Constructor_WithNullDiscoveryService_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object, _mockDocumentTraverser.Object));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object, _mockDocumentTraverser.Object, _mockReplacementEngine.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!, _mockDocumentTraverser.Object));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!, _mockDocumentTraverser.Object, _mockReplacementEngine.Object));
     }
 
     [Fact]
     public void Constructor_WithNullDocumentTraverser_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, null!));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, null!, _mockReplacementEngine.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullReplacementEngine_ThrowsArgumentNullException()
+    {
+        // arrange, act & assert
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object, null!));
     }
 
     [Theory]

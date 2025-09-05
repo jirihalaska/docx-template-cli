@@ -28,7 +28,7 @@ public class DocumentTraverser
     public async Task TraverseDocumentAsync(
         string filePath,
         bool isReadOnly,
-        IDocumentPartProcessor processor,
+        dynamic processor,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);

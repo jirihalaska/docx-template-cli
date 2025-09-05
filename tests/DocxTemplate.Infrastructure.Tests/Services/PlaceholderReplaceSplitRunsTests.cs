@@ -26,6 +26,7 @@ public class PlaceholderReplaceSplitRunsTests
     private readonly Mock<IFileSystemService> _mockFileSystemService;
     private readonly Mock<IImageProcessor> _mockImageProcessor;
     private readonly DocumentTraverser _documentTraverser;
+    private readonly PlaceholderReplacementEngine _replacementEngine;
     private readonly PlaceholderScanService _scanService;
     private readonly PlaceholderReplaceService _replaceService;
 
@@ -41,17 +42,20 @@ public class PlaceholderReplaceSplitRunsTests
         var mockTraverserLogger = new Mock<ILogger<DocumentTraverser>>();
         _documentTraverser = new DocumentTraverser(mockTraverserLogger.Object);
         
+        var mockReplacementEngineLogger = new Mock<ILogger<PlaceholderReplacementEngine>>();
+        _replacementEngine = new PlaceholderReplacementEngine(mockReplacementEngineLogger.Object, _mockImageProcessor.Object);
+        
         _scanService = new PlaceholderScanService(
             _mockDiscoveryService.Object,
             _mockScanLogger.Object,
-            _documentTraverser);
+            _documentTraverser,
+            _replacementEngine);
             
         _replaceService = new PlaceholderReplaceService(
             _mockReplaceLogger.Object,
             _mockErrorHandler.Object,
             _mockFileSystemService.Object,
-            _mockImageProcessor.Object,
-            _documentTraverser);
+            _replacementEngine);
     }
 
     [Fact]

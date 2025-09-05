@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         
         // Document Processing
         services.AddScoped<DocumentTraverser>();
+        services.AddScoped<PlaceholderReplacementEngine>();
 
         // Template Services
         services.AddScoped<ITemplateSetService, TemplateSetDiscoveryService>();

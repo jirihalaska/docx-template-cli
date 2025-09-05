@@ -18,8 +18,7 @@ public class PlaceholderReplaceServiceTests
     private readonly Mock<ILogger<PlaceholderReplaceService>> _mockLogger;
     private readonly Mock<IErrorHandler> _mockErrorHandler;
     private readonly Mock<IFileSystemService> _mockFileSystemService;
-    private readonly Mock<IImageProcessor> _mockImageProcessor;
-    private readonly Mock<DocumentTraverser> _mockDocumentTraverser;
+    private readonly Mock<PlaceholderReplacementEngine> _mockReplacementEngine;
     private readonly PlaceholderReplaceService _service;
 
     public PlaceholderReplaceServiceTests()
@@ -27,16 +26,15 @@ public class PlaceholderReplaceServiceTests
         _mockLogger = new Mock<ILogger<PlaceholderReplaceService>>();
         _mockErrorHandler = new Mock<IErrorHandler>();
         _mockFileSystemService = new Mock<IFileSystemService>();
-        _mockImageProcessor = new Mock<IImageProcessor>();
-        var mockTraverserLogger = new Mock<ILogger<DocumentTraverser>>();
-        _mockDocumentTraverser = new Mock<DocumentTraverser>(mockTraverserLogger.Object);
+        _mockReplacementEngine = new Mock<PlaceholderReplacementEngine>(
+            Mock.Of<ILogger<PlaceholderReplacementEngine>>(),
+            Mock.Of<IImageProcessor>());
         
         _service = new PlaceholderReplaceService(
             _mockLogger.Object,
             _mockErrorHandler.Object,
             _mockFileSystemService.Object,
-            _mockImageProcessor.Object,
-            _mockDocumentTraverser.Object);
+            _mockReplacementEngine.Object);
     }
 
     [Fact]
@@ -449,7 +447,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
+            new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockReplacementEngine.Object));
     }
 
     [Fact]
@@ -457,7 +455,7 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
+            new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _mockReplacementEngine.Object));
     }
 
     [Fact]
@@ -465,23 +463,15 @@ public class PlaceholderReplaceServiceTests
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _mockImageProcessor.Object, _mockDocumentTraverser.Object));
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _mockReplacementEngine.Object));
     }
 
     [Fact]
-    public void Constructor_NullImageProcessor_ThrowsArgumentNullException()
+    public void Constructor_NullReplacementEngine_ThrowsArgumentNullException()
     {
         // act & assert
         Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!, _mockDocumentTraverser.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullDocumentTraverser_ThrowsArgumentNullException()
-    {
-        // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
-            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, _mockImageProcessor.Object, null!));
+            new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!));
     }
 
     [Fact]
@@ -500,7 +490,7 @@ public class PlaceholderReplaceServiceTests
             CreateTestDocumentWithCenterAlignedImagePlaceholder(testDocxPath);
             
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
-            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            // Image processing is now handled internally by PlaceholderReplacementEngine
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
             
@@ -611,7 +601,7 @@ public class PlaceholderReplaceServiceTests
             };
             
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
-            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            // Image processing is now handled internally by PlaceholderReplacementEngine
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
@@ -657,7 +647,7 @@ public class PlaceholderReplaceServiceTests
             };
             
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
-            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            // Image processing is now handled internally by PlaceholderReplacementEngine
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
@@ -703,7 +693,7 @@ public class PlaceholderReplaceServiceTests
             };
             
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
-            _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
+            // Image processing is now handled internally by PlaceholderReplacementEngine
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);

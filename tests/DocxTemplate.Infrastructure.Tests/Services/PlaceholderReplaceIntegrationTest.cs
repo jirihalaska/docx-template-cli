@@ -6,6 +6,7 @@ using DocxTemplate.Infrastructure.DocxProcessing;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DocxTemplate.Infrastructure.Tests.Services;
 
@@ -15,6 +16,7 @@ namespace DocxTemplate.Infrastructure.Tests.Services;
 /// </summary>
 public class PlaceholderReplaceIntegrationTest
 {
+    private readonly ITestOutputHelper _output;
     private readonly Mock<ILogger<PlaceholderScanService>> _mockScanLogger;
     private readonly Mock<ILogger<PlaceholderReplaceService>> _mockReplaceLogger;
     private readonly Mock<ITemplateDiscoveryService> _mockDiscoveryService;
@@ -25,8 +27,9 @@ public class PlaceholderReplaceIntegrationTest
     private readonly PlaceholderScanService _scanService;
     private readonly PlaceholderReplaceService _replaceService;
 
-    public PlaceholderReplaceIntegrationTest()
+    public PlaceholderReplaceIntegrationTest(ITestOutputHelper output)
     {
+        _output = output ?? throw new ArgumentNullException(nameof(output));
         _mockScanLogger = new Mock<ILogger<PlaceholderScanService>>();
         _mockReplaceLogger = new Mock<ILogger<PlaceholderReplaceService>>();
         _mockDiscoveryService = new Mock<ITemplateDiscoveryService>();
@@ -125,6 +128,141 @@ public class PlaceholderReplaceIntegrationTest
             
             // Verify that the document is still valid after replacement
             VerifyDocumentIntegrity(testCopyPath);
+        }
+        finally
+        {
+            if (File.Exists(testCopyPath)) File.Delete(testCopyPath);
+        }
+    }
+
+    [Fact]
+    public async Task IntegrationTest_WithProtokolOPosouzeniFile_ShouldReplaceAllPlaceholders()
+    {
+        // arrange
+        // Build the absolute path to the template file (going up from test directory to project root)
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var projectRoot = FindProjectRoot(currentDirectory);
+        var actualTemplatePath = Path.Combine(projectRoot, "templates", "TEST1", "Protokol o posouzení.docx");
+        var testCopyPath = Path.Combine(Path.GetTempPath(), $"protokol_test_{Guid.NewGuid()}.docx");
+
+        // Skip if the original template file doesn't exist
+        if (!File.Exists(actualTemplatePath))
+        {
+            throw new FileNotFoundException($"Test template file not found: {actualTemplatePath}. Please ensure the file exists to run this test.");
+        }
+
+        // Copy the actual template file for testing
+        File.Copy(actualTemplatePath, testCopyPath);
+        
+        try
+        {
+            // Setup mocks
+            _mockFileSystemService.Setup(fs => fs.FileExists(testCopyPath)).Returns(true);
+            _mockFileSystemService.Setup(fs => fs.GetFileSize(testCopyPath)).Returns(new FileInfo(testCopyPath).Length);
+            
+            // Create a replacement map using the actual placeholders found in the document
+            var replacementMap = new ReplacementMap
+            {
+                Mappings = new Dictionary<string, string>
+                {
+                    // Placeholders actually found in the Protokol o posouzení.docx
+                    { "DODAVATEL", "Test Dodavatel s.r.o." },
+                    { "ICO_DODAVATELE", "12345678" },
+                    { "SIDLO_DODAVATELE", "Testovací ulice 123, 110 00 Praha 1" },
+                    { "ZADAVATEL_ADRESA", "Zadavatel s.r.o., Hlavní ulice 456, 120 00 Praha 2" },
+                    { "ZADAVATEL_ICO", "87654321" },
+                    { "ZADAVATEL_NAZEV", "Zadavatel organizace s.r.o." },
+                    { "ZAKAZKA_NAZEV", "Testovací zakázka - Protokol o posouzení" },
+                    { "ZAKAZKA_PREDMET_DRUH_RIZENI", "Otevřené řízení na dodávku IT služeb" }
+                }
+            };
+            
+            // act - first scan for placeholders to see what's in the document
+            var discoveredPlaceholders = await _scanService.ScanSingleFileAsync(testCopyPath);
+            
+            // Log what we found for debugging
+            var foundPlaceholderNames = discoveredPlaceholders.Select(p => p.Name).OrderBy(n => n).ToList();
+            _output.WriteLine($"Found {discoveredPlaceholders.Count} placeholders in the document:");
+            foreach (var placeholder in foundPlaceholderNames)
+            {
+                _output.WriteLine($"  - {placeholder}");
+            }
+            
+            // act - now replace placeholders
+            var replaceResult = await _replaceService.ReplacePlaceholdersInFileAsync(testCopyPath, replacementMap, false);
+            
+            // assert - verify replacement was successful
+            Assert.True(replaceResult.IsSuccess, $"Replacement failed: {replaceResult.ErrorMessage}");
+            _output.WriteLine($"Replacement completed with {replaceResult.ReplacementCount} replacements");
+            
+            // act - scan again to find any remaining placeholders
+            var remainingPlaceholders = await _scanService.ScanSingleFileAsync(testCopyPath);
+            var remainingNames = remainingPlaceholders.Select(p => p.Name).OrderBy(n => n).ToList();
+            
+            _output.WriteLine($"Found {remainingPlaceholders.Count} remaining placeholders after replacement:");
+            foreach (var placeholder in remainingNames)
+            {
+                _output.WriteLine($"  - {placeholder}");
+            }
+            
+            // assert - verify that placeholders which have replacements were actually replaced
+            var failedReplacements = new List<string>();
+            foreach (var mapping in replacementMap.Mappings)
+            {
+                var placeholderWasFound = discoveredPlaceholders.Any(p => 
+                    string.Equals(p.Name, mapping.Key, StringComparison.OrdinalIgnoreCase));
+                
+                if (placeholderWasFound)
+                {
+                    var placeholderRemains = remainingPlaceholders.Any(p => 
+                        string.Equals(p.Name, mapping.Key, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (placeholderRemains)
+                    {
+                        failedReplacements.Add(mapping.Key);
+                        
+                        // Log detailed information about the failed placeholder
+                        var foundInstances = discoveredPlaceholders.Where(p => 
+                            string.Equals(p.Name, mapping.Key, StringComparison.OrdinalIgnoreCase)).ToList();
+                        var remainingInstances = remainingPlaceholders.Where(p => 
+                            string.Equals(p.Name, mapping.Key, StringComparison.OrdinalIgnoreCase)).ToList();
+                        
+                        _output.WriteLine($"FAILED REPLACEMENT DETAILS for '{mapping.Key}':");
+                        _output.WriteLine($"  Found {foundInstances.Count} instances initially");
+                        _output.WriteLine($"  {remainingInstances.Count} instances remain after replacement");
+                        
+                        foreach (var found in foundInstances)
+                        {
+                            _output.WriteLine($"  Initial location: {found.Locations.FirstOrDefault()?.Context ?? "No context"}");
+                        }
+                        foreach (var remaining in remainingInstances)
+                        {
+                            _output.WriteLine($"  Remaining location: {remaining.Locations.FirstOrDefault()?.Context ?? "No context"}");
+                        }
+                    }
+                }
+            }
+            
+            if (failedReplacements.Count > 0)
+            {
+                Assert.False(true, 
+                    $"The following placeholders were found but not fully replaced: {string.Join(", ", failedReplacements)}. " +
+                    $"This indicates a replacement failure. See output for details.");
+            }
+            
+            // Verify that the document is still valid after replacement
+            VerifyDocumentIntegrity(testCopyPath);
+            
+            // If we had any initial placeholders that were in our mapping, we should have made replacements
+            var mappedPlaceholdersFound = discoveredPlaceholders.Count(p => 
+                replacementMap.Mappings.ContainsKey(p.Name));
+            
+            if (mappedPlaceholdersFound > 0)
+            {
+                Assert.True(replaceResult.ReplacementCount > 0, 
+                    $"Expected at least 1 replacement since {mappedPlaceholdersFound} mapped placeholders were found, " +
+                    $"but got {replaceResult.ReplacementCount} replacements");
+            }
         }
         finally
         {
@@ -309,5 +447,24 @@ public class PlaceholderReplaceIntegrationTest
         {
             Assert.Contains(mapping.Value, allText);
         }
+    }
+    
+    /// <summary>
+    /// Helper method to find the project root directory by looking for the .sln file
+    /// </summary>
+    private static string FindProjectRoot(string startDirectory)
+    {
+        var current = new DirectoryInfo(startDirectory);
+        
+        while (current != null)
+        {
+            if (current.GetFiles("*.sln").Length > 0)
+            {
+                return current.FullName;
+            }
+            current = current.Parent;
+        }
+        
+        throw new DirectoryNotFoundException("Could not find project root directory (directory containing .sln file)");
     }
 }

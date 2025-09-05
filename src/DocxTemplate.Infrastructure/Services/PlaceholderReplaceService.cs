@@ -523,9 +523,6 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
         var textMatches = matches.Where(m => m.Type == PlaceholderType.Text).ToList();
         if (textMatches.Count > 0)
         {
-            // Build text element map for coordinated replacement
-            var textElements = _processor.BuildTextElementMap(paragraph);
-            
             // Process placeholders in reverse order to maintain text positions
             var sortedMatches = textMatches.OrderByDescending(m => m.StartIndex).ToList();
             
@@ -533,10 +530,28 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             {
                 if (replacementMap.Mappings.TryGetValue(match.PlaceholderName, out var replacement))
                 {
-                    // Use unified processor for replacement across elements
-                    if (_processor.ReplaceTextAcrossElements(textElements, match.StartIndex, match.Length, replacement))
+                    // IMPORTANT: Rebuild text element map for each replacement
+                    // This is necessary because each replacement changes the document structure
+                    // and invalidates the position mapping for subsequent replacements
+                    var textElements = _processor.BuildTextElementMap(paragraph);
+                    
+                    // Re-find the placeholder in the current document state
+                    var currentFullText = _processor.ReconstructParagraphText(paragraph);
+                    var currentMatches = _processor.FindAllPlaceholders(currentFullText, documentPart.Uri?.ToString() ?? "document", "paragraph")
+                        .Where(m => m.Type == PlaceholderType.Text && 
+                               string.Equals(m.PlaceholderName, match.PlaceholderName, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    if (currentMatches.Count > 0)
                     {
-                        replacementCount++;
+                        // Use the first match (there should typically be only one at this point)
+                        var currentMatch = currentMatches.First();
+                        
+                        // Use unified processor for replacement across elements
+                        if (_processor.ReplaceTextAcrossElements(textElements, currentMatch.StartIndex, currentMatch.Length, replacement))
+                        {
+                            replacementCount++;
+                        }
                     }
                 }
             }

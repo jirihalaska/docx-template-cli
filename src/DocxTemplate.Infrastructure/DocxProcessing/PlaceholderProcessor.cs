@@ -162,12 +162,30 @@ public class PlaceholderProcessor
             
         if (affectedElements.Count == 0)
         {
-            _logger.LogWarning("No text elements found for placeholder at position {StartIndex}", startIndex);
+            _logger.LogWarning("No text elements found for placeholder at position {StartIndex}-{EndIndex}. " +
+                "Total elements: {ElementCount}, Text reconstruction: '{FullText}'", 
+                startIndex, endIndex, textElements.Count, 
+                string.Join("", textElements.Select(te => te.OriginalText)));
             return false;
         }
 
+        _logger.LogDebug("Replacing placeholder at position {StartIndex}-{EndIndex} with '{Replacement}' " +
+            "across {ElementCount} text elements", startIndex, endIndex, replacement, affectedElements.Count);
+
         try
         {
+            // Validate that our text element map is consistent with the expected replacement
+            var reconstructedText = string.Join("", textElements.Select(te => te.OriginalText));
+            if (startIndex + length > reconstructedText.Length)
+            {
+                _logger.LogWarning("Placeholder position {StartIndex}-{EndIndex} exceeds reconstructed text length {TextLength}. " +
+                    "This suggests a text element mapping inconsistency. Text: '{Text}'", 
+                    startIndex, endIndex, reconstructedText.Length, reconstructedText);
+                
+                // Try to repair the situation by rebuilding the text element positions
+                return TryRepairAndReplaceText(textElements, startIndex, length, replacement);
+            }
+
             // Process affected text elements
             for (int i = 0; i < affectedElements.Count; i++)
             {
@@ -175,6 +193,15 @@ public class PlaceholderProcessor
                 
                 var textStart = Math.Max(0, startIndex - element.StartPosition);
                 var textEnd = Math.Min(element.OriginalText.Length, endIndex - element.StartPosition);
+                
+                // Additional validation
+                if (textStart < 0 || textEnd > element.OriginalText.Length || textStart > textEnd)
+                {
+                    _logger.LogWarning("Invalid text bounds for element {ElementIndex}: textStart={TextStart}, " +
+                        "textEnd={TextEnd}, originalLength={OriginalLength}, element='{ElementText}'",
+                        i, textStart, textEnd, element.OriginalText.Length, element.OriginalText);
+                    continue;
+                }
                 
                 string newText;
                 
@@ -201,6 +228,9 @@ public class PlaceholderProcessor
                     newText = string.Empty;
                 }
                 
+                _logger.LogDebug("Element {ElementIndex}: '{OriginalText}' -> '{NewText}'", 
+                    i, element.OriginalText, newText);
+                
                 element.TextElement.Text = newText;
                 
                 // Remove empty text elements to clean up the document
@@ -217,6 +247,190 @@ public class PlaceholderProcessor
             _logger.LogError(ex, "Failed to replace text across elements for placeholder at position {StartIndex}", startIndex);
             return false;
         }
+    }
+    
+    /// <summary>
+    /// Attempts to repair text element mapping inconsistencies and perform replacement
+    /// using a more robust approach.
+    /// </summary>
+    private bool TryRepairAndReplaceText(List<TextElementInfo> textElements, int startIndex, int length, string replacement)
+    {
+        _logger.LogDebug("Attempting to repair text element mapping and replace text");
+        
+        try
+        {
+            // Rebuild text element positions from scratch
+            var currentPos = 0;
+            for (int i = 0; i < textElements.Count; i++)
+            {
+                var element = textElements[i];
+                var actualText = element.TextElement.Text ?? string.Empty;
+                element.StartPosition = currentPos;
+                element.EndPosition = currentPos + actualText.Length;
+                element.OriginalText = actualText;
+                currentPos += actualText.Length;
+            }
+            
+            // Try replacement again with corrected positions
+            var endIndex = startIndex + length;
+            var affectedElements = textElements.Where(te => 
+                te.StartPosition < endIndex && te.EndPosition > startIndex).ToList();
+                
+            if (affectedElements.Count == 0)
+            {
+                _logger.LogWarning("Still no text elements found after repair attempt");
+                return false;
+            }
+            
+            // If we still have position issues, try a fallback approach:
+            // Find the placeholder text directly in the elements
+            var targetText = string.Join("", textElements.Select(te => te.OriginalText));
+            if (startIndex + length > targetText.Length)
+            {
+                _logger.LogWarning("Position still exceeds text length after repair. Using fallback approach.");
+                return TryFallbackReplacement(textElements, replacement, startIndex, length);
+            }
+            
+            // Use the standard replacement logic now that positions are corrected
+            return PerformActualReplacement(affectedElements, startIndex, length, replacement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed during repair attempt");
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Fallback replacement approach that searches for placeholder patterns directly in text elements
+    /// </summary>
+    private bool TryFallbackReplacement(List<TextElementInfo> textElements, string replacement, int originalStartIndex, int originalLength)
+    {
+        _logger.LogDebug("Using fallback replacement approach");
+        
+        try
+        {
+            // Reconstruct the full text to see what we're actually dealing with
+            var fullText = string.Join("", textElements.Select(te => te.OriginalText));
+            
+            // Try to find any placeholder patterns in the full text
+            var placeholderMatches = TextPlaceholderPattern.Matches(fullText);
+            
+            if (placeholderMatches.Count == 0)
+            {
+                _logger.LogWarning("No placeholder patterns found in fallback approach");
+                return false;
+            }
+            
+            // For each placeholder match, try to replace it
+            bool anyReplaced = false;
+            foreach (Match match in placeholderMatches)
+            {
+                if (TryReplaceSpecificMatch(textElements, match, replacement))
+                {
+                    anyReplaced = true;
+                    break; // Replace one at a time to avoid position conflicts
+                }
+            }
+            
+            return anyReplaced;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed during fallback replacement");
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Tries to replace a specific placeholder match within text elements
+    /// </summary>
+    private bool TryReplaceSpecificMatch(List<TextElementInfo> textElements, Match match, string replacement)
+    {
+        var startIndex = match.Index;
+        var length = match.Length;
+        var endIndex = startIndex + length;
+        
+        // Find elements that contain this match
+        var currentPosition = 0;
+        var affectedElements = new List<TextElementInfo>();
+        
+        foreach (var element in textElements)
+        {
+            var elementEnd = currentPosition + element.OriginalText.Length;
+            
+            if (currentPosition < endIndex && elementEnd > startIndex)
+            {
+                // Rebuild the element positions correctly
+                element.StartPosition = currentPosition;
+                element.EndPosition = elementEnd;
+                affectedElements.Add(element);
+            }
+            
+            currentPosition += element.OriginalText.Length;
+        }
+        
+        if (affectedElements.Count == 0)
+        {
+            return false;
+        }
+        
+        return PerformActualReplacement(affectedElements, startIndex, length, replacement);
+    }
+    
+    /// <summary>
+    /// Performs the actual text replacement across affected elements
+    /// </summary>
+    private bool PerformActualReplacement(List<TextElementInfo> affectedElements, int startIndex, int length, string replacement)
+    {
+        var endIndex = startIndex + length;
+        
+        for (int i = 0; i < affectedElements.Count; i++)
+        {
+            var element = affectedElements[i];
+            
+            var textStart = Math.Max(0, startIndex - element.StartPosition);
+            var textEnd = Math.Min(element.OriginalText.Length, endIndex - element.StartPosition);
+            
+            if (textStart < 0 || textEnd > element.OriginalText.Length || textStart > textEnd)
+            {
+                continue; // Skip invalid bounds
+            }
+            
+            string newText;
+            
+            if (i == 0 && affectedElements.Count == 1)
+            {
+                // Single element case
+                newText = element.OriginalText.Substring(0, textStart) + 
+                         replacement + 
+                         element.OriginalText.Substring(textEnd);
+            }
+            else if (i == 0)
+            {
+                // First element
+                newText = element.OriginalText.Substring(0, textStart) + replacement;
+            }
+            else if (i == affectedElements.Count - 1)
+            {
+                // Last element
+                newText = element.OriginalText.Substring(textEnd);
+            }
+            else
+            {
+                // Middle element
+                newText = string.Empty;
+            }
+            
+            element.TextElement.Text = newText;
+            
+            if (string.IsNullOrEmpty(newText))
+            {
+                element.TextElement.Remove();
+            }
+        }
+        
+        return true;
     }
 
     private string GetContextAroundPlaceholder(string text, string placeholderValue, int contextLength)

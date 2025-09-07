@@ -1,11 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.Drawing.Pictures;
-using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Images;
@@ -15,6 +11,9 @@ using W = DocumentFormat.OpenXml.Wordprocessing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+// ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+// ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 
 namespace DocxTemplate.Infrastructure.DocxProcessing;
 
@@ -26,7 +25,7 @@ public class PlaceholderReplacementEngine
 {
     private readonly ILogger<PlaceholderReplacementEngine> _logger;
     private readonly IImageProcessor _imageProcessor;
-    
+
     private static readonly Regex TextPlaceholderPattern = new(PlaceholderPatterns.TextPlaceholderPattern, RegexOptions.Compiled);
     private static readonly Regex ImagePlaceholderPattern = new(PlaceholderPatterns.ImagePlaceholderPattern, RegexOptions.Compiled);
 
@@ -48,7 +47,7 @@ public class PlaceholderReplacementEngine
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        
+
         if (mode == ProcessingMode.Replace)
         {
             ArgumentNullException.ThrowIfNull(replacementMap);
@@ -58,14 +57,14 @@ public class PlaceholderReplacementEngine
 
         using var document = WordprocessingDocument.Open(filePath, mode == ProcessingMode.Replace);
         var mainDocumentPart = document.MainDocumentPart;
-        
+
         if (mainDocumentPart == null)
         {
             throw new InvalidOperationException($"Document has no main document part: {filePath}");
         }
 
         var result = new DocumentProcessingResult();
-        
+
         // Process all headers first
         if (mainDocumentPart.HeaderParts != null)
         {
@@ -73,12 +72,12 @@ public class PlaceholderReplacementEngine
             foreach (var headerPart in mainDocumentPart.HeaderParts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (headerPart.Header != null)
                 {
                     var section = $"Header{headerIndex}";
                     _logger.LogDebug("Processing {Section}", section);
-                    
+
                     var sectionResult = await ProcessDocumentPartAsync(
                         headerPart.Header,
                         section,
@@ -86,13 +85,13 @@ public class PlaceholderReplacementEngine
                         mode,
                         replacementMap,
                         cancellationToken);
-                        
-                    result.SectionResults[section] = sectionResult;
+
+                    result.SectionResults.Add(sectionResult);
                 }
                 headerIndex++;
             }
         }
-        
+
         // Process main document body
         if (mainDocumentPart.Document?.Body != null)
         {
@@ -104,10 +103,10 @@ public class PlaceholderReplacementEngine
                 mode,
                 replacementMap,
                 cancellationToken);
-                
-            result.SectionResults["Body"] = sectionResult;
+
+            result.SectionResults.Add(sectionResult);
         }
-        
+
         // Process all footers
         if (mainDocumentPart.FooterParts != null)
         {
@@ -115,12 +114,12 @@ public class PlaceholderReplacementEngine
             foreach (var footerPart in mainDocumentPart.FooterParts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (footerPart.Footer != null)
                 {
                     var section = $"Footer{footerIndex}";
                     _logger.LogDebug("Processing {Section}", section);
-                    
+
                     var sectionResult = await ProcessDocumentPartAsync(
                         footerPart.Footer,
                         section,
@@ -128,19 +127,19 @@ public class PlaceholderReplacementEngine
                         mode,
                         replacementMap,
                         cancellationToken);
-                        
-                    result.SectionResults[section] = sectionResult;
+
+                    result.SectionResults.Add(sectionResult);
                 }
                 footerIndex++;
             }
         }
 
         // Aggregate results
-        result.DiscoveredPlaceholders = result.SectionResults.Values
+        result.DiscoveredPlaceholders = result.SectionResults
             .SelectMany(s => s.DiscoveredPlaceholders)
             .ToList();
-            
-        result.ReplacementsPerformed = result.SectionResults.Values
+
+        result.ReplacementsPerformed = result.SectionResults
             .Sum(s => s.ReplacementsPerformed);
 
         _logger.LogDebug("Completed processing document {FilePath}. Found {PlaceholderCount} placeholders, performed {ReplacementCount} replacements",
@@ -159,14 +158,14 @@ public class PlaceholderReplacementEngine
         OpenXmlPart? documentPart = null)
     {
         ArgumentNullException.ThrowIfNull(paragraph);
-        
+
         if (mode == ProcessingMode.Replace)
         {
             ArgumentNullException.ThrowIfNull(replacementMap);
         }
 
         var result = new ParagraphProcessingResult();
-        
+
         // Step 1: Reconstruct full paragraph text
         var fullText = ReconstructParagraphText(paragraph);
         if (string.IsNullOrWhiteSpace(fullText))
@@ -182,7 +181,6 @@ public class PlaceholderReplacementEngine
             Type = m.Type,
             Context = m.Context,
             FilePath = m.FilePath,
-            Section = m.Section
         }).ToList();
 
         if (mode == ProcessingMode.Scan)
@@ -216,7 +214,7 @@ public class PlaceholderReplacementEngine
         return result;
     }
 
-    private async Task<SectionProcessingResult> ProcessDocumentPartAsync(
+    private Task<SectionProcessingResult> ProcessDocumentPartAsync(
         OpenXmlElement element,
         string section,
         OpenXmlPart documentPart,
@@ -226,21 +224,23 @@ public class PlaceholderReplacementEngine
     {
         var result = new SectionProcessingResult();
         var paragraphs = DocumentTraverser.GetAllParagraphs(element);
-        
+
         foreach (var paragraph in paragraphs)
         {
             if (cancellationToken.IsCancellationRequested)
+            {
                 break;
-            
+            }
+
             var paragraphResult = ProcessParagraph(paragraph, mode, replacementMap, documentPart);
             result.DiscoveredPlaceholders.AddRange(paragraphResult.DiscoveredPlaceholders);
             result.ReplacementsPerformed += paragraphResult.ReplacementsPerformed;
         }
-        
+
         _logger.LogDebug("Processed {Section}: found {PlaceholderCount} placeholders, performed {ReplacementCount} replacements",
             section, result.DiscoveredPlaceholders.Count, result.ReplacementsPerformed);
-        
-        return result;
+
+        return Task.FromResult(result);
     }
 
     /// <summary>
@@ -251,10 +251,10 @@ public class PlaceholderReplacementEngine
     {
         if (paragraph == null)
             return string.Empty;
-        
+
         var runs = paragraph.Descendants<W.Run>().ToList();
         var textParts = new List<string>();
-        
+
         foreach (var run in runs)
         {
             var texts = run.Descendants<W.Text>().ToList();
@@ -266,7 +266,7 @@ public class PlaceholderReplacementEngine
                 }
             }
         }
-        
+
         return string.Join("", textParts);
     }
 
@@ -279,7 +279,7 @@ public class PlaceholderReplacementEngine
         var textElements = new List<TextElementInfo>();
         var runs = paragraph.Descendants<W.Run>().ToList();
         var currentPos = 0;
-        
+
         foreach (var run in runs)
         {
             var texts = run.Descendants<W.Text>().ToList();
@@ -289,7 +289,6 @@ public class PlaceholderReplacementEngine
                 textElements.Add(new TextElementInfo
                 {
                     TextElement = text,
-                    ParentRun = run,
                     StartPosition = currentPos,
                     EndPosition = currentPos + textLength,
                     OriginalText = text.Text ?? string.Empty
@@ -297,7 +296,7 @@ public class PlaceholderReplacementEngine
                 currentPos += textLength;
             }
         }
-        
+
         return textElements;
     }
 
@@ -318,7 +317,7 @@ public class PlaceholderReplacementEngine
                 var width = match.Groups[2].Value;
                 var height = match.Groups[3].Value;
                 var key = $"image:{imageName}|width:{width}|height:{height}";
-                
+
                 matches.Add(new PlaceholderMatch
                 {
                     PlaceholderName = imageName,
@@ -339,10 +338,10 @@ public class PlaceholderReplacementEngine
         // Find text placeholders, excluding areas already covered by image placeholders
         var textWithoutImages = ImagePlaceholderPattern.Replace(fullText, "");
         var textMatches = TextPlaceholderPattern.Matches(textWithoutImages);
-        
+
         // Adjust positions back to original text
         var imageOffsets = CalculateImageOffsets(fullText);
-        
+
         foreach (Match match in textMatches)
         {
             if (match.Success)
@@ -351,7 +350,7 @@ public class PlaceholderReplacementEngine
                 if (!string.IsNullOrWhiteSpace(name))
                 {
                     var adjustedIndex = AdjustPositionForImageRemovals(match.Index, imageOffsets);
-                    
+
                     matches.Add(new PlaceholderMatch
                     {
                         PlaceholderName = name,
@@ -379,9 +378,9 @@ public class PlaceholderReplacementEngine
 
         var start = Math.Max(0, index - contextLength);
         var end = Math.Min(text.Length, index + placeholderValue.Length + contextLength);
-        
+
         var context = text.Substring(start, end - start);
-        
+
         // Add ellipsis if we truncated
         if (start > 0)
             context = "..." + context;
@@ -395,7 +394,7 @@ public class PlaceholderReplacementEngine
     {
         var offsets = new List<ImageOffset>();
         var imageMatches = ImagePlaceholderPattern.Matches(originalText);
-        
+
         foreach (Match match in imageMatches)
         {
             offsets.Add(new ImageOffset
@@ -404,7 +403,7 @@ public class PlaceholderReplacementEngine
                 Length = match.Length
             });
         }
-        
+
         return offsets.OrderBy(o => o.StartIndex).ToList();
     }
 
@@ -430,38 +429,38 @@ public class PlaceholderReplacementEngine
     /// This avoids the index shifting problem when multiple placeholders are in the same paragraph.
     /// </summary>
     private int ReplaceTextPlaceholders(
-        W.Paragraph paragraph, 
-        List<PlaceholderMatch> textMatches, 
+        W.Paragraph paragraph,
+        List<PlaceholderMatch> textMatches,
         ReplacementMap replacementMap,
         OpenXmlPart? documentPart)
     {
         var replacementCount = 0;
-        
+
         // CRITICAL: Process placeholders in reverse order to maintain text positions
         var sortedMatches = textMatches.OrderByDescending(m => m.StartIndex).ToList();
-        
+
         foreach (var match in sortedMatches)
         {
             if (!replacementMap.Mappings.TryGetValue(match.PlaceholderName, out var replacement))
                 continue;
-                
+
             // IMPORTANT: Rebuild text element map for each replacement
             // This is necessary because each replacement changes the document structure
             // and invalidates the position mapping for subsequent replacements
             var textElements = BuildTextElementMap(paragraph);
-            
+
             // Re-find the placeholder in the current document state
             var currentFullText = ReconstructParagraphText(paragraph);
             var currentMatches = FindAllPlaceholders(currentFullText, documentPart?.Uri?.ToString() ?? "document", "paragraph")
-                .Where(m => m.Type == PlaceholderType.Text && 
+                .Where(m => m.Type == PlaceholderType.Text &&
                            string.Equals(m.PlaceholderName, match.PlaceholderName, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            
+
             if (currentMatches.Count > 0)
             {
                 // Use the first match (there should typically be only one at this point)
                 var currentMatch = currentMatches.First();
-                
+
                 // Use unified processor for replacement across elements
                 if (ReplaceTextAcrossElements(textElements, currentMatch.StartIndex, currentMatch.Length, replacement))
                 {
@@ -470,7 +469,7 @@ public class PlaceholderReplacementEngine
                 }
             }
         }
-        
+
         // Fallback: Process individual text elements for placeholders that might not be detected
         // due to complex formatting within the placeholder text
         if (replacementCount == 0 && textMatches.Count > 0)
@@ -486,20 +485,20 @@ public class PlaceholderReplacementEngine
     /// across all affected elements.
     /// </summary>
     private bool ReplaceTextAcrossElements(
-        List<TextElementInfo> textElements, 
-        int startIndex, 
-        int length, 
+        List<TextElementInfo> textElements,
+        int startIndex,
+        int length,
         string replacement)
     {
         var endIndex = startIndex + length;
-        var affectedElements = textElements.Where(te => 
+        var affectedElements = textElements.Where(te =>
             te.StartPosition < endIndex && te.EndPosition > startIndex).ToList();
-            
+
         if (affectedElements.Count == 0)
         {
             _logger.LogWarning("No text elements found for placeholder at position {StartIndex}-{EndIndex}. " +
-                "Total elements: {ElementCount}, Text reconstruction: '{FullText}'", 
-                startIndex, endIndex, textElements.Count, 
+                "Total elements: {ElementCount}, Text reconstruction: '{FullText}'",
+                startIndex, endIndex, textElements.Count,
                 string.Join("", textElements.Select(te => te.OriginalText)));
             return false;
         }
@@ -514,9 +513,9 @@ public class PlaceholderReplacementEngine
             if (startIndex + length > reconstructedText.Length)
             {
                 _logger.LogWarning("Placeholder position {StartIndex}-{EndIndex} exceeds reconstructed text length {TextLength}. " +
-                    "This suggests a text element mapping inconsistency. Text: '{Text}'", 
+                    "This suggests a text element mapping inconsistency. Text: '{Text}'",
                     startIndex, endIndex, reconstructedText.Length, reconstructedText);
-                
+
                 // Try to repair the situation by rebuilding the text element positions
                 return TryRepairAndReplaceText(textElements, startIndex, length, replacement);
             }
@@ -525,26 +524,26 @@ public class PlaceholderReplacementEngine
             for (int i = 0; i < affectedElements.Count; i++)
             {
                 var element = affectedElements[i];
-                
+
                 var textStart = Math.Max(0, startIndex - element.StartPosition);
                 var textEnd = Math.Min(element.OriginalText.Length, endIndex - element.StartPosition);
-                
+
                 // Additional validation
-                if (textStart < 0 || textEnd > element.OriginalText.Length || textStart > textEnd)
+                if (textEnd > element.OriginalText.Length || textStart > textEnd)
                 {
                     _logger.LogWarning("Invalid text bounds for element {ElementIndex}: textStart={TextStart}, " +
                         "textEnd={TextEnd}, originalLength={OriginalLength}, element='{ElementText}'",
                         i, textStart, textEnd, element.OriginalText.Length, element.OriginalText);
                     continue;
                 }
-                
+
                 string newText;
-                
+
                 if (i == 0 && affectedElements.Count == 1)
                 {
                     // Single element case - replace within the element
-                    newText = element.OriginalText.Substring(0, textStart) + 
-                             replacement + 
+                    newText = element.OriginalText.Substring(0, textStart) +
+                             replacement +
                              element.OriginalText.Substring(textEnd);
                 }
                 else if (i == 0)
@@ -562,19 +561,19 @@ public class PlaceholderReplacementEngine
                     // Middle element - remove all text (it's part of the placeholder)
                     newText = string.Empty;
                 }
-                
-                _logger.LogDebug("Element {ElementIndex}: '{OriginalText}' -> '{NewText}'", 
+
+                _logger.LogDebug("Element {ElementIndex}: '{OriginalText}' -> '{NewText}'",
                     i, element.OriginalText, newText);
-                
+
                 element.TextElement.Text = newText;
-                
+
                 // Remove empty text elements to clean up the document
                 if (string.IsNullOrEmpty(newText))
                 {
                     element.TextElement.Remove();
                 }
             }
-            
+
             return true;
         }
         catch (Exception ex)
@@ -591,21 +590,20 @@ public class PlaceholderReplacementEngine
     private bool TryRepairAndReplaceText(List<TextElementInfo> textElements, int startIndex, int length, string replacement)
     {
         _logger.LogDebug("Attempting to repair text element mapping and replace text");
-        
+
         try
         {
             // Rebuild text element positions from scratch
             var currentPos = 0;
-            for (int i = 0; i < textElements.Count; i++)
+            foreach (var element in textElements)
             {
-                var element = textElements[i];
                 var actualText = element.TextElement.Text ?? string.Empty;
                 element.StartPosition = currentPos;
                 element.EndPosition = currentPos + actualText.Length;
                 element.OriginalText = actualText;
                 currentPos += actualText.Length;
             }
-            
+
             // Try replacement again with corrected positions
             return ReplaceTextAcrossElements(textElements, startIndex, length, replacement);
         }
@@ -623,7 +621,7 @@ public class PlaceholderReplacementEngine
     {
         var replacementCount = 0;
         var runs = paragraph.Descendants<W.Run>().ToList();
-        
+
         foreach (var run in runs)
         {
             var textElements = run.Descendants<W.Text>().ToList();
@@ -648,7 +646,7 @@ public class PlaceholderReplacementEngine
                 }
             }
         }
-        
+
         return replacementCount;
     }
 
@@ -656,9 +654,9 @@ public class PlaceholderReplacementEngine
     /// Replaces an image placeholder with the actual image file.
     /// </summary>
     private bool TryReplaceImagePlaceholder(
-        W.Paragraph paragraph, 
-        PlaceholderMatch match, 
-        ReplacementMap replacementMap, 
+        W.Paragraph paragraph,
+        PlaceholderMatch match,
+        ReplacementMap replacementMap,
         OpenXmlPart? documentPart)
     {
         try
@@ -666,11 +664,11 @@ public class PlaceholderReplacementEngine
             var imageName = match.PlaceholderName;
             var width = match.Width ?? 100;
             var height = match.Height ?? 100;
-            
+
             // Check if we have a mapping for this image placeholder
-            if (!replacementMap.Mappings.TryGetValue(imageName, out var imagePath) || 
-                string.IsNullOrWhiteSpace(imagePath) || 
-                !System.IO.File.Exists(imagePath))
+            if (!replacementMap.Mappings.TryGetValue(imageName, out var imagePath) ||
+                string.IsNullOrWhiteSpace(imagePath) ||
+                !File.Exists(imagePath))
             {
                 _logger.LogWarning("Image file not found for placeholder {ImageName}: {ImagePath}", imageName, imagePath);
                 return false;
@@ -678,7 +676,7 @@ public class PlaceholderReplacementEngine
 
             // Get image information
             var imageInfo = _imageProcessor.GetImageInfo(imagePath);
-            
+
             // Calculate display dimensions while preserving aspect ratio
             var (displayWidth, displayHeight) = AspectRatioCalculator.CalculateDisplayDimensions(
                 imageInfo.Width, imageInfo.Height, width, height);
@@ -689,23 +687,23 @@ public class PlaceholderReplacementEngine
 
             // Preserve existing paragraph properties (including alignment)
             var existingParagraphProperties = paragraph.GetFirstChild<W.ParagraphProperties>()?.CloneNode(true) as W.ParagraphProperties;
-            
+
             // Clear all content from the paragraph
             paragraph.RemoveAllChildren();
-            
+
             // Restore paragraph properties if they existed
             if (existingParagraphProperties != null)
             {
                 paragraph.PrependChild(existingParagraphProperties);
             }
-            
+
             // Create a new run with the image
             var imageRun = CreateImageRun(documentPart!, imagePath, widthEmus, heightEmus);
             paragraph.AppendChild(imageRun);
 
-            _logger.LogDebug("Replaced image placeholder {ImageName} with {ImagePath} ({Width}x{Height})", 
+            _logger.LogDebug("Replaced image placeholder {ImageName} with {ImagePath} ({Width}x{Height})",
                 imageName, imagePath, displayWidth, displayHeight);
-            
+
             return true;
         }
         catch (Exception ex)
@@ -721,7 +719,7 @@ public class PlaceholderReplacementEngine
     private W.Run CreateImageRun(OpenXmlPart documentPart, string imagePath, long widthEmus, long heightEmus)
     {
         // Read image data
-        var imageBytes = System.IO.File.ReadAllBytes(imagePath);
+        var imageBytes = File.ReadAllBytes(imagePath);
 
         // Determine the correct image part type
         var imagePartType = ImageTypeDetector.GetImagePartContentType(imagePath) switch
@@ -757,7 +755,7 @@ public class PlaceholderReplacementEngine
         // Create and return the run
         var run = new W.Run();
         run.AppendChild(drawing);
-        
+
         return run;
     }
 
@@ -793,14 +791,14 @@ public class PlaceholderReplacementEngine
                 )
             )
         );
-        
+
         return drawing;
     }
 
     private class ImageOffset
     {
-        public int StartIndex { get; set; }
-        public int Length { get; set; }
+        public int StartIndex { get; init; }
+        public int Length { get; init; }
     }
 }
 
@@ -809,8 +807,7 @@ public class PlaceholderReplacementEngine
 /// </summary>
 internal class TextElementInfo
 {
-    public required W.Text TextElement { get; set; }
-    public required W.Run ParentRun { get; set; }
+    public required W.Text TextElement { get; init; }
     public required int StartPosition { get; set; }
     public required int EndPosition { get; set; }
     public required string OriginalText { get; set; }
@@ -830,7 +827,7 @@ internal class PlaceholderMatch
     public required string FilePath { get; set; }
     public required string Section { get; set; }
     public required string Context { get; set; }
-    
+
     // For image placeholders
     public int? Width { get; set; }
     public int? Height { get; set; }
@@ -852,7 +849,7 @@ public class DocumentProcessingResult
 {
     public List<DiscoveredPlaceholder> DiscoveredPlaceholders { get; set; } = new();
     public int ReplacementsPerformed { get; set; }
-    public Dictionary<string, SectionProcessingResult> SectionResults { get; set; } = new();
+    public List<SectionProcessingResult> SectionResults { get; } = new();
 }
 
 /// <summary>
@@ -860,7 +857,7 @@ public class DocumentProcessingResult
 /// </summary>
 public class SectionProcessingResult
 {
-    public List<DiscoveredPlaceholder> DiscoveredPlaceholders { get; set; } = new();
+    public List<DiscoveredPlaceholder> DiscoveredPlaceholders { get; } = new();
     public int ReplacementsPerformed { get; set; }
 }
 
@@ -878,9 +875,8 @@ public class ParagraphProcessingResult
 /// </summary>
 public class DiscoveredPlaceholder
 {
-    public required string Name { get; set; }
-    public required PlaceholderType Type { get; set; }
-    public required string Context { get; set; }
-    public required string FilePath { get; set; }
-    public required string Section { get; set; }
+    public required string Name { get; init; }
+    public required PlaceholderType Type { get; init; }
+    public required string Context { get; init; }
+    public required string FilePath { get; init; }
 }

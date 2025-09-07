@@ -160,6 +160,13 @@ This is a clean, modular .NET 9 GUI application for Word document template proce
 }
 ```
 
+## Technical Documentation
+For detailed information about the DOCX processing system, see [docs/docx-processing.md](docs/docx-processing.md), which covers:
+- Text run splitting problem and solutions
+- Placeholder detection algorithms
+- Replacement strategies and error handling
+- Processing architecture and performance considerations
+
 ## Important Notes
 - The standalone CLI project has been removed (commit 278bfe4)
 - CLI functionality is now provided through pre-built executables distributed with the GUI

@@ -298,7 +298,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         {
             // Load the replacement mappings from JSON file
             var jsonContent = await File.ReadAllTextAsync(mappingFilePath);
-            var replacementMap = ReplacementMap.FromJson(jsonContent, mappingFilePath);
+            var replacementMap = ReplacementMap.FromJson(jsonContent);
 
             // For UpdateProject mode, process files in the source folder directly
             var targetPath = _processingMode == ProcessingMode.UpdateProject ? _templateSetPath : ActualTargetFolderPath;

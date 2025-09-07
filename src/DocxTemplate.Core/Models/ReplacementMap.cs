@@ -15,29 +15,9 @@ public record ReplacementMap
     public required IReadOnlyDictionary<string, string> Mappings { get; init; }
 
     /// <summary>
-    /// Optional source file path where the replacement map was loaded from
-    /// </summary>
-    public string? SourceFilePath { get; init; }
-
-    /// <summary>
-    /// Timestamp when the replacement map was created or loaded
-    /// </summary>
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Gets the number of replacement mappings
-    /// </summary>
-    public int Count => Mappings.Count;
-
-    /// <summary>
     /// Gets all placeholder names in the map
     /// </summary>
     public IEnumerable<string> PlaceholderNames => Mappings.Keys;
-
-    /// <summary>
-    /// Gets all replacement values in the map
-    /// </summary>
-    public IEnumerable<string> ReplacementValues => Mappings.Values;
 
     /// <summary>
     /// Validates the replacement map data
@@ -94,7 +74,7 @@ public record ReplacementMap
     /// </summary>
     /// <param name="value">Value to sanitize</param>
     /// <returns>Sanitized value</returns>
-    public static string SanitizeReplacementValue(string value)
+    private static string SanitizeReplacementValue(string value)
     {
         if (string.IsNullOrEmpty(value))
             return string.Empty;
@@ -115,11 +95,10 @@ public record ReplacementMap
     /// Creates a replacement map from a JSON string
     /// </summary>
     /// <param name="json">JSON string containing the mappings</param>
-    /// <param name="sourceFilePath">Optional source file path</param>
     /// <returns>ReplacementMap instance</returns>
     /// <exception cref="JsonException">Thrown when JSON is invalid</exception>
     /// <exception cref="ArgumentException">Thrown when mappings are invalid</exception>
-    public static ReplacementMap FromJson(string json, string? sourceFilePath = null)
+    public static ReplacementMap FromJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new ArgumentException("JSON content cannot be empty", nameof(json));
@@ -140,46 +119,6 @@ public record ReplacementMap
         return new ReplacementMap
         {
             Mappings = sanitizedMappings,
-            SourceFilePath = sourceFilePath
-        };
-    }
-
-    /// <summary>
-    /// Converts the replacement map to a JSON string
-    /// </summary>
-    /// <param name="indented">Whether to format the JSON with indentation</param>
-    /// <returns>JSON representation of the replacement map</returns>
-    public string ToJson(bool indented = true)
-    {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = indented
-        };
-
-        return JsonSerializer.Serialize(Mappings, options);
-    }
-
-    /// <summary>
-    /// Merges this replacement map with another, with the other map taking precedence
-    /// </summary>
-    /// <param name="other">Other replacement map to merge</param>
-    /// <returns>New merged replacement map</returns>
-    public ReplacementMap MergeWith(ReplacementMap other)
-    {
-        if (other == null)
-            return this;
-
-        var mergedMappings = new Dictionary<string, string>(Mappings);
-        
-        foreach (var kvp in other.Mappings)
-        {
-            mergedMappings[kvp.Key] = kvp.Value;
-        }
-
-        return new ReplacementMap
-        {
-            Mappings = mergedMappings,
-            SourceFilePath = other.SourceFilePath ?? SourceFilePath
         };
     }
 }

@@ -97,6 +97,25 @@
               <SelectableTextBlock Text="{Binding ProcessingResults}"
                          FontSize="12"
                          TextWrapping="Wrap" />
+              
+              <!-- Detailed Replacement Report -->
+              <Border Background="{DynamicResource SystemControlBackgroundChromeLowBrush}"
+                      BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                      BorderThickness="1"
+                      CornerRadius="4"
+                      Padding="10"
+                      Margin="0,10,0,0"
+                      IsVisible="{Binding ReplacementReport, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <ScrollViewer MaxHeight="200" 
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                  <SelectableTextBlock Text="{Binding ReplacementReport}"
+                                     FontFamily="Consolas"
+                                     FontSize="10"
+                                     TextWrapping="NoWrap"
+                                     LineHeight="14" />
+                </ScrollViewer>
+              </Border>
             </StackPanel>
 
             <!-- Error Results -->

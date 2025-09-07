@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
+using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Processing.Models;
 using DocxTemplate.UI.Models;
@@ -24,6 +25,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private bool _isProcessingComplete = false;
     private bool _processingSuccessful = false;
     private string _processingResults = "";
+    private string _replacementReport = "";
     private string _logFilePath = "";
     private string _outputFolderPath = "";
     private string _templateSetName = "";
@@ -32,6 +34,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private Dictionary<string, string> _placeholderValues = new();
     private ProcessingMode _processingMode = ProcessingMode.NewProject;
     private CancellationTokenSource? _cancellationTokenSource;
+    private ReplaceResult? _lastReplaceResult;
 
     public ProcessingResultsViewModel(ITemplateCopyService templateCopyService, IPlaceholderReplaceService placeholderReplaceService)
     {
@@ -92,6 +95,12 @@ public class ProcessingResultsViewModel : StepViewModelBase
     {
         get => _processingResults;
         set => this.RaiseAndSetIfChanged(ref _processingResults, value);
+    }
+
+    public string ReplacementReport
+    {
+        get => _replacementReport;
+        set => this.RaiseAndSetIfChanged(ref _replacementReport, value);
     }
 
     public string LogFilePath
@@ -213,6 +222,13 @@ public class ProcessingResultsViewModel : StepViewModelBase
                 ProcessingSuccessful = true;
                 ProcessingResults = $"Zpracováno {PlaceholderCount} zástupných symbolů v sadě '{TemplateSetName}'";
                 ProcessingStatus = "Zpracování dokončeno úspěšně";
+                
+                // Generate detailed replacement report
+                ReplacementReport = GenerateReplacementReport();
+                
+                // Write replacement report to log file
+                await logFile.WriteLineAsync("");
+                await logFile.WriteLineAsync(ReplacementReport);
 
                 await logFile.WriteLineAsync("=== Processing completed successfully ===");
             }
@@ -316,6 +332,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
             {
                 await logFile.WriteLineAsync($"Warnings/Errors: {string.Join(", ", result.AllErrors)}");
             }
+            
+            // Store the result for report generation
+            _lastReplaceResult = result;
+            
             return (true, "");
         }
         catch (Exception ex)
@@ -373,7 +393,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
         ProcessingSuccessful = false;
         ProcessingStatus = "";
         ProcessingResults = "";
+        ReplacementReport = "";
         LogFilePath = "";
+        _lastReplaceResult = null;
 
         // Clear processing data but keep template info for next run
         // Don't reset TemplateSetName, OutputFolderPath, PlaceholderCount
@@ -385,6 +407,44 @@ public class ProcessingResultsViewModel : StepViewModelBase
     }
 
     public event Action<int>? RequestNavigationToStep;
+
+    private string GenerateReplacementReport()
+    {
+        if (_lastReplaceResult == null || !_lastReplaceResult.IsCompletelySuccessful)
+            return "Žádné údaje o nahrazení nejsou k dispozici.";
+
+        var report = new System.Text.StringBuilder();
+        report.AppendLine("=== ZPRÁVA O NAHRAZENÍ ===");
+        report.AppendLine();
+
+        var successfulFiles = _lastReplaceResult.FileResults.Where(f => f.IsSuccess).ToList();
+        
+        foreach (var fileResult in successfulFiles)
+        {
+            var fileName = Path.GetFileName(fileResult.FilePath);
+            report.AppendLine($"Soubor: {fileName}");
+            
+            if (fileResult.DetailedReplacements.Any())
+            {
+                foreach (var replacement in fileResult.DetailedReplacements.OrderBy(r => r.PlaceholderName))
+                {
+                    report.AppendLine($"  {replacement.DisplayReplacement}");
+                }
+            }
+            else
+            {
+                report.AppendLine("  Žádná nahrazení");
+            }
+            
+            report.AppendLine();
+        }
+
+        var totalFiles = successfulFiles.Count;
+        var totalReplacements = _lastReplaceResult.TotalReplacements;
+        report.AppendLine($"Celkem: {totalReplacements} nahrazení v {totalFiles} souborech");
+
+        return report.ToString();
+    }
 
     public override bool ValidateStep()
     {

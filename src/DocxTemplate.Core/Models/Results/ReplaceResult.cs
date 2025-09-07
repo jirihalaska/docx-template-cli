@@ -172,6 +172,11 @@ public record FileReplaceResult
     public long? FinalSizeBytes { get; init; }
 
     /// <summary>
+    /// Detailed information about each placeholder replacement performed in this file
+    /// </summary>
+    public IReadOnlyList<DetailedReplacement> DetailedReplacements { get; init; } = Array.Empty<DetailedReplacement>();
+
+    /// <summary>
     /// File name without path
     /// </summary>
     public string FileName => Path.GetFileName(FilePath);
@@ -210,13 +215,15 @@ public record FileReplaceResult
     /// <param name="backupPath">Optional backup file path</param>
     /// <param name="processingDuration">Optional processing duration</param>
     /// <param name="finalSizeBytes">Optional final file size</param>
+    /// <param name="detailedReplacements">Optional detailed replacement information</param>
     /// <returns>FileReplaceResult instance</returns>
     public static FileReplaceResult Success(
         string filePath, 
         int replacementCount, 
         string? backupPath = null,
         TimeSpan? processingDuration = null,
-        long? finalSizeBytes = null)
+        long? finalSizeBytes = null,
+        IReadOnlyList<DetailedReplacement>? detailedReplacements = null)
     {
         return new FileReplaceResult
         {
@@ -225,7 +232,8 @@ public record FileReplaceResult
             IsSuccess = true,
             BackupPath = backupPath,
             ProcessingDuration = processingDuration,
-            FinalSizeBytes = finalSizeBytes
+            FinalSizeBytes = finalSizeBytes,
+            DetailedReplacements = detailedReplacements ?? Array.Empty<DetailedReplacement>()
         };
     }
 

@@ -153,6 +153,18 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
             var result = await _replacementEngine.ProcessDocumentAsync(templatePath, ProcessingMode.Replace, replacementMap, cancellationToken);
             var replacementCount = result.ReplacementsPerformed;
             
+            // Convert detailed replacements to DetailedReplacement objects
+            var fileName = Path.GetFileName(templatePath);
+            var detailedReplacements = result.DetailedReplacements
+                .Select(kvp =>
+                {
+                    var parts = kvp.Key.Split('→', 2);
+                    var placeholderName = parts.Length > 0 ? parts[0] : kvp.Key;
+                    var replacedValue = parts.Length > 1 ? parts[1] : "";
+                    return DetailedReplacement.Create(fileName, placeholderName, replacedValue, kvp.Value);
+                })
+                .ToList();
+            
             // File prefix is now handled by TemplateCopyService during copy operation
             var finalFilePath = templatePath;
             
@@ -163,7 +175,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 replacementCount,
                 backupPath,
                 endTime - startTime,
-                _fileSystemService.GetFileSize(finalFilePath));
+                _fileSystemService.GetFileSize(finalFilePath),
+                detailedReplacements);
         }
         catch (Exception ex)
         {

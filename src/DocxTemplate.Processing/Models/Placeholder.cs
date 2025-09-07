@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace DocxTemplate.Core.Models;
+namespace DocxTemplate.Processing.Models;
 
 /// <summary>
 /// Represents a placeholder with pattern, locations, and replacement context

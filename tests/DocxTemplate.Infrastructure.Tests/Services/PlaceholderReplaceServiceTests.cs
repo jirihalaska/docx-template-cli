@@ -3,13 +3,15 @@ using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Services;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.IO;
 using Xunit;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplate.Processing.Interfaces;
+using DocxTemplate.Processing.Models;
 
 namespace DocxTemplate.Infrastructure.Tests.Services;
 
@@ -28,11 +30,11 @@ public class PlaceholderReplaceServiceTests
         _mockErrorHandler = new Mock<IErrorHandler>();
         _mockFileSystemService = new Mock<IFileSystemService>();
         _mockImageProcessor = new Mock<IImageProcessor>();
-        
+
         // Use a real PlaceholderReplacementEngine for integration-style tests
         var mockReplacementEngineLogger = new Mock<ILogger<PlaceholderReplacementEngine>>();
         _replacementEngine = new PlaceholderReplacementEngine(mockReplacementEngineLogger.Object, _mockImageProcessor.Object);
-        
+
         _service = new PlaceholderReplaceService(
             _mockLogger.Object,
             _mockErrorHandler.Object,
@@ -46,7 +48,7 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var folderPath = "/test/folder";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories))
             .Returns(["/test/folder/test.docx"]);
@@ -71,7 +73,7 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var folderPath = "/nonexistent/folder";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(false);
         _mockErrorHandler.Setup(eh => eh.HandleExceptionAsync(It.IsAny<DirectoryNotFoundException>(), "folder replacement"))
             .ReturnsAsync(ErrorResult.FileNotFoundError(folderPath, "folder replacement"));
@@ -101,7 +103,7 @@ public class PlaceholderReplaceServiceTests
             }
         };
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.FileExists("/test/test.docx")).Returns(true);
         _mockFileSystemService.Setup(fs => fs.GetFileSize("/test/test.docx")).Returns(1024);
 
@@ -130,12 +132,12 @@ public class PlaceholderReplaceServiceTests
         };
         var invalidMappings = new Dictionary<string, string> { { "", "value" } }; // Invalid because empty key
         var invalidReplacementMap = new ReplacementMap { Mappings = invalidMappings };
-        
+
         // Verify the map is actually invalid
         Assert.False(invalidReplacementMap.IsValid());
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
             await _service.ReplacePlaceholdersAsync(templateFiles, invalidReplacementMap, false));
     }
 
@@ -145,7 +147,7 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var templatePath = "/test/test.docx";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.FileExists(templatePath)).Returns(true);
         _mockFileSystemService.Setup(fs => fs.GetFileSize(templatePath)).Returns(1024);
         _mockFileSystemService.Setup(fs => fs.CreateBackupAsync(templatePath, It.IsAny<CancellationToken>()))
@@ -169,7 +171,7 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var templatePath = "/test/nonexistent.docx";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.FileExists(templatePath)).Returns(false);
 
         // act
@@ -188,7 +190,7 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var folderPath = "/test/folder";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(true);
         _mockFileSystemService.Setup(fs => fs.EnumerateFiles(folderPath, "*.docx", SearchOption.AllDirectories))
             .Returns(["/test/folder/test.docx"]);
@@ -210,13 +212,13 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var folderPath = "/nonexistent/folder";
         var replacementMap = CreateValidReplacementMap();
-        
+
         _mockFileSystemService.Setup(fs => fs.DirectoryExists(folderPath)).Returns(false);
         _mockErrorHandler.Setup(eh => eh.HandleExceptionAsync(It.IsAny<DirectoryNotFoundException>(), "replacement preview"))
             .ReturnsAsync(ErrorResult.FileNotFoundError(folderPath, "replacement preview"));
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _service.PreviewReplacementsAsync(folderPath, replacementMap));
     }
 
@@ -226,9 +228,9 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var placeholders = new List<Placeholder>
         {
-            new() 
-            { 
-                Name = "TestPlaceholder", 
+            new()
+            {
+                Name = "TestPlaceholder",
                 Pattern = @"\{\{TestPlaceholder\}\}",
                 Locations = new List<PlaceholderLocation>(),
                 TotalOccurrences = 0
@@ -251,9 +253,9 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var placeholders = new List<Placeholder>
         {
-            new() 
-            { 
-                Name = "MissingPlaceholder", 
+            new()
+            {
+                Name = "MissingPlaceholder",
                 Pattern = @"\{\{MissingPlaceholder\}\}",
                 Locations = new List<PlaceholderLocation>(),
                 TotalOccurrences = 0
@@ -287,7 +289,7 @@ public class PlaceholderReplaceServiceTests
             }
         };
         var backupDirectory = "/test/backup";
-        
+
         _mockFileSystemService.Setup(fs => fs.CreateDirectory(It.IsAny<string>()));
         _mockFileSystemService.Setup(fs => fs.CopyFile("/test/test.docx", It.IsAny<string>(), It.IsAny<bool>()));
 
@@ -330,7 +332,7 @@ public class PlaceholderReplaceServiceTests
                 LastModified = DateTime.UtcNow
             }
         };
-        
+
         _mockFileSystemService.Setup(fs => fs.CreateDirectory(It.IsAny<string>()));
         _mockFileSystemService.Setup(fs => fs.CopyFile("/test/test.docx", It.IsAny<string>(), It.IsAny<bool>()))
             .Throws(new IOException("Access denied"));
@@ -352,7 +354,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _service.ReplacePlaceholdersAsync((string)null!, replacementMap, true));
     }
 
@@ -365,7 +367,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
             await _service.ReplacePlaceholdersAsync(invalidPath, replacementMap, true));
     }
 
@@ -376,7 +378,7 @@ public class PlaceholderReplaceServiceTests
         var folderPath = "/test/folder";
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _service.ReplacePlaceholdersAsync(folderPath, null!, true));
     }
 
@@ -387,7 +389,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _service.ReplacePlaceholdersAsync((IReadOnlyList<TemplateFile>)null!, replacementMap, true));
     }
 
@@ -398,7 +400,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _service.ReplacePlaceholdersInFileAsync((string)null!, replacementMap, true));
     }
 
@@ -411,7 +413,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
             await _service.ReplacePlaceholdersInFileAsync(invalidPath, replacementMap, true));
     }
 
@@ -422,7 +424,7 @@ public class PlaceholderReplaceServiceTests
         var replacementMap = CreateValidReplacementMap();
 
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             _service.ValidateReplacements(null!, replacementMap, false));
     }
 
@@ -433,7 +435,7 @@ public class PlaceholderReplaceServiceTests
         var placeholders = new List<Placeholder>();
 
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             _service.ValidateReplacements(placeholders, null!, false));
     }
 
@@ -441,7 +443,7 @@ public class PlaceholderReplaceServiceTests
     public async Task CreateBackupsAsync_NullTemplateFiles_ThrowsArgumentNullException()
     {
         // act & assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await _service.CreateBackupsAsync(null!));
     }
 
@@ -449,7 +451,7 @@ public class PlaceholderReplaceServiceTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new PlaceholderReplaceService(null!, _mockErrorHandler.Object, _mockFileSystemService.Object, _replacementEngine));
     }
 
@@ -457,7 +459,7 @@ public class PlaceholderReplaceServiceTests
     public void Constructor_NullErrorHandler_ThrowsArgumentNullException()
     {
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new PlaceholderReplaceService(_mockLogger.Object, null!, _mockFileSystemService.Object, _replacementEngine));
     }
 
@@ -465,7 +467,7 @@ public class PlaceholderReplaceServiceTests
     public void Constructor_NullFileSystemService_ThrowsArgumentNullException()
     {
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, null!, _replacementEngine));
     }
 
@@ -473,7 +475,7 @@ public class PlaceholderReplaceServiceTests
     public void Constructor_NullReplacementEngine_ThrowsArgumentNullException()
     {
         // act & assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new PlaceholderReplaceService(_mockLogger.Object, _mockErrorHandler.Object, _mockFileSystemService.Object, null!));
     }
 
@@ -483,20 +485,20 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var testImagePath = Path.Combine(Path.GetTempPath(), "test_image.png");
         var testDocxPath = Path.Combine(Path.GetTempPath(), "test_document.docx");
-        
+
         // Create a test image file
         await File.WriteAllBytesAsync(testImagePath, [137, 80, 78, 71, 13, 10, 26, 10]); // PNG header
-        
+
         try
         {
             // Create test document with center-aligned image placeholder
             CreateTestDocumentWithCenterAlignedImagePlaceholder(testDocxPath);
-            
+
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
             _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
-            
+
             var replacementMap = new ReplacementMap
             {
                 Mappings = new Dictionary<string, string>
@@ -504,14 +506,14 @@ public class PlaceholderReplaceServiceTests
                     { "LOGO", testImagePath }
                 }
             };
-            
+
             // act
             var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
-            
+
             // assert
             Assert.True(result.IsSuccess);
             Assert.True(result.ReplacementCount > 0);
-            
+
             // Verify that the image was inserted and alignment was preserved
             VerifyImageReplacementPreservesAlignment(testDocxPath);
         }
@@ -522,17 +524,17 @@ public class PlaceholderReplaceServiceTests
             if (File.Exists(testDocxPath)) File.Delete(testDocxPath);
         }
     }
-    
+
     private static void CreateTestDocumentWithCenterAlignedImagePlaceholder(string docxPath)
     {
         using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
         var mainPart = doc.AddMainDocumentPart();
         var document = new DocumentFormat.OpenXml.Wordprocessing.Document();
         var body = new DocumentFormat.OpenXml.Wordprocessing.Body();
-        
+
         // Create a paragraph with center alignment and image placeholder
         var paragraph = new DocumentFormat.OpenXml.Wordprocessing.Paragraph();
-        
+
         // Add paragraph properties with center justification
         var paragraphProperties = new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties();
         var justification = new DocumentFormat.OpenXml.Wordprocessing.Justification()
@@ -541,40 +543,40 @@ public class PlaceholderReplaceServiceTests
         };
         paragraphProperties.Append(justification);
         paragraph.Append(paragraphProperties);
-        
+
         // Add run with image placeholder text
         var run = new DocumentFormat.OpenXml.Wordprocessing.Run();
         var text = new DocumentFormat.OpenXml.Wordprocessing.Text("{{image:LOGO|width:200|height:150}}");
         run.Append(text);
         paragraph.Append(run);
-        
+
         body.Append(paragraph);
         document.Append(body);
         mainPart.Document = document;
         mainPart.Document.Save();
     }
-    
+
     private static void VerifyImageReplacementPreservesAlignment(string docxPath)
     {
         using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(docxPath, false);
         var body = doc.MainDocumentPart?.Document?.Body;
         Assert.NotNull(body);
-        
+
         var paragraphs = body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>().ToList();
         Assert.NotEmpty(paragraphs);
-        
+
         // Find the paragraph that should contain the replaced image
         var imageParagraph = paragraphs.FirstOrDefault(p => p.Descendants<DocumentFormat.OpenXml.Wordprocessing.Drawing>().Any());
         Assert.NotNull(imageParagraph);
-        
+
         // Verify that the paragraph properties with center justification are still there
         var paragraphProperties = imageParagraph.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties>();
         Assert.NotNull(paragraphProperties);
-        
+
         var justification = paragraphProperties.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.Justification>();
         Assert.NotNull(justification);
         Assert.Equal(DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center, justification.Val?.Value);
-        
+
         // Verify that there's no placeholder text remaining
         var allText = string.Join("", imageParagraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>().Select(t => t.Text));
         Assert.DoesNotContain("{{image:LOGO|width:200|height:150}}", allText);
@@ -586,15 +588,15 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var testDocxPath = Path.Combine(Path.GetTempPath(), $"header_test_{Guid.NewGuid()}.docx");
         var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
-        
+
         // Create test image
         await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
-        
+
         try
         {
             // Create document with image placeholder in header
             CreateTestDocumentWithHeaderImagePlaceholder(testDocxPath);
-            
+
             var replacementMap = new ReplacementMap
             {
                 Mappings = new Dictionary<string, string>
@@ -602,20 +604,20 @@ public class PlaceholderReplaceServiceTests
                     { "logo", testImagePath }
                 }
             };
-            
+
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
             _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
-            
+
             // act
             var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
-            
+
             // assert
             Assert.True(result.IsSuccess);
             Assert.True(result.ReplacementCount > 0);
-            
+
             // Verify image was added to HeaderPart, not MainDocumentPart
             VerifyImageInHeaderPart(testDocxPath);
         }
@@ -632,15 +634,15 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var testDocxPath = Path.Combine(Path.GetTempPath(), $"footer_test_{Guid.NewGuid()}.docx");
         var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
-        
+
         // Create test image
         await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
-        
+
         try
         {
             // Create document with image placeholder in footer
             CreateTestDocumentWithFooterImagePlaceholder(testDocxPath);
-            
+
             var replacementMap = new ReplacementMap
             {
                 Mappings = new Dictionary<string, string>
@@ -648,20 +650,20 @@ public class PlaceholderReplaceServiceTests
                     { "logo", testImagePath }
                 }
             };
-            
+
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
             _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
-            
+
             // act
             var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
-            
+
             // assert
             Assert.True(result.IsSuccess);
             Assert.True(result.ReplacementCount > 0);
-            
+
             // Verify image was added to FooterPart, not MainDocumentPart
             VerifyImageInFooterPart(testDocxPath);
         }
@@ -678,15 +680,15 @@ public class PlaceholderReplaceServiceTests
         // arrange
         var testDocxPath = Path.Combine(Path.GetTempPath(), $"body_header_test_{Guid.NewGuid()}.docx");
         var testImagePath = Path.Combine(Path.GetTempPath(), $"test_logo_{Guid.NewGuid()}.png");
-        
+
         // Create test image
         await File.WriteAllBytesAsync(testImagePath, CreateSimplePngBytes());
-        
+
         try
         {
             // Create document with same image placeholder in both body and header
             CreateTestDocumentWithBodyAndHeaderImagePlaceholder(testDocxPath);
-            
+
             var replacementMap = new ReplacementMap
             {
                 Mappings = new Dictionary<string, string>
@@ -694,20 +696,20 @@ public class PlaceholderReplaceServiceTests
                     { "logo", testImagePath }
                 }
             };
-            
+
             var imageInfo = new ImageInfo { Width = 100, Height = 100 };
             _mockImageProcessor.Setup(ip => ip.GetImageInfo(testImagePath)).Returns(imageInfo);
             _mockFileSystemService.Setup(fs => fs.FileExists(testImagePath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.FileExists(testDocxPath)).Returns(true);
             _mockFileSystemService.Setup(fs => fs.GetFileSize(testDocxPath)).Returns(1024);
-            
+
             // act
             var result = await _service.ReplacePlaceholdersInFileAsync(testDocxPath, replacementMap, false);
-            
+
             // assert
             Assert.True(result.IsSuccess);
             Assert.Equal(2, result.ReplacementCount); // One in body, one in header
-            
+
             // Verify images were added to both MainDocumentPart and HeaderPart
             VerifyImageInBothBodyAndHeader(testDocxPath);
         }
@@ -739,12 +741,12 @@ public class PlaceholderReplaceServiceTests
         using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
         var mainPart = doc.AddMainDocumentPart();
         mainPart.Document = new Document(new Body());
-        
+
         // Create header with image placeholder
         var headerPart = mainPart.AddNewPart<HeaderPart>();
         headerPart.Header = new Header(
             new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
-        
+
         // Reference the header in section properties
         var sectionProps = new SectionProperties();
         var headerReference = new HeaderReference()
@@ -754,21 +756,21 @@ public class PlaceholderReplaceServiceTests
         };
         sectionProps.AppendChild(headerReference);
         mainPart.Document.Body.AppendChild(sectionProps);
-        
+
         mainPart.Document.Save();
     }
-    
+
     private static void CreateTestDocumentWithFooterImagePlaceholder(string docxPath)
     {
         using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
         var mainPart = doc.AddMainDocumentPart();
         mainPart.Document = new Document(new Body());
-        
+
         // Create footer with image placeholder
         var footerPart = mainPart.AddNewPart<FooterPart>();
         footerPart.Footer = new Footer(
             new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
-        
+
         // Reference the footer in section properties
         var sectionProps = new SectionProperties();
         var footerReference = new FooterReference()
@@ -778,25 +780,25 @@ public class PlaceholderReplaceServiceTests
         };
         sectionProps.AppendChild(footerReference);
         mainPart.Document.Body.AppendChild(sectionProps);
-        
+
         mainPart.Document.Save();
     }
-    
+
     private static void CreateTestDocumentWithBodyAndHeaderImagePlaceholder(string docxPath)
     {
         using var doc = WordprocessingDocument.Create(docxPath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
         var mainPart = doc.AddMainDocumentPart();
         mainPart.Document = new Document(new Body());
-        
+
         // Add image placeholder to body
         var bodyParagraph = new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}")));
         mainPart.Document.Body.AppendChild(bodyParagraph);
-        
+
         // Create header with image placeholder
         var headerPart = mainPart.AddNewPart<HeaderPart>();
         headerPart.Header = new Header(
             new Paragraph(new Run(new Text("{{image:logo|width:100|height:100}}"))));
-        
+
         // Reference the header in section properties
         var sectionProps = new SectionProperties();
         var headerReference = new HeaderReference()
@@ -806,63 +808,63 @@ public class PlaceholderReplaceServiceTests
         };
         sectionProps.AppendChild(headerReference);
         mainPart.Document.Body.AppendChild(sectionProps);
-        
+
         mainPart.Document.Save();
     }
-    
+
     private static void VerifyImageInHeaderPart(string docxPath)
     {
         using var doc = WordprocessingDocument.Open(docxPath, false);
         var mainPart = doc.MainDocumentPart;
-        
+
         // Verify HeaderPart has images
         var headerPart = mainPart.HeaderParts.FirstOrDefault();
         Assert.NotNull(headerPart);
         Assert.NotEmpty(headerPart.ImageParts);
-        
+
         // Verify MainDocumentPart does NOT have images (since placeholder was only in header)
         Assert.Empty(mainPart.ImageParts);
-        
+
         // Verify header contains Drawing element (replaced image)
         var headerDrawing = headerPart.Header.Descendants<Drawing>().FirstOrDefault();
         Assert.NotNull(headerDrawing);
     }
-    
+
     private static void VerifyImageInFooterPart(string docxPath)
     {
         using var doc = WordprocessingDocument.Open(docxPath, false);
         var mainPart = doc.MainDocumentPart;
-        
+
         // Verify FooterPart has images
         var footerPart = mainPart.FooterParts.FirstOrDefault();
         Assert.NotNull(footerPart);
         Assert.NotEmpty(footerPart.ImageParts);
-        
+
         // Verify MainDocumentPart does NOT have images (since placeholder was only in footer)
         Assert.Empty(mainPart.ImageParts);
-        
+
         // Verify footer contains Drawing element (replaced image)
         var footerDrawing = footerPart.Footer.Descendants<Drawing>().FirstOrDefault();
         Assert.NotNull(footerDrawing);
     }
-    
+
     private static void VerifyImageInBothBodyAndHeader(string docxPath)
     {
         using var doc = WordprocessingDocument.Open(docxPath, false);
         var mainPart = doc.MainDocumentPart;
-        
+
         // Verify MainDocumentPart has images (body placeholder)
         Assert.NotEmpty(mainPart.ImageParts);
-        
+
         // Verify HeaderPart has images (header placeholder)
         var headerPart = mainPart.HeaderParts.FirstOrDefault();
         Assert.NotNull(headerPart);
         Assert.NotEmpty(headerPart.ImageParts);
-        
+
         // Verify body contains Drawing element
         var bodyDrawing = mainPart.Document.Body.Descendants<Drawing>().FirstOrDefault();
         Assert.NotNull(bodyDrawing);
-        
+
         // Verify header contains Drawing element
         var headerDrawing = headerPart.Header.Descendants<Drawing>().FirstOrDefault();
         Assert.NotNull(headerDrawing);

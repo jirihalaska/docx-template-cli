@@ -1,6 +1,6 @@
-using DocxTemplate.Core.Models;
+using DocxTemplate.Processing.Models;
 
-namespace DocxTemplate.Core.Services;
+namespace DocxTemplate.Processing.Interfaces;
 
 /// <summary>
 /// Service for processing image files

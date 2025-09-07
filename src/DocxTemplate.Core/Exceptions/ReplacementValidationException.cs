@@ -1,3 +1,4 @@
+using DocxTemplate.Processing.Models;
 namespace DocxTemplate.Core.Exceptions;
 
 /// <summary>

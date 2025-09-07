@@ -1,6 +1,6 @@
 using DocumentFormat.OpenXml.Packaging;
 
-namespace DocxTemplate.Infrastructure.Images;
+namespace DocxTemplate.Processing.Images;
 
 /// <summary>
 /// Utility class for detecting image types and mapping to DocumentFormat.OpenXml types

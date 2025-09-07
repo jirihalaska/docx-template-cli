@@ -1,4 +1,4 @@
-namespace DocxTemplate.Core.Models;
+namespace DocxTemplate.Processing.Models;
 
 /// <summary>
 /// Contains information about an image file

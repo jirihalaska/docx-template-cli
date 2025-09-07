@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
 using DocxTemplate.UI.Services;
 using DocxTemplate.UI.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;

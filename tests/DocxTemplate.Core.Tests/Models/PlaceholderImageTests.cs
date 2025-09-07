@@ -1,4 +1,5 @@
 using DocxTemplate.Core.Models;
+using DocxTemplate.Processing.Models;
 using Xunit;
 
 namespace DocxTemplate.Core.Tests.Models;
@@ -16,12 +17,12 @@ public class PlaceholderImageTests
             Locations = new List<PlaceholderLocation>(),
             TotalOccurrences = 0
         };
-        
+
         // assert
         Assert.Equal(PlaceholderType.Text, placeholder.Type);
         Assert.Null(placeholder.ImageProperties);
     }
-    
+
     [Fact]
     public void Placeholder_ShouldSupportImageType()
     {
@@ -32,7 +33,7 @@ public class PlaceholderImageTests
             MaxHeight = 600,
             ImageName = "logo"
         };
-        
+
         // act
         var placeholder = new Placeholder
         {
@@ -43,7 +44,7 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Image,
             ImageProperties = imageProps
         };
-        
+
         // assert
         Assert.Equal(PlaceholderType.Image, placeholder.Type);
         Assert.NotNull(placeholder.ImageProperties);
@@ -51,7 +52,7 @@ public class PlaceholderImageTests
         Assert.Equal(600, placeholder.ImageProperties.MaxHeight);
         Assert.Equal("logo", placeholder.ImageProperties.ImageName);
     }
-    
+
     [Fact]
     public void Placeholder_IsValid_ShouldFailForImageTypeWithoutProperties()
     {
@@ -62,7 +63,7 @@ public class PlaceholderImageTests
             FilePath = "/path/to/test.docx",
             Occurrences = 1
         };
-        
+
         var placeholder = new Placeholder
         {
             Name = "image",
@@ -72,14 +73,14 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Image,
             ImageProperties = null
         };
-        
+
         // act
         var isValid = placeholder.IsValid();
-        
+
         // assert
         Assert.False(isValid);
     }
-    
+
     [Fact]
     public void Placeholder_IsValid_ShouldFailForImageTypeWithInvalidDimensions()
     {
@@ -90,14 +91,14 @@ public class PlaceholderImageTests
             FilePath = "/path/to/test.docx",
             Occurrences = 1
         };
-        
+
         var imageProps = new ImageProperties
         {
             MaxWidth = 0,
             MaxHeight = -1,
             ImageName = "logo"
         };
-        
+
         var placeholder = new Placeholder
         {
             Name = "logo",
@@ -107,14 +108,14 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Image,
             ImageProperties = imageProps
         };
-        
+
         // act
         var isValid = placeholder.IsValid();
-        
+
         // assert
         Assert.False(isValid);
     }
-    
+
     [Fact]
     public void Placeholder_IsValid_ShouldFailForImageTypeWithEmptyName()
     {
@@ -125,14 +126,14 @@ public class PlaceholderImageTests
             FilePath = "/path/to/test.docx",
             Occurrences = 1
         };
-        
+
         var imageProps = new ImageProperties
         {
             MaxWidth = 800,
             MaxHeight = 600,
             ImageName = ""
         };
-        
+
         var placeholder = new Placeholder
         {
             Name = "image",
@@ -142,14 +143,14 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Image,
             ImageProperties = imageProps
         };
-        
+
         // act
         var isValid = placeholder.IsValid();
-        
+
         // assert
         Assert.False(isValid);
     }
-    
+
     [Fact]
     public void Placeholder_IsValid_ShouldPassForValidImagePlaceholder()
     {
@@ -160,14 +161,14 @@ public class PlaceholderImageTests
             FilePath = "/path/to/test.docx",
             Occurrences = 1
         };
-        
+
         var imageProps = new ImageProperties
         {
             MaxWidth = 800,
             MaxHeight = 600,
             ImageName = "logo"
         };
-        
+
         var placeholder = new Placeholder
         {
             Name = "logo",
@@ -177,14 +178,14 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Image,
             ImageProperties = imageProps
         };
-        
+
         // act
         var isValid = placeholder.IsValid();
-        
+
         // assert
         Assert.True(isValid);
     }
-    
+
     [Fact]
     public void Placeholder_IsValid_ShouldPassForTextPlaceholderWithoutImageProperties()
     {
@@ -195,7 +196,7 @@ public class PlaceholderImageTests
             FilePath = "/path/to/test.docx",
             Occurrences = 1
         };
-        
+
         var placeholder = new Placeholder
         {
             Name = "text",
@@ -205,14 +206,14 @@ public class PlaceholderImageTests
             Type = PlaceholderType.Text,
             ImageProperties = null
         };
-        
+
         // act
         var isValid = placeholder.IsValid();
-        
+
         // assert
         Assert.True(isValid);
     }
-    
+
     [Theory]
     [InlineData(@"{{image:logo|width:800|height:600}}", "logo", 800, 600)]
     [InlineData(@"{{image:photo|width:1920|height:1080}}", "photo", 1920, 1080)]
@@ -222,10 +223,10 @@ public class PlaceholderImageTests
         // arrange
         var pattern = @"\{\{image:([^|]+)\|width:(\d+)\|height:(\d+)\}\}";
         var regex = new System.Text.RegularExpressions.Regex(pattern);
-        
+
         // act
         var match = regex.Match(syntax);
-        
+
         // assert
         Assert.True(match.Success);
         Assert.Equal(expectedName, match.Groups[1].Value);

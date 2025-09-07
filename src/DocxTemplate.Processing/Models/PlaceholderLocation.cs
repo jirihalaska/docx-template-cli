@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DocxTemplate.Core.Models;
+namespace DocxTemplate.Processing.Models;
 
 /// <summary>
 /// Tracks where placeholders appear in templates with position tracking and context information

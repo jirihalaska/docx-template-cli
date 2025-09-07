@@ -1,4 +1,5 @@
 using DocxTemplate.Core.Models;
+using DocxTemplate.Processing.Models;
 using FluentAssertions;
 
 namespace DocxTemplate.Core.Tests.Models;

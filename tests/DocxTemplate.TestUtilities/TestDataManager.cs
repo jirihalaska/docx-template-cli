@@ -2,6 +2,7 @@ using DocxTemplate.Core.Models;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplate.Processing.Models;
 
 namespace DocxTemplate.TestUtilities;
 
@@ -37,7 +38,7 @@ public class TestDataManager
     public static void CreateTestDocumentWithPlaceholders(string filePath, Dictionary<string, string> placeholders)
     {
         using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
-        
+
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
         var body = mainPart.Document.AppendChild(new Body());
@@ -76,7 +77,7 @@ public class TestDataManager
     public static void CreateComplexTestDocument(string filePath)
     {
         using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
-        
+
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
         var body = mainPart.Document.AppendChild(new Body());
@@ -178,7 +179,7 @@ public class TestDataManager
     public async Task CreateTestDocumentAsync(string filePath, IList<string> placeholders, bool includeCzechCharacters = false)
     {
         using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
-        
+
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
         var body = mainPart.Document.AppendChild(new Body());
@@ -196,7 +197,7 @@ public class TestDataManager
         {
             var paragraph = new Paragraph();
             var run = new Run();
-            var text = includeCzechCharacters ? 
+            var text = includeCzechCharacters ?
                 $"Tento dokument obsahuje zástupný symbol {{{{{placeholder}}}}} pro testování." :
                 $"This document contains placeholder {{{{{placeholder}}}}} for testing.";
             run.Append(new Text(text));
@@ -224,7 +225,7 @@ public class TestDataManager
     public async Task CreateComplexTestDocumentAsync(string filePath, dynamic complexitySpec)
     {
         using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document);
-        
+
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
         var body = mainPart.Document.AppendChild(new Body());
@@ -251,7 +252,7 @@ public class TestDataManager
         if (complexitySpec.HasTables)
         {
             var table = new Table();
-            
+
             // Add table header
             var headerRow = new TableRow();
             var headerCell1 = new TableCell();
@@ -260,7 +261,7 @@ public class TestDataManager
             headerCell2.Append(new Paragraph(new Run(new Text("Column 2 - {{table_header_2}}"))));
             headerRow.Append(headerCell1, headerCell2);
             table.Append(headerRow);
-            
+
             // Add data rows
             for (int i = 1; i <= 3; i++)
             {
@@ -272,7 +273,7 @@ public class TestDataManager
                 row.Append(cell1, cell2);
                 table.Append(row);
             }
-            
+
             body.Append(table);
         }
 

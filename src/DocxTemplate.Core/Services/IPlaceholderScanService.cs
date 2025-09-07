@@ -1,3 +1,4 @@
+using DocxTemplate.Processing.Models;
 using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 

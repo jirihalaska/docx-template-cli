@@ -4,7 +4,8 @@ using DocumentFormat.OpenXml.Packaging;
 using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
+using DocxTemplate.Processing.Models;
 using Microsoft.Extensions.Logging;
 
 namespace DocxTemplate.Infrastructure.Services;
@@ -16,22 +17,15 @@ public class PlaceholderScanService : IPlaceholderScanService
 {
     private readonly ITemplateDiscoveryService _discoveryService;
     private readonly ILogger<PlaceholderScanService> _logger;
-    private readonly PlaceholderScanner _placeholderScanner;
-    private readonly DocumentTraverser _documentTraverser;
+    private readonly PlaceholderReplacementEngine _replacementEngine;
 
-    public PlaceholderScanService(
-        ITemplateDiscoveryService discoveryService,
+    public PlaceholderScanService(ITemplateDiscoveryService discoveryService,
         ILogger<PlaceholderScanService> logger,
-        DocumentTraverser documentTraverser,
         PlaceholderReplacementEngine replacementEngine)
     {
         _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _documentTraverser = documentTraverser ?? throw new ArgumentNullException(nameof(documentTraverser));
-        
-        // Create a logger for the scanner using the factory pattern
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        _placeholderScanner = new PlaceholderScanner(loggerFactory.CreateLogger<PlaceholderScanner>(), replacementEngine);
+        _replacementEngine = replacementEngine ?? throw new ArgumentNullException(nameof(replacementEngine));
     }
 
     /// <inheritdoc />
@@ -58,7 +52,7 @@ public class PlaceholderScanService : IPlaceholderScanService
         {
             _logger.LogError(ex, "Failed to scan placeholders in folder: {Path}", folderPath);
             var duration = DateTime.UtcNow - startTime;
-            
+
             return PlaceholderScanResult.WithErrors(
                 [],
                 0,
@@ -196,7 +190,7 @@ public class PlaceholderScanService : IPlaceholderScanService
         try
         {
             var regex = new Regex(pattern, RegexOptions.Compiled, TimeSpan.FromSeconds(5));
-            
+
             // Test the regex with a simple example to ensure it works
             var testResult = regex.Match("{{test}}");
             return true;
@@ -223,7 +217,7 @@ public class PlaceholderScanService : IPlaceholderScanService
         {
             var regex = new Regex(pattern, RegexOptions.Compiled, TimeSpan.FromSeconds(5));
             var matches = regex.Matches(content);
-            
+
             var names = new HashSet<string>();
             foreach (Match match in matches)
             {
@@ -283,24 +277,40 @@ public class PlaceholderScanService : IPlaceholderScanService
         string pattern,
         CancellationToken cancellationToken)
     {
-        var placeholders = new Dictionary<string, List<PlaceholderLocation>>();
-
         try
         {
-            // Create scan processor with required dependencies
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var scanProcessor = new ScanDocumentPartProcessor(
-                _placeholderScanner,
+            // Use PlaceholderReplacementEngine in scan mode
+            var result = await _replacementEngine.ProcessDocumentAsync(
                 templatePath,
-                placeholders,
-                loggerFactory.CreateLogger<ScanDocumentPartProcessor>());
-
-            // Use DocumentTraverser to traverse all document parts uniformly
-            await _documentTraverser.TraverseDocumentAsync(
-                templatePath,
-                isReadOnly: true,
-                scanProcessor,
+                ProcessingMode.Scan,
+                replacementMap: null,
                 cancellationToken);
+
+            // Convert DiscoveredPlaceholders to the expected format
+            var placeholders = new Dictionary<string, List<PlaceholderLocation>>();
+            foreach (var discovered in result.DiscoveredPlaceholders)
+            {
+                var location = new PlaceholderLocation
+                {
+                    FileName = Path.GetFileName(discovered.FilePath),
+                    FilePath = discovered.FilePath,
+                    Context = discovered.Context,
+                    Occurrences = 1
+                };
+
+                if (!placeholders.ContainsKey(discovered.Name))
+                {
+                    placeholders[discovered.Name] = new List<PlaceholderLocation>();
+                }
+                placeholders[discovered.Name].Add(location);
+            }
+
+            return new ScanFileResult
+            {
+                FilePath = templatePath,
+                Placeholders = placeholders,
+                Error = null
+            };
         }
         catch (Exception ex)
         {
@@ -316,18 +326,11 @@ public class PlaceholderScanService : IPlaceholderScanService
                 }
             };
         }
-
-        return new ScanFileResult
-        {
-            FilePath = templatePath,
-            Placeholders = placeholders,
-            Error = null
-        };
     }
 
 
     private static IReadOnlyList<Placeholder> ConvertToPlaceholders(
-        Dictionary<string, List<PlaceholderLocation>> placeholders, 
+        Dictionary<string, List<PlaceholderLocation>> placeholders,
         string pattern)
     {
         var placeholderList = placeholders.Select(kvp =>
@@ -342,7 +345,7 @@ public class PlaceholderScanService : IPlaceholderScanService
                     var imageName = imageMatch.Groups[1].Value;
                     var width = int.Parse(imageMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
                     var height = int.Parse(imageMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    
+
                     return new Placeholder
                     {
                         Name = imageName,
@@ -359,7 +362,7 @@ public class PlaceholderScanService : IPlaceholderScanService
                     };
                 }
             }
-            
+
             // It's a text placeholder
             return new Placeholder
             {

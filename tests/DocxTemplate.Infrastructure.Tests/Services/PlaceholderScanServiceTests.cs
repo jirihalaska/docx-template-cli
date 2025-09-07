@@ -3,7 +3,9 @@ using DocxTemplate.Core.Exceptions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
 using DocxTemplate.Infrastructure.Services;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
+using DocxTemplate.Processing.Interfaces;
+using DocxTemplate.Processing.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -27,35 +29,28 @@ public class PlaceholderScanServiceTests
         _mockReplacementEngine = new Mock<PlaceholderReplacementEngine>(
             Mock.Of<ILogger<PlaceholderReplacementEngine>>(),
             Mock.Of<IImageProcessor>());
-        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object, _mockReplacementEngine.Object);
+        _service = new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockReplacementEngine.Object);
     }
 
     [Fact]
     public void Constructor_WithNullDiscoveryService_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object, _mockDocumentTraverser.Object, _mockReplacementEngine.Object));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(null!, _mockLogger.Object, _mockReplacementEngine.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!, _mockDocumentTraverser.Object, _mockReplacementEngine.Object));
-    }
-
-    [Fact]
-    public void Constructor_WithNullDocumentTraverser_ThrowsArgumentNullException()
-    {
-        // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, null!, _mockReplacementEngine.Object));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, null!, _mockReplacementEngine.Object));
     }
 
     [Fact]
     public void Constructor_WithNullReplacementEngine_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, _mockDocumentTraverser.Object, null!));
+        Assert.Throws<ArgumentNullException>(() => new PlaceholderScanService(_mockDiscoveryService.Object, _mockLogger.Object, null!));
     }
 
     [Theory]
@@ -76,7 +71,7 @@ public class PlaceholderScanServiceTests
         const string invalidPattern = "[";
 
         // act & assert
-        await Assert.ThrowsAsync<InvalidPlaceholderPatternException>(() => 
+        await Assert.ThrowsAsync<InvalidPlaceholderPatternException>(() =>
             _service.ScanPlaceholdersAsync(folderPath, invalidPattern));
     }
 
@@ -106,7 +101,7 @@ public class PlaceholderScanServiceTests
     public async Task ScanPlaceholdersAsync_WithNullTemplateFiles_ThrowsArgumentNullException()
     {
         // arrange, act & assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.ScanPlaceholdersAsync((IReadOnlyList<TemplateFile>)null!));
     }
 
@@ -127,7 +122,7 @@ public class PlaceholderScanServiceTests
         const string nonExistentPath = "/path/that/does/not/exist.docx";
 
         // act & assert
-        await Assert.ThrowsAsync<TemplateNotFoundException>(() => 
+        await Assert.ThrowsAsync<TemplateNotFoundException>(() =>
             _service.ScanSingleFileAsync(nonExistentPath));
     }
 

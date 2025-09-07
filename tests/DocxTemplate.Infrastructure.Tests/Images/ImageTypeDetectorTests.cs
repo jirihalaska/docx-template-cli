@@ -1,5 +1,5 @@
 using DocumentFormat.OpenXml.Packaging;
-using DocxTemplate.Infrastructure.Images;
+using DocxTemplate.Processing.Images;
 using Xunit;
 
 namespace DocxTemplate.Infrastructure.Tests.Images;

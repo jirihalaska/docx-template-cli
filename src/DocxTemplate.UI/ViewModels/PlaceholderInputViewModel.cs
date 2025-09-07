@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
 using ReactiveUI;
 
 namespace DocxTemplate.UI.ViewModels;
@@ -27,7 +28,7 @@ public class PlaceholderInputViewModel : StepViewModelBase
     {
         _userPreferencesService = userPreferencesService;
         _placeholderInputs = new ObservableCollection<PlaceholderInputItemViewModel>();
-        
+
         ClearAllCommand = ReactiveCommand.Create(ClearAllInputs);
     }
 
@@ -101,7 +102,7 @@ public class PlaceholderInputViewModel : StepViewModelBase
             return;
         }
 
-        // Create input items for each discovered placeholder  
+        // Create input items for each discovered placeholder
         // Maintain same order as Step 2 (no additional sorting)
         var inputItems = discoveredPlaceholders
             .Select(placeholder => new PlaceholderInputItemViewModel(placeholder, _userPreferencesService))
@@ -186,21 +187,21 @@ public class PlaceholderInputItemViewModel : ReactiveObject
     {
         PlaceholderItem = placeholderItem ?? throw new ArgumentNullException(nameof(placeholderItem));
         _userPreferencesService = userPreferencesService;
-        
+
         // Initialize commands
-        SelectImageCommand = ReactiveCommand.CreateFromTask(SelectImageAsync, 
+        SelectImageCommand = ReactiveCommand.CreateFromTask(SelectImageAsync,
             this.WhenAnyValue(x => x.IsImagePlaceholder));
         ClearImageCommand = ReactiveCommand.Create(ClearImageSelection,
-            this.WhenAnyValue(x => x.IsImagePlaceholder, x => x.SelectedImagePath, 
+            this.WhenAnyValue(x => x.IsImagePlaceholder, x => x.SelectedImagePath,
                 (isImage, imagePath) => isImage && !string.IsNullOrWhiteSpace(imagePath)));
-        
+
         // Initialize the filled state based on current input value (should be empty initially)
         IsFilled = !string.IsNullOrWhiteSpace(_inputValue);
-        
+
         // Subscribe to input value changes for IsFilled state tracking
         // Note: Removed automatic whitespace normalization to prevent interference with normal text editing
         this.WhenAnyValue(x => x.InputValue)
-            .Subscribe(value => 
+            .Subscribe(value =>
             {
                 if (!IsImagePlaceholder)
                 {
@@ -208,7 +209,7 @@ public class PlaceholderInputItemViewModel : ReactiveObject
                     IsFilled = !string.IsNullOrWhiteSpace(value?.Trim());
                 }
             });
-            
+
         // Subscribe to image path changes
         this.WhenAnyValue(x => x.SelectedImagePath)
             .Subscribe(imagePath =>
@@ -315,8 +316,8 @@ public class PlaceholderInputItemViewModel : ReactiveObject
     /// <summary>
     /// Image dimensions display text
     /// </summary>
-    public string ImageDimensionsText => IsImagePlaceholder && MaxWidth.HasValue && MaxHeight.HasValue 
-        ? $"Maximální rozměry: {MaxWidth}×{MaxHeight} pixelů" 
+    public string ImageDimensionsText => IsImagePlaceholder && MaxWidth.HasValue && MaxHeight.HasValue
+        ? $"Maximální rozměry: {MaxWidth}×{MaxHeight} pixelů"
         : string.Empty;
 
     /// <summary>
@@ -341,7 +342,7 @@ public class PlaceholderInputItemViewModel : ReactiveObject
         {
             return InputValue; // Image paths should not be normalized
         }
-        
+
         return NormalizeWhitespace(InputValue);
     }
 
@@ -406,7 +407,7 @@ public class PlaceholderInputItemViewModel : ReactiveObject
             {
                 var selectedFile = result[0];
                 var localPath = selectedFile.TryGetLocalPath();
-                
+
                 if (!string.IsNullOrEmpty(localPath) && File.Exists(localPath))
                 {
                     // Validate image file

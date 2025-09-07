@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/DocxTemplate.Infrastructure/DocxTemplate.Infrastructure.csproj" />
     <ProjectReference Include="../../src/DocxTemplate.Core/DocxTemplate.Core.csproj" />
+    <ProjectReference Include="..\..\src\DocxTemplate.Processing\DocxTemplate.Processing.csproj" />
   </ItemGroup>
 
   <ItemGroup>

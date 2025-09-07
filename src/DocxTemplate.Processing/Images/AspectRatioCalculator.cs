@@ -1,4 +1,4 @@
-namespace DocxTemplate.Infrastructure.Images;
+namespace DocxTemplate.Processing.Images;
 
 /// <summary>
 /// Utility class for calculating display dimensions while preserving aspect ratio

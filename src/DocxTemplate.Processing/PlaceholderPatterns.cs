@@ -1,4 +1,4 @@
-namespace DocxTemplate.Infrastructure.DocxProcessing;
+namespace DocxTemplate.Processing;
 
 /// <summary>
 /// Contains regex patterns for different placeholder types

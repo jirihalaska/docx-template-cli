@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace DocxTemplate.Core.Models;
+namespace DocxTemplate.Processing.Models;
 
 /// <summary>
 /// Represents a mapping of placeholders to replacement values with validation

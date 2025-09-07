@@ -2,7 +2,8 @@ using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Models.Results;
 using DocxTemplate.Core.Services;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
+using DocxTemplate.Processing.Models;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DocxTemplate.UI.Tests.Helpers;
@@ -20,7 +21,7 @@ public static class DocumentContentValidator
     /// <param name="pattern">Placeholder pattern to search for</param>
     /// <returns>List of placeholders found in the document</returns>
     public static async Task<IReadOnlyList<Placeholder>> ScanDocumentAsync(
-        string filePath, 
+        string filePath,
         IServiceProvider serviceProvider,
         string pattern = @"\{\{.*?\}\}")
     {
@@ -65,7 +66,7 @@ public static class DocumentContentValidator
         try
         {
             var documentText = await ExtractDocumentText(filePath);
-            
+
             // Check for each expected content string
             foreach (var kvp in expectedContent)
             {
@@ -74,7 +75,7 @@ public static class DocumentContentValidator
                     return false;
                 }
             }
-            
+
             return true;
         }
         catch (Exception)
@@ -162,10 +163,10 @@ public static class DocumentContentValidator
             using var stream = File.OpenRead(filePath);
             var buffer = new byte[4];
             stream.Read(buffer, 0, 4);
-            
+
             // ZIP file signature: 0x50, 0x4B, 0x03, 0x04
-            return buffer[0] == 0x50 && buffer[1] == 0x4B && 
-                   (buffer[2] == 0x03 || buffer[2] == 0x05 || buffer[2] == 0x07) && 
+            return buffer[0] == 0x50 && buffer[1] == 0x4B &&
+                   (buffer[2] == 0x03 || buffer[2] == 0x05 || buffer[2] == 0x07) &&
                    (buffer[3] == 0x04 || buffer[3] == 0x06 || buffer[3] == 0x08);
         }
         catch (Exception)
@@ -201,7 +202,7 @@ public static class DocumentContentValidator
                 var scanResult = await ScanDocumentAsync(filePath, serviceProvider);
                 summary.RemainingPlaceholderCount = scanResult.Count;
                 summary.RemainingPlaceholders = scanResult.Select(p => p.Name).ToList();
-                
+
                 if (expectedReplacements != null)
                 {
                     summary.ExpectedContentValidation = await ValidateCzechCharacters(filePath, expectedReplacements);
@@ -227,26 +228,26 @@ public static class DocumentContentValidator
         // This is a simplified text extraction for testing
         // In a real implementation, you might use DocumentFormat.OpenXml
         // For now, we'll use a basic approach
-        
+
         try
         {
             using var archive = System.IO.Compression.ZipFile.OpenRead(filePath);
             var documentEntry = archive.GetEntry("word/document.xml");
-            
+
             if (documentEntry == null)
             {
                 return string.Empty;
             }
-            
+
             using var stream = documentEntry.Open();
             using var reader = new StreamReader(stream, Encoding.UTF8);
             var xmlContent = await reader.ReadToEndAsync();
-            
+
             // Simple regex to extract text between XML tags
             // This is very basic and may not capture all text accurately
             var textPattern = @"<w:t[^>]*>([^<]+)</w:t>";
             var matches = Regex.Matches(xmlContent, textPattern);
-            
+
             var extractedText = new StringBuilder();
             foreach (Match match in matches)
             {
@@ -255,7 +256,7 @@ public static class DocumentContentValidator
                     extractedText.Append(match.Groups[1].Value).Append(" ");
                 }
             }
-            
+
             return extractedText.ToString();
         }
         catch (Exception)
@@ -275,48 +276,48 @@ public class DocumentValidationSummary
     /// Path to the validated document
     /// </summary>
     public required string FilePath { get; set; }
-    
+
     /// <summary>
     /// Whether the file exists
     /// </summary>
     public bool FileExists { get; set; }
-    
+
     /// <summary>
     /// Whether the file is a valid DOCX format
     /// </summary>
     public bool IsValidDocx { get; set; }
-    
+
     /// <summary>
     /// File size in bytes
     /// </summary>
     public long FileSizeBytes { get; set; }
-    
+
     /// <summary>
     /// Number of remaining placeholders in the document
     /// </summary>
     public int RemainingPlaceholderCount { get; set; }
-    
+
     /// <summary>
     /// List of remaining placeholder names
     /// </summary>
     public List<string> RemainingPlaceholders { get; set; } = new();
-    
+
     /// <summary>
     /// Whether expected content validation passed
     /// </summary>
     public bool? ExpectedContentValidation { get; set; }
-    
+
     /// <summary>
     /// Any validation error that occurred
     /// </summary>
     public string? ValidationError { get; set; }
-    
+
     /// <summary>
     /// Whether the document passed all validations
     /// </summary>
-    public bool IsValid => FileExists && IsValidDocx && RemainingPlaceholderCount == 0 && 
+    public bool IsValid => FileExists && IsValidDocx && RemainingPlaceholderCount == 0 &&
                            ValidationError == null && (ExpectedContentValidation ?? true);
-                           
+
     /// <summary>
     /// Gets a summary string of the validation results
     /// </summary>
@@ -325,13 +326,13 @@ public class DocumentValidationSummary
         var fileName = Path.GetFileName(FilePath);
         var status = IsValid ? "VALID" : "INVALID";
         var details = new List<string>();
-        
+
         if (!FileExists) details.Add("File missing");
         if (!IsValidDocx) details.Add("Invalid DOCX format");
         if (RemainingPlaceholderCount > 0) details.Add($"{RemainingPlaceholderCount} placeholders remaining");
         if (ExpectedContentValidation == false) details.Add("Expected content validation failed");
         if (ValidationError != null) details.Add($"Error: {ValidationError}");
-        
+
         var detailsStr = details.Any() ? $" ({string.Join(", ", details)})" : "";
         return $"{fileName}: {status}{detailsStr}";
     }

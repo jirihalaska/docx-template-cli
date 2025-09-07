@@ -6,8 +6,9 @@ using DocxTemplate.Core.Services;
 using DocxTemplate.Core.ErrorHandling;
 using DocxTemplate.Infrastructure.Configuration;
 using DocxTemplate.Infrastructure.Services;
-using DocxTemplate.Infrastructure.Images;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
+using DocxTemplate.Processing.Images;
+using DocxTemplate.Processing.Interfaces;
 
 namespace DocxTemplate.Infrastructure.DependencyInjection;
 

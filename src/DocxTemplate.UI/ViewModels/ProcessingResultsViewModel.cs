@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
 using DocxTemplate.UI.Models;
 using ReactiveUI;
 
@@ -42,15 +43,15 @@ public class ProcessingResultsViewModel : StepViewModelBase
             x => x.IsProcessingComplete,
             x => x.TemplateSetName,
             x => x.OutputFolderPath,
-            (isProcessing, isComplete, templateName, outputPath) => 
-                !isProcessing && !isComplete && !string.IsNullOrEmpty(templateName) && 
+            (isProcessing, isComplete, templateName, outputPath) =>
+                !isProcessing && !isComplete && !string.IsNullOrEmpty(templateName) &&
                 !string.IsNullOrEmpty(outputPath));
 
         var canOpenFolder = this.WhenAnyValue(
             x => x.IsProcessingComplete,
             x => x.ProcessingSuccessful,
             x => x.ActualTargetFolderPath,
-            (isComplete, isSuccessful, actualTargetPath) => 
+            (isComplete, isSuccessful, actualTargetPath) =>
                 isComplete && isSuccessful && !string.IsNullOrEmpty(actualTargetPath) && Directory.Exists(actualTargetPath));
 
         var canOpenLog = this.WhenAnyValue(
@@ -118,10 +119,10 @@ public class ProcessingResultsViewModel : StepViewModelBase
             // In UpdateProject mode, we process files in place, so target is the same as source
             if (_processingMode == ProcessingMode.UpdateProject)
                 return _templateSetPath;
-                
+
             if (string.IsNullOrEmpty(_templateSetPath) || string.IsNullOrEmpty(OutputFolderPath))
                 return OutputFolderPath;
-                
+
             var sourceDirectoryName = Path.GetFileName(_templateSetPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             return Path.Combine(OutputFolderPath, sourceDirectoryName);
         }
@@ -133,7 +134,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         set => this.RaiseAndSetIfChanged(ref _placeholderCount, value);
     }
 
-    public string ProcessingSummary => 
+    public string ProcessingSummary =>
         $"Sada šablon: {TemplateSetName}\n" +
         $"Výstupní složka: {OutputFolderPath}\n" +
         $"Počet zástupných symbolů: {PlaceholderCount}";
@@ -153,7 +154,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         _placeholderValues = placeholders ?? new Dictionary<string, string>();
         PlaceholderCount = _placeholderValues.Count;
         _processingMode = processingMode;
-        
+
         this.RaisePropertyChanged(nameof(ProcessingSummary));
         this.RaisePropertyChanged(nameof(ActualTargetFolderPath));
     }
@@ -161,26 +162,26 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private async Task ProcessTemplatesAsync()
     {
         _cancellationTokenSource = new CancellationTokenSource();
-        
+
         try
         {
             IsProcessing = true;
             IsProcessingComplete = false;
             ProcessingSuccessful = false;
-            
+
             // Create log file
             var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
             LogFilePath = Path.Combine(Path.GetTempPath(), $"docx-processing-{timestamp}.log");
-            
+
             using var logFile = new StreamWriter(LogFilePath, append: true);
             await logFile.WriteLineAsync($"=== Template Processing Started at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
-            
+
             // Step 1: Copy templates (only for NewProject mode)
             if (_processingMode == ProcessingMode.NewProject)
             {
                 ProcessingStatus = "Kopírování šablon...";
                 await logFile.WriteLineAsync("Phase 1: Copying templates");
-                
+
                 var copyResult = await ExecuteCopyCommand(logFile);
                 if (!copyResult.Success)
                 {
@@ -191,28 +192,28 @@ public class ProcessingResultsViewModel : StepViewModelBase
             {
                 await logFile.WriteLineAsync("Phase 1: Skipping template copy (UpdateProject mode - processing existing files in place)");
             }
-            
+
             // Step 2: Create temporary JSON mapping file
             var tempJsonPath = Path.Combine(Path.GetTempPath(), $"placeholder-map-{timestamp}.json");
             try
             {
                 await CreatePlaceholderMappingFile(tempJsonPath, logFile);
-                
+
                 // Step 2/3: Replace placeholders
                 ProcessingStatus = "Nahrazování zástupných symbolů...";
                 await logFile.WriteLineAsync($"Phase 2: Replacing placeholders (Mode: {_processingMode})");
-                
+
                 var replaceResult = await ExecuteReplaceCommand(tempJsonPath, logFile);
                 if (!replaceResult.Success)
                 {
                     throw new InvalidOperationException($"Placeholder replacement failed: {replaceResult.Error}");
                 }
-                
+
                 // Success
                 ProcessingSuccessful = true;
                 ProcessingResults = $"Zpracováno {PlaceholderCount} zástupných symbolů v sadě '{TemplateSetName}'";
                 ProcessingStatus = "Zpracování dokončeno úspěšně";
-                
+
                 await logFile.WriteLineAsync("=== Processing completed successfully ===");
             }
             finally
@@ -237,7 +238,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
             ProcessingSuccessful = false;
             ProcessingResults = $"Chyba při zpracování: {ex.Message}";
             ProcessingStatus = "Zpracování selhalo";
-            
+
             using var logFile = new StreamWriter(LogFilePath, append: true);
             await logFile.WriteLineAsync($"=== Processing failed: {ex.Message} ===");
             await logFile.WriteLineAsync($"Stack trace: {ex.StackTrace}");
@@ -257,7 +258,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         {
             // Extract file prefix from placeholders (SOUBOR_PREFIX)
             _placeholderValues.TryGetValue(Placeholder.FilePrefixPlaceholder, out var filePrefix);
-            
+
             var result = await _templateCopyService.CopyTemplatesAsync(
                 _templateSetPath,
                 OutputFolderPath,
@@ -287,7 +288,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
 
         var jsonContent = JsonSerializer.Serialize(_placeholderValues, jsonOptions);
         await File.WriteAllTextAsync(filePath, jsonContent);
-        
+
         await logFile.WriteLineAsync($"Created placeholder mapping file: {filePath}");
         await logFile.WriteLineAsync($"Mapping content: {jsonContent}");
     }
@@ -303,7 +304,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
             // For UpdateProject mode, process files in the source folder directly
             var targetPath = _processingMode == ProcessingMode.UpdateProject ? _templateSetPath : ActualTargetFolderPath;
             await logFile.WriteLineAsync($"Target path for replacement: {targetPath}");
-            
+
             var result = await _placeholderReplaceService.ReplacePlaceholdersAsync(
                 targetPath,
                 replacementMap,
@@ -373,11 +374,11 @@ public class ProcessingResultsViewModel : StepViewModelBase
         ProcessingStatus = "";
         ProcessingResults = "";
         LogFilePath = "";
-        
+
         // Clear processing data but keep template info for next run
         // Don't reset TemplateSetName, OutputFolderPath, PlaceholderCount
         // as these are used for validation and may be needed for retry
-        
+
         // Request navigation back to step 1
         // This will be handled by the WizardViewModel
         RequestNavigationToStep?.Invoke(1);
@@ -387,7 +388,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
 
     public override bool ValidateStep()
     {
-        return !string.IsNullOrEmpty(TemplateSetName) && 
+        return !string.IsNullOrEmpty(TemplateSetName) &&
                !string.IsNullOrEmpty(OutputFolderPath);
     }
 }

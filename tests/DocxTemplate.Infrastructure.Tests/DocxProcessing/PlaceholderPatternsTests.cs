@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using DocxTemplate.Infrastructure.DocxProcessing;
+using DocxTemplate.Processing;
 using Xunit;
 
 namespace DocxTemplate.Infrastructure.Tests.DocxProcessing;

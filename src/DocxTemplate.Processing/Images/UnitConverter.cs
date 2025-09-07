@@ -1,4 +1,4 @@
-namespace DocxTemplate.Infrastructure.Images;
+namespace DocxTemplate.Processing.Images;
 
 /// <summary>
 /// Utility class for converting between different measurement units used in Word documents

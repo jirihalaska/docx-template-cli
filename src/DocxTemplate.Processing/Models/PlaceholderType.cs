@@ -1,4 +1,4 @@
-namespace DocxTemplate.Core.Models;
+namespace DocxTemplate.Processing.Models;
 
 /// <summary>
 /// Defines the type of placeholder

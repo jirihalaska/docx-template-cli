@@ -1,3 +1,4 @@
+using DocxTemplate.Processing.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace DocxTemplate.Core.Models;

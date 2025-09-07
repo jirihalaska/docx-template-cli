@@ -3,7 +3,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
 
-namespace DocxTemplate.Infrastructure.DocxProcessing;
+namespace DocxTemplate.Processing;
 
 /// <summary>
 /// Provides unified document traversal for Word documents, ensuring all parts

@@ -1,3 +1,4 @@
+using DocxTemplate.Processing.Models;
 using System.Text.RegularExpressions;
 
 namespace DocxTemplate.Core.Exceptions;

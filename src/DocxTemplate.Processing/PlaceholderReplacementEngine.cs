@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
-using DocxTemplate.Core.Models;
-using DocxTemplate.Core.Services;
-using DocxTemplate.Infrastructure.Images;
+using DocxTemplate.Processing.Models;
+using DocxTemplate.Processing.Interfaces;
+using DocxTemplate.Processing.Images;
 using Microsoft.Extensions.Logging;
 
 using W = DocumentFormat.OpenXml.Wordprocessing;
@@ -15,7 +15,7 @@ using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 // ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 
-namespace DocxTemplate.Infrastructure.DocxProcessing;
+namespace DocxTemplate.Processing;
 
 /// <summary>
 /// Unified engine for processing placeholder replacement in Word documents.

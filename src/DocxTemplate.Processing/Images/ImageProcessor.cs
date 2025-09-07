@@ -1,8 +1,8 @@
-using DocxTemplate.Core.Models;
-using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
+using DocxTemplate.Processing.Interfaces;
 using SkiaSharp;
 
-namespace DocxTemplate.Infrastructure.Images;
+namespace DocxTemplate.Processing.Images;
 
 /// <summary>
 /// Service for processing image files using SkiaSharp

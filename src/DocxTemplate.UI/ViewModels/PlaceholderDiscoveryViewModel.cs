@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DocxTemplate.Core.Models;
 using DocxTemplate.Core.Services;
+using DocxTemplate.Processing.Models;
 using DocxTemplate.UI.Models;
 using DocxTemplate.UI.Services;
 using ReactiveUI;
@@ -18,7 +19,7 @@ namespace DocxTemplate.UI.ViewModels;
 public class PlaceholderDiscoveryViewModel : StepViewModelBase
 {
     private readonly IPlaceholderScanService _placeholderScanService;
-    
+
     private ObservableCollection<PlaceholderItemViewModel> _discoveredPlaceholders;
     private bool _isScanning;
     private bool _hasScanCompleted;
@@ -32,10 +33,10 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
     public PlaceholderDiscoveryViewModel(IPlaceholderScanService placeholderScanService)
     {
         _placeholderScanService = placeholderScanService ?? throw new ArgumentNullException(nameof(placeholderScanService));
-        
+
         _discoveredPlaceholders = new ObservableCollection<PlaceholderItemViewModel>();
-        
-        RescanCommand = ReactiveCommand.CreateFromTask(ScanPlaceholdersAsync, 
+
+        RescanCommand = ReactiveCommand.CreateFromTask(ScanPlaceholdersAsync,
             this.WhenAnyValue(x => x.IsScanning, scanning => !scanning));
     }
 
@@ -168,7 +169,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
     public override async void OnStepActivated()
     {
         base.OnStepActivated();
-        
+
         // If we haven't scanned yet or if the template set has changed, start scanning
         if (!HasScanCompleted || !_discoveredPlaceholders.Any())
         {
@@ -205,7 +206,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         try
         {
             var templatePath = SelectedTemplateSet.TemplateSetInfo.Path;
-            
+
             var scanResult = await _placeholderScanService.ScanPlaceholdersAsync(
                 templatePath,
                 pattern: @"\{\{.*?\}\}",
@@ -257,7 +258,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
                     Locations = new List<PlaceholderLocation>().AsReadOnly(),
                     TotalOccurrences = 0
                 };
-                
+
                 // Insert at the beginning of the list
                 placeholderViewModels.Insert(0, new PlaceholderItemViewModel(souborPrefixPlaceholder));
             }
@@ -265,7 +266,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
             var statusMessage = scanResult.IsSuccessful
                 ? $"Dokončeno: nalezeno {scanResult.UniquePlaceholderCount} zástupných symbolů ({scanResult.TotalOccurrences} výskytů)"
                 : null;
-            
+
             var errorMessage = !scanResult.IsSuccessful
                 ? $"Prohledávání dokončeno s chybami: {string.Join(", ", scanResult.Errors.Select(e => e.DisplayMessage))}"
                 : null;
@@ -292,7 +293,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
 
             TotalPlaceholdersFound = processedData.TotalPlaceholders;
             TotalOccurrences = processedData.TotalOccurrences;
-            
+
             if (processedData.IsSuccessful)
             {
                 HasScanCompleted = true;
@@ -314,7 +315,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
         if (SelectedTemplateSet != templateSet)
         {
             SelectedTemplateSet = templateSet;
-            
+
             // Reset scan state when template set changes
             HasScanCompleted = false;
             HasScanError = false;
@@ -323,7 +324,7 @@ public class PlaceholderDiscoveryViewModel : StepViewModelBase
             TotalOccurrences = 0;
             ScanStatusMessage = string.Empty;
             ScanErrorMessage = string.Empty;
-            
+
             UpdateValidation();
         }
     }
@@ -357,7 +358,7 @@ public class PlaceholderItemViewModel : ReactiveObject
     /// <summary>
     /// Formatted display text with occurrence count
     /// </summary>
-    public string DisplayText 
+    public string DisplayText
     {
         get
         {
@@ -380,7 +381,7 @@ public class PlaceholderItemViewModel : ReactiveObject
             {
                 return "Automaticky přidáno pro prefix souborů";
             }
-            return string.Join(", ", 
+            return string.Join(", ",
                 Placeholder.Locations.Select(l => System.IO.Path.GetFileName(l.FilePath)).Distinct());
         }
     }

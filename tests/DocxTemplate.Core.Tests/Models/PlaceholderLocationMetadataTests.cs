@@ -1,4 +1,5 @@
 using DocxTemplate.Core.Models;
+using DocxTemplate.Processing.Models;
 using Xunit;
 
 namespace DocxTemplate.Core.Tests.Models;
@@ -16,11 +17,11 @@ public class PlaceholderLocationMetadataTests
             Occurrences = 1,
             OriginalSyntax = "{{image:logo|width:800|height:600}}"
         };
-        
+
         // assert
         Assert.Equal("{{image:logo|width:800|height:600}}", location.OriginalSyntax);
     }
-    
+
     [Fact]
     public void PlaceholderLocation_ShouldSupportMetadata()
     {
@@ -31,7 +32,7 @@ public class PlaceholderLocationMetadataTests
             ["height"] = 600,
             ["imageType"] = "png"
         };
-        
+
         var location = new PlaceholderLocation
         {
             FileName = "test.docx",
@@ -39,7 +40,7 @@ public class PlaceholderLocationMetadataTests
             Occurrences = 1,
             Metadata = metadata
         };
-        
+
         // assert
         Assert.NotNull(location.Metadata);
         Assert.Equal(3, location.Metadata.Count);
@@ -47,7 +48,7 @@ public class PlaceholderLocationMetadataTests
         Assert.Equal(600, location.Metadata["height"]);
         Assert.Equal("png", location.Metadata["imageType"]);
     }
-    
+
     [Fact]
     public void PlaceholderLocation_IsValid_ShouldPassWithMetadata()
     {
@@ -57,7 +58,7 @@ public class PlaceholderLocationMetadataTests
             ["placeholderType"] = "image",
             ["dimensions"] = "800x600"
         };
-        
+
         var location = new PlaceholderLocation
         {
             FileName = "test.docx",
@@ -66,14 +67,14 @@ public class PlaceholderLocationMetadataTests
             OriginalSyntax = "{{image:test}}",
             Metadata = metadata
         };
-        
+
         // act
         var isValid = location.IsValid();
-        
+
         // assert
         Assert.True(isValid);
     }
-    
+
     [Fact]
     public void PlaceholderLocation_IsValid_ShouldPassWithoutMetadata()
     {
@@ -86,14 +87,14 @@ public class PlaceholderLocationMetadataTests
             OriginalSyntax = null,
             Metadata = null
         };
-        
+
         // act
         var isValid = location.IsValid();
-        
+
         // assert
         Assert.True(isValid);
     }
-    
+
     [Fact]
     public void PlaceholderLocation_ShouldPreserveBackwardsCompatibility()
     {
@@ -107,10 +108,10 @@ public class PlaceholderLocationMetadataTests
             LineNumbers = new List<int> { 10, 25 },
             CharacterPositions = new List<int> { 100, 250 }
         };
-        
+
         // act
         var isValid = location.IsValid();
-        
+
         // assert
         Assert.True(isValid);
         Assert.Null(location.OriginalSyntax);

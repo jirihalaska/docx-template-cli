@@ -20,6 +20,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
 {
     private readonly ITemplateCopyService _templateCopyService;
     private readonly IPlaceholderReplaceService _placeholderReplaceService;
+    private readonly IPlaceholderScanService _placeholderScanService;
     private string _processingStatus = "";
     private bool _isProcessing = false;
     private bool _isProcessingComplete = false;
@@ -35,11 +36,13 @@ public class ProcessingResultsViewModel : StepViewModelBase
     private ProcessingMode _processingMode = ProcessingMode.NewProject;
     private CancellationTokenSource? _cancellationTokenSource;
     private ReplaceResult? _lastReplaceResult;
+    private List<VerificationWarning> _verificationWarnings = new();
 
-    public ProcessingResultsViewModel(ITemplateCopyService templateCopyService, IPlaceholderReplaceService placeholderReplaceService)
+    public ProcessingResultsViewModel(ITemplateCopyService templateCopyService, IPlaceholderReplaceService placeholderReplaceService, IPlaceholderScanService placeholderScanService)
     {
         _templateCopyService = templateCopyService ?? throw new ArgumentNullException(nameof(templateCopyService));
         _placeholderReplaceService = placeholderReplaceService ?? throw new ArgumentNullException(nameof(placeholderReplaceService));
+        _placeholderScanService = placeholderScanService ?? throw new ArgumentNullException(nameof(placeholderScanService));
 
         var canProcessTemplates = this.WhenAnyValue(
             x => x.IsProcessing,
@@ -217,6 +220,9 @@ public class ProcessingResultsViewModel : StepViewModelBase
                 {
                     throw new InvalidOperationException($"Placeholder replacement failed: {replaceResult.Error}");
                 }
+
+                // Perform final verification to check for any remaining placeholders that should have been replaced
+                _verificationWarnings = await PerformFinalVerificationAsync(logFile);
 
                 // Success
                 ProcessingSuccessful = true;
@@ -396,6 +402,7 @@ public class ProcessingResultsViewModel : StepViewModelBase
         ReplacementReport = "";
         LogFilePath = "";
         _lastReplaceResult = null;
+        _verificationWarnings.Clear();
 
         // Clear processing data but keep template info for next run
         // Don't reset TemplateSetName, OutputFolderPath, PlaceholderCount
@@ -407,6 +414,76 @@ public class ProcessingResultsViewModel : StepViewModelBase
     }
 
     public event Action<int>? RequestNavigationToStep;
+
+    private async Task<List<VerificationWarning>> PerformFinalVerificationAsync(StreamWriter logFile)
+    {
+        var warnings = new List<VerificationWarning>();
+        
+        try
+        {
+            await logFile.WriteLineAsync("Phase 3: Performing final verification of output files");
+            ProcessingStatus = "Ověřování výsledných souborů...";
+            
+            if (_lastReplaceResult == null)
+            {
+                await logFile.WriteLineAsync("No replacement results available for verification");
+                return warnings;
+            }
+
+            var successfulFiles = _lastReplaceResult.FileResults.Where(f => f.IsSuccess).ToList();
+            
+            foreach (var fileResult in successfulFiles)
+            {
+                try
+                {
+                    // Scan the output file for remaining placeholders
+                    var remainingPlaceholders = await _placeholderScanService.ScanSingleFileAsync(
+                        fileResult.FilePath, 
+                        @"\{\{.*?\}\}",
+                        _cancellationTokenSource?.Token ?? CancellationToken.None);
+
+                    if (remainingPlaceholders.Any())
+                    {
+                        // Check which of these placeholders should have been replaced
+                        foreach (var placeholder in remainingPlaceholders)
+                        {
+                            if (_placeholderValues.TryGetValue(placeholder.Name, out var expectedValue))
+                            {
+                                // This placeholder had a replacement value but is still present
+                                warnings.Add(VerificationWarning.Create(
+                                    Path.GetFileName(fileResult.FilePath),
+                                    placeholder.Name,
+                                    expectedValue,
+                                    placeholder.Locations.Sum(l => l.Occurrences)
+                                ));
+
+                                await logFile.WriteLineAsync($"WARNING: Placeholder {placeholder.Name} should have been replaced with '{expectedValue}' but was found {placeholder.Locations.Sum(l => l.Occurrences)} times in {Path.GetFileName(fileResult.FilePath)}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await logFile.WriteLineAsync($"Warning: Could not verify file {fileResult.FilePath}: {ex.Message}");
+                }
+            }
+
+            if (warnings.Any())
+            {
+                await logFile.WriteLineAsync($"Final verification found {warnings.Count} warnings");
+            }
+            else
+            {
+                await logFile.WriteLineAsync("Final verification completed successfully - no issues found");
+            }
+        }
+        catch (Exception ex)
+        {
+            await logFile.WriteLineAsync($"Error during final verification: {ex.Message}");
+        }
+
+        return warnings;
+    }
 
     private string GenerateReplacementReport()
     {
@@ -453,14 +530,38 @@ public class ProcessingResultsViewModel : StepViewModelBase
             report.AppendLine();
         }
 
+        // Add verification warnings section if any warnings exist
+        if (_verificationWarnings.Any())
+        {
+            report.AppendLine("=== UPOZORNĚNÍ NA OVĚŘENÍ ===");
+            report.AppendLine("Následující zástupné symboly měly být nahrazeny, ale stále jsou přítomny:");
+            report.AppendLine();
+
+            var warningsGroupedByFile = _verificationWarnings.GroupBy(w => w.FileName);
+            foreach (var fileGroup in warningsGroupedByFile)
+            {
+                report.AppendLine($"Soubor: {fileGroup.Key}");
+                foreach (var warning in fileGroup.OrderBy(w => w.PlaceholderName))
+                {
+                    report.AppendLine(warning.DisplayWarning);
+                }
+                report.AppendLine();
+            }
+        }
+
         var totalFiles = successfulFiles.Count;
         var totalReplacements = _lastReplaceResult.TotalReplacements;
         var totalUnreplaced = successfulFiles.Sum(f => f.UnreplacedPlaceholders.Sum(u => u.OccurrenceCount));
+        var totalWarnings = _verificationWarnings.Sum(w => w.OccurrenceCount);
         
         report.AppendLine($"Celkem: {totalReplacements} nahrazení v {totalFiles} souborech");
         if (totalUnreplaced > 0)
         {
             report.AppendLine($"Nezpracováno: {totalUnreplaced} zástupných symbolů");
+        }
+        if (totalWarnings > 0)
+        {
+            report.AppendLine($"UPOZORNĚNÍ: {totalWarnings} zástupných symbolů nebylo nahrazeno i přes zadanou hodnotu!");
         }
 
         return report.ToString();

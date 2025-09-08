@@ -156,6 +156,19 @@ public class PlaceholderReplacementEngine
                     result.DetailedReplacements[detailKvp.Key] = detailKvp.Value;
                 }
             }
+            
+            // Aggregate unreplaced placeholders from all sections
+            foreach (var unreplacedKvp in section.UnreplacedPlaceholders)
+            {
+                if (result.UnreplacedPlaceholders.ContainsKey(unreplacedKvp.Key))
+                {
+                    result.UnreplacedPlaceholders[unreplacedKvp.Key] += unreplacedKvp.Value;
+                }
+                else
+                {
+                    result.UnreplacedPlaceholders[unreplacedKvp.Key] = unreplacedKvp.Value;
+                }
+            }
         }
 
         _logger.LogDebug("Completed processing document {FilePath}. Found {PlaceholderCount} placeholders, performed {ReplacementCount} replacements",
@@ -213,13 +226,13 @@ public class PlaceholderReplacementEngine
         {
             foreach (var match in imageMatches)
             {
-                if (TryReplaceImagePlaceholder(paragraph, match, replacementMap!, documentPart))
+                if (replacementMap!.Mappings.TryGetValue(match.PlaceholderName, out var imagePath))
                 {
-                    result.ReplacementsPerformed++;
-                    
-                    // Track detailed image replacement
-                    if (replacementMap.Mappings.TryGetValue(match.PlaceholderName, out var imagePath))
+                    if (TryReplaceImagePlaceholder(paragraph, match, replacementMap!, documentPart))
                     {
+                        result.ReplacementsPerformed++;
+                        
+                        // Track detailed image replacement
                         var placeholderKey = $"{match.PlaceholderName}→{imagePath}";
                         if (result.DetailedReplacements.ContainsKey(placeholderKey))
                         {
@@ -230,6 +243,30 @@ public class PlaceholderReplacementEngine
                             result.DetailedReplacements[placeholderKey] = 1;
                         }
                     }
+                    else
+                    {
+                        // Track unreplaced image placeholder (replacement attempted but failed)
+                        if (result.UnreplacedPlaceholders.ContainsKey(match.PlaceholderName))
+                        {
+                            result.UnreplacedPlaceholders[match.PlaceholderName]++;
+                        }
+                        else
+                        {
+                            result.UnreplacedPlaceholders[match.PlaceholderName] = 1;
+                        }
+                    }
+                }
+                else
+                {
+                    // Track unreplaced image placeholder (no value provided)
+                    if (result.UnreplacedPlaceholders.ContainsKey(match.PlaceholderName))
+                    {
+                        result.UnreplacedPlaceholders[match.PlaceholderName]++;
+                    }
+                    else
+                    {
+                        result.UnreplacedPlaceholders[match.PlaceholderName] = 1;
+                    }
                 }
             }
             return result;
@@ -238,7 +275,7 @@ public class PlaceholderReplacementEngine
         // Process text placeholders using right-to-left strategy
         if (textMatches.Count > 0)
         {
-            result.ReplacementsPerformed = ReplaceTextPlaceholders(paragraph, textMatches, replacementMap!, documentPart, result.DetailedReplacements);
+            result.ReplacementsPerformed = ReplaceTextPlaceholders(paragraph, textMatches, replacementMap!, documentPart, result.DetailedReplacements, result.UnreplacedPlaceholders);
         }
 
         return result;
@@ -276,6 +313,19 @@ public class PlaceholderReplacementEngine
                 else
                 {
                     result.DetailedReplacements[detailKvp.Key] = detailKvp.Value;
+                }
+            }
+            
+            // Aggregate unreplaced placeholders
+            foreach (var unreplacedKvp in paragraphResult.UnreplacedPlaceholders)
+            {
+                if (result.UnreplacedPlaceholders.ContainsKey(unreplacedKvp.Key))
+                {
+                    result.UnreplacedPlaceholders[unreplacedKvp.Key] += unreplacedKvp.Value;
+                }
+                else
+                {
+                    result.UnreplacedPlaceholders[unreplacedKvp.Key] = unreplacedKvp.Value;
                 }
             }
         }
@@ -476,7 +526,8 @@ public class PlaceholderReplacementEngine
         List<PlaceholderMatch> textMatches,
         ReplacementMap replacementMap,
         OpenXmlPart? documentPart,
-        Dictionary<string, int> detailedReplacements)
+        Dictionary<string, int> detailedReplacements,
+        Dictionary<string, int> unreplacedPlaceholders)
     {
         var replacementCount = 0;
 
@@ -486,7 +537,18 @@ public class PlaceholderReplacementEngine
         foreach (var match in sortedMatches)
         {
             if (!replacementMap.Mappings.TryGetValue(match.PlaceholderName, out var replacement))
+            {
+                // Track unreplaced text placeholder (no value provided)
+                if (unreplacedPlaceholders.ContainsKey(match.PlaceholderName))
+                {
+                    unreplacedPlaceholders[match.PlaceholderName]++;
+                }
+                else
+                {
+                    unreplacedPlaceholders[match.PlaceholderName] = 1;
+                }
                 continue;
+            }
 
             // IMPORTANT: Rebuild text element map for each replacement
             // This is necessary because each replacement changes the document structure
@@ -529,7 +591,7 @@ public class PlaceholderReplacementEngine
         // due to complex formatting within the placeholder text
         if (replacementCount == 0 && textMatches.Count > 0)
         {
-            replacementCount += ProcessFallbackTextReplacement(paragraph, replacementMap, detailedReplacements);
+            replacementCount += ProcessFallbackTextReplacement(paragraph, replacementMap, detailedReplacements, unreplacedPlaceholders);
         }
 
         return replacementCount;
@@ -672,7 +734,7 @@ public class PlaceholderReplacementEngine
     /// <summary>
     /// Fallback replacement approach that searches for placeholder patterns directly in text elements
     /// </summary>
-    private int ProcessFallbackTextReplacement(W.Paragraph paragraph, ReplacementMap replacementMap, Dictionary<string, int> detailedReplacements)
+    private int ProcessFallbackTextReplacement(W.Paragraph paragraph, ReplacementMap replacementMap, Dictionary<string, int> detailedReplacements, Dictionary<string, int> unreplacedPlaceholders)
     {
         var replacementCount = 0;
         var runs = paragraph.Descendants<W.Run>().ToList();
@@ -703,6 +765,18 @@ public class PlaceholderReplacementEngine
                         }
                         
                         return replacement;
+                    }
+                    else
+                    {
+                        // Track unreplaced placeholder in fallback processing
+                        if (unreplacedPlaceholders.ContainsKey(placeholderName))
+                        {
+                            unreplacedPlaceholders[placeholderName]++;
+                        }
+                        else
+                        {
+                            unreplacedPlaceholders[placeholderName] = 1;
+                        }
                     }
                     return match.Value; // Keep original if no replacement found
                 });
@@ -918,6 +992,7 @@ public class DocumentProcessingResult
     public int ReplacementsPerformed { get; set; }
     public List<SectionProcessingResult> SectionResults { get; } = new();
     public Dictionary<string, int> DetailedReplacements { get; set; } = new();
+    public Dictionary<string, int> UnreplacedPlaceholders { get; set; } = new();
 }
 
 /// <summary>
@@ -928,6 +1003,7 @@ public class SectionProcessingResult
     public List<DiscoveredPlaceholder> DiscoveredPlaceholders { get; } = new();
     public int ReplacementsPerformed { get; set; }
     public Dictionary<string, int> DetailedReplacements { get; set; } = new();
+    public Dictionary<string, int> UnreplacedPlaceholders { get; set; } = new();
 }
 
 /// <summary>
@@ -938,6 +1014,7 @@ public class ParagraphProcessingResult
     public List<DiscoveredPlaceholder> DiscoveredPlaceholders { get; set; } = new();
     public int ReplacementsPerformed { get; set; }
     public Dictionary<string, int> DetailedReplacements { get; set; } = new();
+    public Dictionary<string, int> UnreplacedPlaceholders { get; set; } = new();
 }
 
 /// <summary>

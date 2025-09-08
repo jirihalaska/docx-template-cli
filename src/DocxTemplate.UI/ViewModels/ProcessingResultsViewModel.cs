@@ -424,16 +424,30 @@ public class ProcessingResultsViewModel : StepViewModelBase
             var fileName = Path.GetFileName(fileResult.FilePath);
             report.AppendLine($"Soubor: {fileName}");
             
+            // Show completed replacements
             if (fileResult.DetailedReplacements.Any())
             {
+                report.AppendLine("  Zpracované zástupné symboly:");
                 foreach (var replacement in fileResult.DetailedReplacements.OrderBy(r => r.PlaceholderName))
                 {
-                    report.AppendLine($"  {replacement.DisplayReplacement}");
+                    report.AppendLine($"    {replacement.DisplayReplacement}");
                 }
             }
-            else
+            
+            // Show unreplaced placeholders
+            if (fileResult.UnreplacedPlaceholders.Any())
             {
-                report.AppendLine("  Žádná nahrazení");
+                report.AppendLine("  Nezpracované zástupné symboly:");
+                foreach (var unreplaced in fileResult.UnreplacedPlaceholders.OrderBy(u => u.PlaceholderName))
+                {
+                    report.AppendLine($"    {unreplaced.DisplayUnreplaced}");
+                }
+            }
+            
+            // Show summary if no replacements or unreplaced placeholders
+            if (!fileResult.DetailedReplacements.Any() && !fileResult.UnreplacedPlaceholders.Any())
+            {
+                report.AppendLine("  Žádné zástupné symboly nenalezeny");
             }
             
             report.AppendLine();
@@ -441,7 +455,13 @@ public class ProcessingResultsViewModel : StepViewModelBase
 
         var totalFiles = successfulFiles.Count;
         var totalReplacements = _lastReplaceResult.TotalReplacements;
+        var totalUnreplaced = successfulFiles.Sum(f => f.UnreplacedPlaceholders.Sum(u => u.OccurrenceCount));
+        
         report.AppendLine($"Celkem: {totalReplacements} nahrazení v {totalFiles} souborech");
+        if (totalUnreplaced > 0)
+        {
+            report.AppendLine($"Nezpracováno: {totalUnreplaced} zástupných symbolů");
+        }
 
         return report.ToString();
     }

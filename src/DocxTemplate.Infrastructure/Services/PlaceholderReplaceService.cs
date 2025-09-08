@@ -165,6 +165,11 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 })
                 .ToList();
             
+            // Convert unreplaced placeholders to UnreplacedPlaceholder objects
+            var unreplacedPlaceholders = result.UnreplacedPlaceholders
+                .Select(kvp => UnreplacedPlaceholder.Create(fileName, kvp.Key, kvp.Value))
+                .ToList();
+            
             // File prefix is now handled by TemplateCopyService during copy operation
             var finalFilePath = templatePath;
             
@@ -176,7 +181,8 @@ public class PlaceholderReplaceService : IPlaceholderReplaceService
                 backupPath,
                 endTime - startTime,
                 _fileSystemService.GetFileSize(finalFilePath),
-                detailedReplacements);
+                detailedReplacements,
+                unreplacedPlaceholders);
         }
         catch (Exception ex)
         {

@@ -177,6 +177,11 @@ public record FileReplaceResult
     public IReadOnlyList<DetailedReplacement> DetailedReplacements { get; init; } = Array.Empty<DetailedReplacement>();
 
     /// <summary>
+    /// Information about placeholders that were found but not replaced because no value was provided
+    /// </summary>
+    public IReadOnlyList<UnreplacedPlaceholder> UnreplacedPlaceholders { get; init; } = Array.Empty<UnreplacedPlaceholder>();
+
+    /// <summary>
     /// File name without path
     /// </summary>
     public string FileName => Path.GetFileName(FilePath);
@@ -216,6 +221,7 @@ public record FileReplaceResult
     /// <param name="processingDuration">Optional processing duration</param>
     /// <param name="finalSizeBytes">Optional final file size</param>
     /// <param name="detailedReplacements">Optional detailed replacement information</param>
+    /// <param name="unreplacedPlaceholders">Optional unreplaced placeholder information</param>
     /// <returns>FileReplaceResult instance</returns>
     public static FileReplaceResult Success(
         string filePath, 
@@ -223,7 +229,8 @@ public record FileReplaceResult
         string? backupPath = null,
         TimeSpan? processingDuration = null,
         long? finalSizeBytes = null,
-        IReadOnlyList<DetailedReplacement>? detailedReplacements = null)
+        IReadOnlyList<DetailedReplacement>? detailedReplacements = null,
+        IReadOnlyList<UnreplacedPlaceholder>? unreplacedPlaceholders = null)
     {
         return new FileReplaceResult
         {
@@ -233,7 +240,8 @@ public record FileReplaceResult
             BackupPath = backupPath,
             ProcessingDuration = processingDuration,
             FinalSizeBytes = finalSizeBytes,
-            DetailedReplacements = detailedReplacements ?? Array.Empty<DetailedReplacement>()
+            DetailedReplacements = detailedReplacements ?? Array.Empty<DetailedReplacement>(),
+            UnreplacedPlaceholders = unreplacedPlaceholders ?? Array.Empty<UnreplacedPlaceholder>()
         };
     }
 
